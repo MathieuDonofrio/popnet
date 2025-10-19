@@ -5,77 +5,80 @@
 #include <stdint.h>
 
 #ifdef POPNET_SHARED
-  #ifdef _MSC_VER
-    #ifdef POPNET_BUILD
-      #define POPNET_API __declspec(dllexport)
-    #else
-      #define POPNET_API __declspec(dllimport)
-    #endif
-  #else
-    #define POPNET_API __attribute__((visibility("default")))
-  #endif
+#ifdef _MSC_VER
+#ifdef POPNET_BUILD
+#define POPNET_API __declspec(dllexport)
 #else
-  #define POPNET_API
+#define POPNET_API __declspec(dllimport)
+#endif
+#else
+#define POPNET_API __attribute__((visibility("default")))
+#endif
+#else
+#define POPNET_API
 #endif
 
 #ifdef __cplusplus
-  #ifdef _MSC_VER
-    #define POPNET_RESTRICT __restrict
-  #elif defined(__clang__) || defined(__GNUC__)
-    #define POPNET_RESTRICT __restrict__
-  #else
-    #define POPNET_RESTRICT
-  #endif
+#ifdef _MSC_VER
+#define POPNET_RESTRICT __restrict
+#elif defined(__clang__) || defined(__GNUC__)
+#define POPNET_RESTRICT __restrict__
 #else
-  #define POPNET_RESTRICT restrict
+#define POPNET_RESTRICT
+#endif
+#else
+#define POPNET_RESTRICT restrict
 #endif
 
 #ifdef _MSC_VER
-    #define POPNET_INLINE __forceinline
+#define POPNET_INLINE __forceinline
 #elif defined(__GNUC__) || defined(__clang__)
-    #define POPNET_INLINE inline __attribute__((always_inline))
+#define POPNET_INLINE inline __attribute__((always_inline))
 #else
-    #define POPNET_INLINE inline
+#define POPNET_INLINE inline
 #endif
 
 #ifndef NDEBUG
-    #include <assert.h>
-    #define POPNET_EXPECT(cond) assert(cond)
-    #define POPNET_UNREACHABLE() assert(false)
+#include <assert.h>
+#define POPNET_EXPECT(cond) assert(cond)
+#define POPNET_UNREACHABLE() assert(false)
 #else
-    #ifdef _MSC_VER
-        #define POPNET_EXPECT(cond) __assume(cond)
-        #define POPNET_UNREACHABLE() __assume(0)
-    #elif defined(__GNUC__) || defined(__clang__) 
-        #define POPNET_EXPECT(cond) __builtin_assume(cond)
-        #define POPNET_UNREACHABLE() __builtin_unreachable()
-    #else
-        #define POPNET_EXPECT(cond) ((void)0)
-        #define POPNET_UNREACHABLE() ((void)0)
-    #endif
+#ifdef _MSC_VER
+#define POPNET_EXPECT(cond) __assume(cond)
+#define POPNET_UNREACHABLE() __assume(0)
+#elif defined(__GNUC__) || defined(__clang__)
+#define POPNET_EXPECT(cond) __builtin_assume(cond)
+#define POPNET_UNREACHABLE() __builtin_unreachable()
+#else
+#define POPNET_EXPECT(cond) ((void)0)
+#define POPNET_UNREACHABLE() ((void)0)
+#endif
 #endif
 
 #define POPNET_MAX_DIMS 4
 #define POPNET_MAX_SRC 8
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-/// 
+///
 /// Types
 ///
 
-typedef enum {
+typedef enum
+{
   POPNET_TYPE_NONE = 0,
   POPNET_TYPE_I32,
   POPNET_TYPE_F32,
 } popnet_type;
 
-typedef enum {
+typedef enum
+{
   POPNET_OP_NONE = 0,
 
-  // Element-wise 
+  // Element-wise
   POPNET_OP_ADD,
   POPNET_OP_SUB,
   POPNET_OP_MUL,
@@ -112,7 +115,7 @@ typedef struct popnet_tensor popnet_tensor;
 typedef struct popnet_graph popnet_graph;
 
 ///
-/// Tensor 
+/// Tensor
 ///
 
 POPNET_API popnet_tensor* popnet_empty(popnet_type dtype, popnet_shape shape);
@@ -167,7 +170,6 @@ POPNET_API popnet_tensor* popnet_min(popnet_tensor* a, uint8_t axis_mask);
 
 POPNET_API popnet_tensor* popnet_matmul(popnet_tensor* a, popnet_tensor* b);
 POPNET_API popnet_tensor* popnet_transpose(popnet_tensor* a);
-
 
 #ifdef __cplusplus
 }

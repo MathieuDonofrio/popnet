@@ -20,7 +20,6 @@ POPNET_INLINE static vf32 op_neg(vf32 a) { return vf32{_mm512_sub_ps(_mm512_setz
 POPNET_INLINE static vf32 op_sqr(vf32 a) { return vf32{_mm512_mul_ps(a.v, a.v)}; }
 POPNET_INLINE static vf32 op_sqrt(vf32 a) { return vf32{_mm512_sqrt_ps(a.v)}; }
 
-
 POPNET_INLINE static vf32 op_exp(vf32 a) { return vf32{_mm512_exp_ps(a.v)}; }
 POPNET_INLINE static vf32 op_log(vf32 a) { return vf32{_mm512_log_ps(a.v)}; }
 
@@ -30,7 +29,8 @@ POPNET_INLINE static vf32 op_tanh(vf32 a) { return vf32{_mm512_tanh_ps(a.v)}; }
 
 POPNET_INLINE static vf32 op_relu(vf32 a) { return vf32{_mm512_max_ps(a.v, _mm512_setzero_ps())}; }
 
-POPNET_INLINE static vf32 op_sigmoid(vf32 a) {
+POPNET_INLINE static vf32 op_sigmoid(vf32 a)
+{
   const auto vneg = _mm512_sub_ps(_mm512_setzero_ps(), a.v);
   const auto vnegexp = _mm512_exp_ps(vneg);
   const auto vdenom = _mm512_add_ps(_mm512_set1_ps(1.0f), vnegexp);
@@ -41,43 +41,48 @@ POPNET_INLINE static vf32 op_sigmoid(vf32 a) {
 /// Templated Kernels
 ///
 
-template<auto OpFunc>
-void popnet_elemwise(const vf32* POPNET_RESTRICT a, vf32* POPNET_RESTRICT b, size_t n) {
+template <auto OpFunc> void popnet_elemwise(const vf32* POPNET_RESTRICT a, vf32* POPNET_RESTRICT b, size_t n)
+{
 
   const size_t full_vectors = n / vf32::elements;
   const size_t tail_elements = n % vf32::elements;
 
-  for (size_t i = 0; i < full_vectors; i++) {
-      const auto aa = vf32::load(a + i);
-      const vf32 bb = OpFunc(aa);
-      bb.store(b + i);
+  for (size_t i = 0; i < full_vectors; i++)
+  {
+    const auto aa = vf32::load(a + i);
+    const vf32 bb = OpFunc(aa);
+    bb.store(b + i);
   }
 
-  if(tail_elements > 0) {
-      const vf32::mask_t m = (1 << tail_elements) - 1;
-      const auto aa = vf32::load(a + full_vectors, m);
-      const vf32 bb = OpFunc(aa);
-      bb.store(b + full_vectors, m);
+  if (tail_elements > 0)
+  {
+    const vf32::mask_t m = (1 << tail_elements) - 1;
+    const auto aa = vf32::load(a + full_vectors, m);
+    const vf32 bb = OpFunc(aa);
+    bb.store(b + full_vectors, m);
   }
 }
 
-template<auto OpFunc>
-void popnet_elemwise(const vf32* POPNET_RESTRICT a, const vf32* POPNET_RESTRICT b, vf32* POPNET_RESTRICT c, size_t n) {
+template <auto OpFunc>
+void popnet_elemwise(const vf32* POPNET_RESTRICT a, const vf32* POPNET_RESTRICT b, vf32* POPNET_RESTRICT c, size_t n)
+{
 
   const size_t full_vectors = n / vf32::elements;
   const size_t tail_elements = n % vf32::elements;
 
-  for (size_t i = 0; i < full_vectors; i++) {
-      const auto [aa, bb] = vf32::load2(a + i, b + i);
-      const vf32 cc = OpFunc(aa, bb);
-      cc.store(c + i);
+  for (size_t i = 0; i < full_vectors; i++)
+  {
+    const auto [aa, bb] = vf32::load2(a + i, b + i);
+    const vf32 cc = OpFunc(aa, bb);
+    cc.store(c + i);
   }
 
-  if(tail_elements > 0) {
-      const vf32::mask_t m = (1 << tail_elements) - 1;
-      const auto [aa, bb] = vf32::load2(a + full_vectors, b + full_vectors, m);
-      const vf32 cc = OpFunc(aa, bb);
-      cc.store(c + full_vectors, m);
+  if (tail_elements > 0)
+  {
+    const vf32::mask_t m = (1 << tail_elements) - 1;
+    const auto [aa, bb] = vf32::load2(a + full_vectors, b + full_vectors, m);
+    const vf32 cc = OpFunc(aa, bb);
+    cc.store(c + full_vectors, m);
   }
 }
 

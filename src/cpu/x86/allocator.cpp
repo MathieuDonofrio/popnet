@@ -19,7 +19,4 @@ void* popnet_alloc(popnet_type dtype, popnet_shape shape)
   return malloc(size);
 }
 
-void popnet_free(void* ptr)
-{
-  free(ptr);
-}
+void popnet_free(void* ptr) { free(ptr); }

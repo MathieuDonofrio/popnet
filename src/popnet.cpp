@@ -1,9 +1,9 @@
 #include "popnet.h"
 
-#include <ranges>
-#include <vector>
-#include <span>
 #include <array>
+#include <ranges>
+#include <span>
+#include <vector>
 
 #include "allocator.h"
 #include "elemwise.h"
@@ -30,14 +30,14 @@ struct popnet_graph
 };
 
 ///
-/// Tensor 
+/// Tensor
 ///
 
 POPNET_INLINE static bool popnet_valid_shape(const popnet_shape& shape)
 {
-  for(size_t i = 0; i < POPNET_MAX_DIMS; i++)
+  for (size_t i = 0; i < POPNET_MAX_DIMS; i++)
   {
-    if(shape.dim[i] == 0) return false;
+    if (shape.dim[i] == 0) return false;
   }
   return true;
 }
@@ -70,14 +70,14 @@ popnet_tensor* popnet_empty(popnet_type dtype, popnet_shape shape)
 
 popnet_tensor* popnet_empty_like(const popnet_tensor* tensor)
 {
-  if(!tensor) return nullptr;
+  if (!tensor) return nullptr;
 
   return popnet_empty(tensor->dtype, tensor->shape);
 }
 
 POPNET_API void popnet_free(popnet_tensor* tensor)
 {
-  if(!tensor) return;
+  if (!tensor) return;
 
   POPNET_EXPECT(popnet_valid_tensor(tensor));
 
@@ -104,7 +104,7 @@ size_t popnet_nelems(popnet_shape shape)
 {
   size_t nelems = 1;
 
-  for(size_t i = 0; i < POPNET_MAX_DIMS; i++)
+  for (size_t i = 0; i < POPNET_MAX_DIMS; i++)
   {
     nelems *= shape.dim[i];
   }
@@ -130,16 +130,16 @@ void popnet_graph_free(popnet_graph* graph)
 
 void popnet_graph_build_forward(popnet_graph* graph, popnet_tensor* tensor)
 {
-  if(!tensor) return;
+  if (!tensor) return;
 
-  for(auto node : graph->nodes)
+  for (auto node : graph->nodes)
   {
-    if(node == tensor) return;
+    if (node == tensor) return;
   }
 
-  for(auto src : tensor->src)
+  for (auto src : tensor->src)
   {
-    if(src)
+    if (src)
     {
       popnet_graph_build_forward(graph, src);
     }
@@ -161,11 +161,8 @@ POPNET_INLINE static bool popnet_broadcastable(const popnet_tensor* a, const pop
 {
   // TODO allow scalar broadcasting
   // TODO allow full broadcasting rules
-  return a && b 
-    && (a->shape.dim[0] == b->shape.dim[0]) 
-    && (a->shape.dim[1] == b->shape.dim[1]) 
-    && (a->shape.dim[2] == b->shape.dim[2]) 
-    && (a->shape.dim[3] == b->shape.dim[3]);
+  return a && b && (a->shape.dim[0] == b->shape.dim[0]) && (a->shape.dim[1] == b->shape.dim[1]) &&
+         (a->shape.dim[2] == b->shape.dim[2]) && (a->shape.dim[3] == b->shape.dim[3]);
 }
 
 popnet_tensor* popnet_add(popnet_tensor* a, popnet_tensor* b)
@@ -192,8 +189,8 @@ popnet_tensor* popnet_sub(popnet_tensor* a, popnet_tensor* b)
   result->src[1] = b;
 
   return result;
-} 
-  
+}
+
 popnet_tensor* popnet_mul(popnet_tensor* a, popnet_tensor* b)
 {
   POPNET_EXPECT(popnet_broadcastable(b, a));
@@ -332,15 +329,15 @@ popnet_tensor* popnet_sigmoid(popnet_tensor* a)
 
 POPNET_INLINE static bool popnet_valid_axis_mask(uint8_t axis_mask)
 {
-  return axis_mask != 0  // at least one axis must be reduced
-    && (axis_mask & ~0x0F) == 0; // only 4 dimensions supported
+  return axis_mask != 0               // at least one axis must be reduced
+         && (axis_mask & ~0x0F) == 0; // only 4 dimensions supported
 }
 
 POPNET_INLINE static popnet_shape popnet_reduce_shape(const popnet_tensor* a, uint8_t axis_mask)
 {
   popnet_shape shape;
 
-  for(size_t i = 0; i < POPNET_MAX_DIMS; i++)
+  for (size_t i = 0; i < POPNET_MAX_DIMS; i++)
   {
     shape.dim[i] = (axis_mask & (1 << i)) ? 1 : a->shape.dim[i];
   }
