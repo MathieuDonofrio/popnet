@@ -64,7 +64,7 @@ extern "C"
 #endif
 
 ///
-/// Types
+/// Tensor
 ///
 
 typedef enum
@@ -111,12 +111,14 @@ typedef struct popnet_shape
   size_t dim[POPNET_MAX_DIMS];
 } popnet_shape;
 
-typedef struct popnet_tensor popnet_tensor;
-typedef struct popnet_graph popnet_graph;
+POPNET_INLINE size_t popnet_nelems(popnet_shape shape)
+{
+  const size_t size = shape.dim[0] * shape.dim[1] * shape.dim[2] * shape.dim[3];
+  POPNET_EXPECT(size > 0);
+  return size;
+}
 
-///
-/// Tensor
-///
+typedef struct popnet_tensor popnet_tensor;
 
 POPNET_API popnet_tensor* popnet_empty(popnet_type dtype, popnet_shape shape);
 POPNET_API popnet_tensor* popnet_empty_like(const popnet_tensor* tensor);
@@ -126,11 +128,11 @@ POPNET_API void popnet_free(popnet_tensor* tensor);
 POPNET_API popnet_type popnet_dtypeof(const popnet_tensor* tensor);
 POPNET_API popnet_shape popnet_shapeof(const popnet_tensor* tensor);
 
-POPNET_API size_t popnet_nelems(popnet_shape shape);
-
 ///
 /// Graph
 ///
+
+typedef struct popnet_graph popnet_graph;
 
 POPNET_API popnet_graph* popnet_graph_alloc();
 POPNET_API void popnet_graph_free(popnet_graph* graph);

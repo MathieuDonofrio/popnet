@@ -2,19 +2,18 @@
 
 #include "popnet.h"
 
-void popnet_add_f32(const void* POPNET_RESTRICT a, const void* POPNET_RESTRICT b, void* POPNET_RESTRICT c, size_t n);
-void popnet_sub_f32(const void* POPNET_RESTRICT a, const void* POPNET_RESTRICT b, void* POPNET_RESTRICT c, size_t n);
-void popnet_mul_f32(const void* POPNET_RESTRICT a, const void* POPNET_RESTRICT b, void* POPNET_RESTRICT c, size_t n);
-void popnet_div_f32(const void* POPNET_RESTRICT a, const void* POPNET_RESTRICT b, void* POPNET_RESTRICT c, size_t n);
-
-void popnet_abs_f32(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t n);
-void popnet_neg_f32(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t n);
-void popnet_sqr_f32(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t n);
-void popnet_sqrt_f32(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t n);
-void popnet_exp_f32(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t n);
-void popnet_log_f32(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t n);
-void popnet_sin_f32(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t n);
-void popnet_cos_f32(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t n);
-void popnet_tanh_f32(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t n);
-void popnet_relu_f32(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t n);
-void popnet_sigmoid_f32(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t n);
+void popnet_compute_add(popnet_tensor* dst);
+void popnet_compute_sub(popnet_tensor* dst);
+void popnet_compute_mul(popnet_tensor* dst);
+void popnet_compute_div(popnet_tensor* dst);
+void popnet_compute_abs(popnet_tensor* dst);
+void popnet_compute_neg(popnet_tensor* dst);
+void popnet_compute_sqr(popnet_tensor* dst);
+void popnet_compute_sqrt(popnet_tensor* dst);
+void popnet_compute_exp(popnet_tensor* dst);
+void popnet_compute_log(popnet_tensor* dst);
+void popnet_compute_sin(popnet_tensor* dst);
+void popnet_compute_cos(popnet_tensor* dst);
+void popnet_compute_tanh(popnet_tensor* dst);
+void popnet_compute_relu(popnet_tensor* dst);
+void popnet_compute_sigmoid(popnet_tensor* dst);
