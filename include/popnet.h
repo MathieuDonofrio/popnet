@@ -127,6 +127,10 @@ POPNET_API void popnet_free(popnet_tensor* tensor);
 POPNET_API popnet_type popnet_dtypeof(const popnet_tensor* tensor);
 POPNET_API popnet_shape popnet_shapeof(const popnet_tensor* tensor);
 
+POPNET_API bool popnet_set_data(const popnet_tensor* tensor, const void* src, popnet_type src_dtype, size_t offset,
+                                size_t n);
+POPNET_API bool popnet_get_data(const popnet_tensor* tensor, void* dst, popnet_type dst_dtype, size_t offset, size_t n);
+
 ///
 /// Graph
 ///

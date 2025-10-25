@@ -46,3 +46,41 @@ popnet_type popnet_dtypeof(const popnet_tensor* tensor)
 }
 
 popnet_shape popnet_shapeof(const popnet_tensor* tensor) { return tensor ? tensor->shape : popnet_shape{0}; }
+
+bool popnet_set_data(const popnet_tensor* tensor, const void* src, popnet_type src_dtype, size_t offset, size_t n)
+{
+  POPNET_EXPECT(popnet_valid_tensor(tensor));
+  POPNET_EXPECT(src != nullptr);
+  POPNET_EXPECT(popnet_valid_dtype(src_dtype));
+  POPNET_EXPECT(offset + n <= popnet_nelems(tensor->shape));
+
+  if (tensor->dtype == POPNET_TYPE_F32 && src_dtype == POPNET_TYPE_F32)
+  {
+    float* dst_ptr = static_cast<float*>(tensor->data) + offset;
+    const float* src_ptr = static_cast<const float*>(src);
+    memcpy(dst_ptr, src_ptr, n * sizeof(float)); // TODO backend copy
+  }
+
+  POPNET_UNREACHABLE(); // TODO
+
+  return false;
+}
+
+bool popnet_get_data(const popnet_tensor* tensor, void* dst, popnet_type dst_dtype, size_t offset, size_t n)
+{
+  POPNET_EXPECT(popnet_valid_tensor(tensor));
+  POPNET_EXPECT(dst != nullptr);
+  POPNET_EXPECT(popnet_valid_dtype(dst_dtype));
+  POPNET_EXPECT(offset + n <= popnet_nelems(tensor->shape));
+
+  if (tensor->dtype == POPNET_TYPE_F32 && dst_dtype == POPNET_TYPE_F32)
+  {
+    const float* src_ptr = static_cast<const float*>(tensor->data) + offset;
+    float* dst_ptr = static_cast<float*>(dst);
+    memcpy(dst_ptr, src_ptr, n * sizeof(float)); // TODO backend copy
+  }
+
+  POPNET_UNREACHABLE(); // TODO
+
+  return false;
+}

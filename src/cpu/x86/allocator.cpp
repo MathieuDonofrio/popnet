@@ -11,7 +11,6 @@ void* popnet_alloc(popnet_type dtype, popnet_shape shape)
   switch (dtype)
   {
   case POPNET_TYPE_F32: size = sizeof(float) * nelems; break;
-  case POPNET_TYPE_I32: size = sizeof(int32_t) * nelems; break;
   default: POPNET_UNREACHABLE(); break;
   }
 
