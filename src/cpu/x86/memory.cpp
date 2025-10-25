@@ -1,11 +1,14 @@
-#include "allocator.h"
+#include "memory.h"
 
 #include <new>
 #include <stdlib.h>
 
 void* popnet_alloc(popnet_type dtype, popnet_shape shape)
 {
-  size_t nelems = popnet_nelems(shape);
+  const size_t nelems = popnet_nelems(shape);
+
+  if (nelems == 0) return nullptr;
+
   size_t size = 0;
 
   switch (dtype)
@@ -17,8 +20,12 @@ void* popnet_alloc(popnet_type dtype, popnet_shape shape)
   POPNET_EXPECT(size > 0);
 
   // Allocate memory aligned to the hardware's cache line size for optimal SIMD access and to minimize false sharing
-  // between threads.
+// between threads.
+#ifndef __cpp_lib_hardware_interference_size
+  constexpr size_t alignment = 64; // reasonable default for modern CPUs
+#else
   constexpr size_t alignment = std::hardware_destructive_interference_size;
+#endif
 
 #ifdef _MSC_VER
   void* ptr = _aligned_malloc(size, alignment);
@@ -35,9 +42,16 @@ void* popnet_alloc(popnet_type dtype, popnet_shape shape)
 
 void popnet_free(void* ptr)
 {
+  if (!ptr) return;
+
 #if defined(_MSC_VER)
   _aligned_free(ptr);
 #else
   free(ptr);
 #endif
+}
+
+void popnet_memcpy(void* POPNET_RESTRICT dst, const void* POPNET_RESTRICT src, size_t count, MemcpyKind kind)
+{
+  memcpy(dst, src, count);
 }

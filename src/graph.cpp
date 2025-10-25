@@ -52,22 +52,22 @@ void popnet_graph_compute_forward(popnet_graph* graph)
     case POPNET_OP_RELU: popnet_compute_relu(node); break;
     case POPNET_OP_SIGMOID: popnet_compute_sigmoid(node); break;
     case POPNET_OP_SUM:
-      POPNET_UNREACHABLE(); /** TODO */
+      POPNET_UNREACHABLE(); // TODO
       break;
     case POPNET_OP_MEAN:
-      POPNET_UNREACHABLE(); /** TODO */
+      POPNET_UNREACHABLE(); // TODO
       break;
     case POPNET_OP_MAX:
-      POPNET_UNREACHABLE(); /** TODO */
+      POPNET_UNREACHABLE(); // TODO
       break;
     case POPNET_OP_MIN:
-      POPNET_UNREACHABLE(); /** TODO */
+      POPNET_UNREACHABLE(); // TODO
       break;
     case POPNET_OP_MATMUL:
-      POPNET_UNREACHABLE(); /** TODO */
+      POPNET_UNREACHABLE(); // TODO
       break;
     case POPNET_OP_TRANSPOSE:
-      POPNET_UNREACHABLE(); /** TODO */
+      POPNET_UNREACHABLE(); // TODO
       break;
     default: POPNET_UNREACHABLE(); break;
     }

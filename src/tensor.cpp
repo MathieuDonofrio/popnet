@@ -1,6 +1,6 @@
 #include "tensor.h"
 
-#include "allocator.h"
+#include "memory.h"
 
 popnet_tensor* popnet_empty(popnet_type dtype, popnet_shape shape)
 {
@@ -56,9 +56,7 @@ bool popnet_set_data(const popnet_tensor* tensor, const void* src, popnet_type s
 
   if (tensor->dtype == POPNET_TYPE_F32 && src_dtype == POPNET_TYPE_F32)
   {
-    float* dst_ptr = static_cast<float*>(tensor->data) + offset;
-    const float* src_ptr = static_cast<const float*>(src);
-    memcpy(dst_ptr, src_ptr, n * sizeof(float)); // TODO backend copy
+    popnet_memcpy(static_cast<float*>(tensor->data) + offset, src, n * sizeof(float), MemcpyKind::HostToDevice);
   }
 
   POPNET_UNREACHABLE(); // TODO
@@ -75,9 +73,7 @@ bool popnet_get_data(const popnet_tensor* tensor, void* dst, popnet_type dst_dty
 
   if (tensor->dtype == POPNET_TYPE_F32 && dst_dtype == POPNET_TYPE_F32)
   {
-    const float* src_ptr = static_cast<const float*>(tensor->data) + offset;
-    float* dst_ptr = static_cast<float*>(dst);
-    memcpy(dst_ptr, src_ptr, n * sizeof(float)); // TODO backend copy
+    popnet_memcpy(dst, static_cast<const float*>(tensor->data) + offset, n * sizeof(float), MemcpyKind::DeviceToHost);
   }
 
   POPNET_UNREACHABLE(); // TODO
