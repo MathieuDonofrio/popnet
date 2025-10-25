@@ -162,7 +162,7 @@ popnet_tensor* popnet_sigmoid(popnet_tensor* a)
   return result;
 }
 
-popnet_tensor* popnet_sum_row(popnet_tensor* a, uint8_t axis_mask)
+popnet_tensor* popnet_sum(popnet_tensor* a, uint8_t axis_mask)
 {
   POPNET_EXPECT(popnet_valid_axis_mask(axis_mask));
 
@@ -174,7 +174,7 @@ popnet_tensor* popnet_sum_row(popnet_tensor* a, uint8_t axis_mask)
   return result;
 }
 
-popnet_tensor* popnet_mean_row(popnet_tensor* a, uint8_t axis_mask)
+popnet_tensor* popnet_mean(popnet_tensor* a, uint8_t axis_mask)
 {
   POPNET_EXPECT(popnet_valid_axis_mask(axis_mask));
 
@@ -186,7 +186,7 @@ popnet_tensor* popnet_mean_row(popnet_tensor* a, uint8_t axis_mask)
   return result;
 }
 
-popnet_tensor* popnet_max_row(popnet_tensor* a, uint8_t axis_mask)
+popnet_tensor* popnet_max(popnet_tensor* a, uint8_t axis_mask)
 {
   POPNET_EXPECT(popnet_valid_axis_mask(axis_mask));
 
@@ -198,7 +198,7 @@ popnet_tensor* popnet_max_row(popnet_tensor* a, uint8_t axis_mask)
   return result;
 }
 
-popnet_tensor* popnet_min_row(popnet_tensor* a, uint8_t axis_mask)
+popnet_tensor* popnet_min(popnet_tensor* a, uint8_t axis_mask)
 {
   POPNET_EXPECT(popnet_valid_axis_mask(axis_mask));
 
