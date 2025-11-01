@@ -29,12 +29,19 @@ option(POPNET_LTO "Enable link-time optimization (LTO) for improved runtime perf
 set(POPNET_BACKEND "CPU" CACHE STRING "Select the compute backend (CPU, CUDA)")
 set_property(CACHE POPNET_BACKEND PROPERTY STRINGS CPU CUDA)
 
+# Sanitizers
+
+option(POPNET_ASAN "Enable AddressSanitizer (ASAN) for detecting memory errors" OFF)
+option(POPNET_UBSAN "Enable UndefinedBehaviorSanitizer (UBSAN) for detecting undefined behavior" OFF)
+option(POPNET_TSAN "Enable ThreadSanitizer (TSAN) for detecting data races" OFF)
+
 #
 # Includes
 #
 
 include(cmake/cpu-native-tuning.cmake)
 include(cmake/interprocedural-optimization.cmake)
+include(cmake/sanitizers.cmake)
 
 #
 # Popnet Lib
