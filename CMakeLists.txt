@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 
 #
 # Project
@@ -34,6 +34,7 @@ set_property(CACHE POPNET_BACKEND PROPERTY STRINGS CPU CUDA)
 #
 
 include(cmake/cpu-native-tuning.cmake)
+include(cmake/interprocedural-optimization.cmake)
 
 #
 # Popnet Lib
@@ -51,6 +52,8 @@ target_include_directories(popnet
 )
 
 target_include_directories(popnet PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+
+enable_popnet_ipo(popnet)
 
 add_library(popnet_internal INTERFACE)
 
