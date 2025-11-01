@@ -14,8 +14,26 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Options
 #
 
-option(BUILD_TESTS "Build tests" OFF)
-option(BUILD_BENCHMARKS "Build benchmarks" OFF)
+# Build Artefacts
+
+option(POPNET_BUILD_TESTS "Build unit tests" OFF)
+option(POPNET_BUILD_BENCHMARKS "Build performance benchmarks" OFF)
+
+# Optimization and Compilation
+
+option(POPNET_NATIVE "Enable native CPU tuning when building on the host system. Automatically disabled when cross-compiling." ON)
+option(POPNET_LTO "Enable link-time optimization (LTO) for improved runtime performance. Requires compiler and linker support." OFF)
+
+# Compute Backend
+
+set(POPNET_BACKEND "CPU" CACHE STRING "Select the compute backend (CPU, CUDA)")
+set_property(CACHE POPNET_BACKEND PROPERTY STRINGS CPU CUDA)
+
+#
+# Includes
+#
+
+include(cmake/cpu-native-tuning.cmake)
 
 #
 # Popnet Lib
@@ -48,7 +66,7 @@ target_link_libraries(popnet_internal INTERFACE popnet)
 # Testing
 #
 
-if(BUILD_TESTS)
+if(POPNET_BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
 endif()
