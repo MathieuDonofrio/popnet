@@ -70,6 +70,11 @@ extern "C"
 typedef enum
 {
   POPNET_TYPE_NONE = 0,
+  POPNET_TYPE_T,
+  POPNET_TYPE_I8,
+  POPNET_TYPE_I16,
+  POPNET_TYPE_I32,
+  POPNET_TYPE_F16,
   POPNET_TYPE_F32,
 } popnet_type;
 
