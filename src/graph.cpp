@@ -31,6 +31,8 @@ void popnet_graph_build_forward(popnet_graph* graph, popnet_tensor* tensor)
 
 void popnet_graph_compute_forward(popnet_graph* graph)
 {
+  if (!graph) return;
+
   for (auto* node : graph->nodes)
   {
     switch (node->op)
