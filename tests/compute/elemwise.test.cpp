@@ -59,8 +59,8 @@ TEST_CASE("elementwise unary compute")
 
       for (int i = 0; i < n; i++)
       {
-        const float out = output_data[i];
-        const float expected = expected_data[i];
+        const auto out = output_data[i];
+        const auto expected = expected_data[i];
 
         if (std::isnan(expected))
         {
@@ -154,11 +154,13 @@ TEST_CASE("element binary compute")
       auto lhs_data = generate_data<DType>(n);
       auto rhs_data = generate_data<DType>(n);
 
-      std::vector<float> expected_data;
+      decltype(lhs_data) expected_data;
       expected_data.reserve(n);
 
       for (size_t i = 0; i < n; ++i)
+      {
         expected_data.push_back(ScalarCompute(lhs_data[i], rhs_data[i]));
+      }
 
       popnet_tensor* lhs = popnet_empty(DType, shape);
       popnet_tensor* rhs = popnet_empty(DType, shape);
@@ -176,13 +178,13 @@ TEST_CASE("element binary compute")
 
       Compute(dst);
 
-      std::vector<float> output_data(n);
+      decltype(lhs_data) output_data(n);
       REQUIRE(popnet_get_data(dst, output_data.data(), DType, 0, n));
 
       for (size_t i = 0; i < n; ++i)
       {
-        const float out = output_data[i];
-        const float expected = expected_data[i];
+        const auto out = output_data[i];
+        const auto expected = expected_data[i];
 
         if (std::isnan(expected))
         {
