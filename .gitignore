@@ -16,4 +16,5 @@ CMakeUserPresets.json
 
 # Build directories
 
+build
 cmake-build-*
