@@ -60,6 +60,7 @@ using vf32 = simd<POPNET_TYPE_F32>;
 
 template <> struct simd<POPNET_TYPE_T>
 {
+  using scalar_t = int8_t;
 #if POPNET_AVX512
   using reg_t = __m512i;
   using mask_t = __mmask64;
@@ -109,6 +110,7 @@ template <> struct simd<POPNET_TYPE_T>
 
 template <> struct simd<POPNET_TYPE_F32>
 {
+  using scalar_t = float;
 #if POPNET_AVX512
   using reg_t = __m512;
   using mask_t = __mmask16;

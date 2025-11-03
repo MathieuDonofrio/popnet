@@ -57,9 +57,8 @@ bool popnet_set_data(const popnet_tensor* tensor, const void* src, popnet_type s
   if (tensor->dtype == POPNET_TYPE_F32 && src_dtype == POPNET_TYPE_F32)
   {
     popnet_memcpy(static_cast<float*>(tensor->data) + offset, src, n * sizeof(float), MemcpyKind::HostToDevice);
+    return true;
   }
-
-  POPNET_UNREACHABLE(); // TODO
 
   return false;
 }
@@ -74,9 +73,8 @@ bool popnet_get_data(const popnet_tensor* tensor, void* dst, popnet_type dst_dty
   if (tensor->dtype == POPNET_TYPE_F32 && dst_dtype == POPNET_TYPE_F32)
   {
     popnet_memcpy(dst, static_cast<const float*>(tensor->data) + offset, n * sizeof(float), MemcpyKind::DeviceToHost);
+    return true;
   }
-
-  POPNET_UNREACHABLE(); // TODO
 
   return false;
 }
