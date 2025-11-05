@@ -1,6 +1,7 @@
+#include "graph.h"
+
 #include <doctest/doctest.h>
 
-#include "graph.h"
 #include "ops.h"
 #include "tensor.h"
 

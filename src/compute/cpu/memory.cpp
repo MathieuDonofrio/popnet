@@ -20,7 +20,7 @@ void* popnet_alloc(popnet_type dtype, popnet_shape shape)
   POPNET_EXPECT(size > 0);
 
   // Allocate memory aligned to the hardware's cache line size for optimal SIMD access and to minimize false sharing
-// between threads.
+  // between threads.
 #ifndef __cpp_lib_hardware_interference_size
   constexpr size_t alignment = 64; // reasonable default for modern CPUs
 #else

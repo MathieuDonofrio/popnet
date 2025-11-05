@@ -8,11 +8,18 @@ UseTab: Never
 ColumnLimit: 120
 InsertNewlineAtEOF: true
 LineEnding: LF
-
-# Language
-
 Language: Cpp
 Standard: c++20
+
+# Includes
+
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^<.*>$'
+    Priority: 1
+  - Regex: '^".*"$'
+    Priority: 2
+SortIncludes: true
 
 # Braces
 
@@ -50,7 +57,6 @@ IndentWrappedFunctionNames: false
 
 PointerAlignment: Left
 ReflowComments: true
-SortIncludes: true
 
 # Short Constructs
 

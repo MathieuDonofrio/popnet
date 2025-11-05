@@ -3,10 +3,6 @@
 #include "simd.h"
 #include "tensor.h"
 
-///
-/// Templated Kernels
-///
-
 template <auto UnaryOpFunc> POPNET_INLINE static void popnet_compute_unary(popnet_tensor* dst)
 {
   const popnet_tensor* src = dst->src[0];
@@ -39,10 +35,6 @@ template <auto BinaryOpFunc> POPNET_INLINE static void popnet_compute_binary(pop
     POPNET_UNREACHABLE(); // TODO
   }
 }
-
-///
-/// Kernels
-///
 
 void popnet_compute_add(popnet_tensor* dst) { popnet_compute_binary<vadd>(dst); }
 void popnet_compute_sub(popnet_tensor* dst) { popnet_compute_binary<vsub>(dst); }

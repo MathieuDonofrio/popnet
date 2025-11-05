@@ -1,9 +1,10 @@
-#include <doctest/doctest.h>
-
 #include "elemwise.h"
+
+#include <doctest/doctest.h>
+#include <vector>
+
 #include "simd.h"
 #include "tensor.h"
-#include <vector>
 
 template <popnet_type DType> static auto generate_data(size_t n)
 {

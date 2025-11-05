@@ -1,8 +1,8 @@
 #pragma once
 
-#include "popnet.h"
-
 #include <array>
+
+#include "popnet.h"
 
 struct popnet_tensor
 {

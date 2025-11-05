@@ -1,7 +1,6 @@
 #pragma once
 
 #include "popnet.h"
-
 #include "tensor.h"
 
 POPNET_INLINE bool popnet_broadcastable(const popnet_tensor* a, const popnet_tensor* b)

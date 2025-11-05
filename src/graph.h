@@ -1,8 +1,8 @@
 #pragma once
 
-#include "popnet.h"
-
 #include <vector>
+
+#include "popnet.h"
 
 struct popnet_graph
 {

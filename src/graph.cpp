@@ -1,9 +1,7 @@
-
 #include "graph.h"
 
-#include "tensor.h"
-
 #include "elemwise.h"
+#include "tensor.h"
 
 popnet_graph* popnet_graph_alloc() { return new popnet_graph(); }
 

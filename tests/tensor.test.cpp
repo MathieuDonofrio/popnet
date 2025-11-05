@@ -1,7 +1,8 @@
+#include "tensor.h"
+
 #include <doctest/doctest.h>
 
 #include "simd.h"
-#include "tensor.h"
 
 TEST_CASE("popnet_nelems computes number of elements correctly")
 {

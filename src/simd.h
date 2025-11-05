@@ -1,9 +1,9 @@
-#include "popnet.h"
-
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <utility>
+
+#include "popnet.h"
 
 #ifdef _MSC_VER
 #include <intrin.h>
