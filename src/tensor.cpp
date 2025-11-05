@@ -47,6 +47,8 @@ popnet_type popnet_dtypeof(const popnet_tensor* tensor)
 
 popnet_shape popnet_shapeof(const popnet_tensor* tensor) { return tensor ? tensor->shape : popnet_shape{0}; }
 
+popnet_op popnet_opof(const popnet_tensor* tensor) { return tensor ? tensor->op : POPNET_OP_NONE; }
+
 bool popnet_set_data(const popnet_tensor* tensor, const void* src, popnet_type src_dtype, size_t offset, size_t n)
 {
   POPNET_EXPECT(popnet_valid_tensor(tensor));

@@ -17,24 +17,23 @@ TEST_CASE("popnet_empty and popnet_empty_like")
     popnet_tensor* t = popnet_empty(POPNET_TYPE_F32, shape);
 
     REQUIRE(t != nullptr);
-    REQUIRE(popnet_valid_tensor(t) == true);
-    REQUIRE(popnet_nelems(popnet_shapeof(t)) == 16);
-    REQUIRE(popnet_dtypeof(t) == POPNET_TYPE_F32);
+    CHECK(popnet_valid_tensor(t));
+    CHECK(popnet_dtypeof(t) == POPNET_TYPE_F32);
+    CHECK(popnet_opof(t) == POPNET_OP_NONE);
+    CHECK(popnet_shapeof(t) == shape);
 
-    SUBCASE("empty_like preserves shape and dtype")
+    t->op = POPNET_OP_ABS;
+
+    SUBCASE("empty_like preserves shape and dtype but not op")
     {
       popnet_tensor* t2 = popnet_empty_like(t);
+
       REQUIRE(t2 != nullptr);
-      REQUIRE(popnet_valid_tensor(t2) == true);
-      REQUIRE(popnet_dtypeof(t2) == POPNET_TYPE_F32);
-
-      auto shape2 = popnet_shapeof(t2);
-      for (size_t i = 0; i < POPNET_MAX_DIMS; ++i)
-      {
-        REQUIRE(shape2.dim[i] == shape.dim[i]);
-      }
-
-      REQUIRE(t2->data != t->data);
+      CHECK(popnet_valid_tensor(t2));
+      CHECK(popnet_dtypeof(t2) == POPNET_TYPE_F32);
+      CHECK(popnet_opof(t2) == POPNET_OP_NONE);
+      CHECK(popnet_shapeof(t2) == shape);
+      CHECK(t2->data != t->data);
 
       popnet_free(t2);
     }
@@ -42,13 +41,18 @@ TEST_CASE("popnet_empty and popnet_empty_like")
     SUBCASE("empty_like with nullptr should fail gracefully")
     {
       popnet_tensor* bad = popnet_empty_like(nullptr);
+
       REQUIRE(bad == nullptr);
+      CHECK_FALSE(popnet_valid_tensor(bad));
+      CHECK(popnet_dtypeof(bad) == POPNET_TYPE_NONE);
+      CHECK(popnet_opof(bad) == POPNET_OP_NONE);
+      CHECK(popnet_shapeof(bad) == popnet_shape{{0, 0, 0, 0}});
     }
 
     popnet_free(t);
   };
 
-  SUBCASE("dtype = F32") { run_test.operator()<POPNET_TYPE_F32>(); }
+  SUBCASE("F32") { run_test.operator()<POPNET_TYPE_F32>(); }
 }
 
 TEST_CASE("popnet_set_data and popnet_get_data")

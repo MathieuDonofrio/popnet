@@ -16,13 +16,16 @@ struct popnet_tensor
   popnet_op op;
 };
 
+POPNET_INLINE bool operator==(const popnet_shape& a, const popnet_shape& b)
+{
+  static_assert(POPNET_MAX_DIMS == 4);
+  return a.dim[0] == b.dim[0] && a.dim[1] == b.dim[1] && a.dim[2] == b.dim[2] && a.dim[3] == b.dim[3];
+}
+
 POPNET_INLINE bool popnet_valid_shape(popnet_shape shape)
 {
-  for (size_t i = 0; i < POPNET_MAX_DIMS; i++)
-  {
-    if (shape.dim[i] == 0) return false;
-  }
-  return true;
+  static_assert(POPNET_MAX_DIMS == 4);
+  return shape.dim[0] != 0 && shape.dim[1] != 0 && shape.dim[2] != 0 && shape.dim[3] != 0;
 }
 
 POPNET_INLINE bool popnet_valid_dtype(popnet_type dtype) { return dtype != POPNET_TYPE_NONE; }
