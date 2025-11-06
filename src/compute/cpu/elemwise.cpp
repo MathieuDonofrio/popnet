@@ -10,7 +10,7 @@ template <auto UnaryOpFunc> POPNET_INLINE static void popnet_compute_unary(popne
 
   if (src->dtype == POPNET_TYPE_F32 && dst->dtype == POPNET_TYPE_F32)
   {
-    vtransform<UnaryOpFunc>(static_cast<vf32*>(dst->data), n, static_cast<const vf32*>(src->data));
+    simd_map<UnaryOpFunc, POPNET_TYPE_F32>(dst->data, n, src->data);
   }
   else
   {
@@ -27,8 +27,7 @@ template <auto BinaryOpFunc> POPNET_INLINE static void popnet_compute_binary(pop
 
   if (src0->dtype == POPNET_TYPE_F32 && src1->dtype == POPNET_TYPE_F32 && dst->dtype == POPNET_TYPE_F32)
   {
-    vtransform<BinaryOpFunc>(static_cast<vf32*>(dst->data), n, static_cast<const vf32*>(src0->data),
-                             static_cast<const vf32*>(src1->data));
+    simd_map<BinaryOpFunc, POPNET_TYPE_F32>(dst->data, n, src0->data, src1->data);
   }
   else
   {

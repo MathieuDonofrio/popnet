@@ -1,5 +1,8 @@
+#pragma once
+
 #include <algorithm>
 #include <cmath>
+#include <concepts>
 #include <cstdint>
 #include <utility>
 
@@ -43,193 +46,152 @@
 #define POPNET_SCALAR 1
 #endif
 
-template <typename T> struct hpair
+enum class simd_category
 {
-  T fst;
-  T snd;
+  scalar,
+  fixed,
+  variable
 };
 
-template <popnet_type Type> struct simd;
+template <popnet_type Type> struct simd_traits;
 
-using vt = simd<POPNET_TYPE_T>;
-using vi8 = simd<POPNET_TYPE_I8>;
-using vi16 = simd<POPNET_TYPE_I16>;
-using vi32 = simd<POPNET_TYPE_I32>;
-using vf16 = simd<POPNET_TYPE_F16>;
-using vf32 = simd<POPNET_TYPE_F32>;
-
-template <> struct simd<POPNET_TYPE_T>
-{
-  using scalar_t = int8_t;
-#if POPNET_AVX512
-  using reg_t = __m512i;
-  using mask_t = __mmask64;
-#else
-  using reg_t = uintptr_t;
-  using mask_t = uintptr_t;
-#endif
-
-  static constexpr size_t elements = sizeof(reg_t) * 8;
-  static constexpr size_t size = sizeof(reg_t) * 2;
-
-#if POPNET_AVX512
-  POPNET_INLINE static vt load(const void* p)
-  {
-    return {_mm512_loadu_si512(p), _mm512_loadu_si512(static_cast<const char*>(p) + 64)};
-  }
-
-  // TODO masked load (perhaps use byte interleaving here? The goal is to reduce memory alignment requirements, 1 byte
-  // is the smallest unit)
-
-  POPNET_INLINE static hpair<vt> load2(const void* pa, const void* pb)
-  {
-    // Load both signs first for better memory access pattern
-    const reg_t as = _mm512_loadu_si512(pa);
-    const reg_t bs = _mm512_loadu_si512(pb);
-    const reg_t am = _mm512_loadu_si512(static_cast<const char*>(pa) + 64);
-    const reg_t bm = _mm512_loadu_si512(static_cast<const char*>(pb) + 64);
-    return {vt{as, am}, vt { bs, bm }};
-  }
-
-  // TODO masked load2 (same comment as above)
-
-  POPNET_INLINE void store(void* p) const
-  {
-    _mm512_storeu_si512(p, sgn);
-    _mm512_storeu_si512(static_cast<char*>(p) + 64, mag);
-  }
-
-  // TODO masked store
-#else
-
-#endif
-
-  reg_t sgn; // sign bits
-  reg_t mag; // magnitude bits
-};
-
-template <> struct simd<POPNET_TYPE_F32>
+template <> struct simd_traits<POPNET_TYPE_F32>
 {
   using scalar_t = float;
+
+  static constexpr size_t scalar_size = sizeof(scalar_t);
+
 #if POPNET_AVX512
+  static inline constexpr simd_category category = simd_category::fixed;
+
   using reg_t = __m512;
   using mask_t = __mmask16;
-#else
-  using reg_t = float;
-  using mask_t = bool;
-#endif
 
-  static constexpr size_t elements = sizeof(reg_t) / sizeof(float);
-  static constexpr size_t size = sizeof(reg_t);
+  static consteval size_t length() { return sizeof(reg_t) / scalar_size; }
 
-#if POPNET_AVX512
-  POPNET_INLINE static vf32 zero() { return {_mm512_setzero_ps()}; }
+  POPNET_INLINE static reg_t load(const void* p) { return {_mm512_loadu_ps(p)}; }
+  POPNET_INLINE static reg_t load(const void* p, const mask_t m) { return {_mm512_maskz_loadu_ps(m, p)}; }
 
-  POPNET_INLINE static vf32 load(const void* p) { return {_mm512_loadu_ps(p)}; }
-  POPNET_INLINE static vf32 load(const void* p, mask_t m) { return {_mm512_maskz_loadu_ps(m, p)}; }
-  POPNET_INLINE static hpair<vf32> load2(const void* pa, const void* pb) { return {vf32::load(pa), vf32::load(pb)}; }
-  POPNET_INLINE static hpair<vf32> load2(const void* pa, const void* pb, mask_t m)
-  {
-    return {vf32::load(pa, m), vf32::load(pb, m)};
-  }
-
-  POPNET_INLINE void store(void* p) const { _mm512_storeu_ps(p, v); }
-  POPNET_INLINE void store(void* p, mask_t m) const { _mm512_mask_storeu_ps(p, m, v); }
+  POPNET_INLINE static void store(void* p, const reg_t v) { _mm512_storeu_ps(p, v); }
+  POPNET_INLINE static void store(void* p, const mask_t m, const reg_t v) { _mm512_mask_storeu_ps(p, m, v); }
 
 #else
-  POPNET_INLINE static vf32 zero() { return {0}; }
+  static inline constexpr simd_category category = simd_category::scalar;
 
-  POPNET_INLINE static vf32 load(const void* p) { return {*reinterpret_cast<const reg_t*>(p)}; }
-  POPNET_INLINE static vf32 load(const void* p, mask_t m) { return {*reinterpret_cast<const reg_t*>(p)}; }
-  POPNET_INLINE static hpair<vf32> load2(const void* pa, const void* pb) { return {vf32::load(pa), vf32::load(pb)}; }
-  POPNET_INLINE static hpair<vf32> load2(const void* pa, const void* pb, mask_t m)
-  {
-    return {vf32::load(pa, m), vf32::load(pb, m)};
-  }
+  using reg_t = scalar_t;
 
-  POPNET_INLINE void store(void* p) const { *reinterpret_cast<reg_t*>(p) = v; }
-  POPNET_INLINE void store(void* p, mask_t m) const { *reinterpret_cast<reg_t*>(p) = v; }
+  static consteval size_t length() { return 1; }
 #endif
-
-  reg_t v;
 };
 
-#if POPNET_AVX512
-
-POPNET_INLINE vf32 vabs(vf32 a) { return vf32{_mm512_abs_ps(a.v)}; }
-POPNET_INLINE vf32 vneg(vf32 a) { return vf32{_mm512_sub_ps(_mm512_setzero_ps(), a.v)}; }
-
-POPNET_INLINE vf32 vsqr(vf32 a) { return vf32{_mm512_mul_ps(a.v, a.v)}; }
-POPNET_INLINE vf32 vsqrt(vf32 a) { return vf32{_mm512_sqrt_ps(a.v)}; }
-
-POPNET_INLINE vf32 vexp(vf32 a) { return vf32{_mm512_exp_ps(a.v)}; }
-POPNET_INLINE vf32 vlog(vf32 a) { return vf32{_mm512_log_ps(a.v)}; }
-
-POPNET_INLINE vf32 vsin(vf32 a) { return vf32{_mm512_sin_ps(a.v)}; }
-POPNET_INLINE vf32 vcos(vf32 a) { return vf32{_mm512_cos_ps(a.v)}; }
-POPNET_INLINE vf32 vtanh(vf32 a) { return vf32{_mm512_tanh_ps(a.v)}; }
-
-POPNET_INLINE vf32 vrelu(vf32 a) { return vf32{_mm512_max_ps(a.v, _mm512_setzero_ps())}; }
-
-POPNET_INLINE vf32 vsigmoid(vf32 a)
+template <auto op, popnet_type type, std::same_as<void>... T>
+POPNET_INLINE static void simd_map(void* POPNET_RESTRICT output, size_t n, const T* POPNET_RESTRICT... inputs)
 {
-  const auto vneg = _mm512_sub_ps(_mm512_setzero_ps(), a.v);
-  const auto vnegexp = _mm512_exp_ps(vneg);
-  const auto vdenom = _mm512_add_ps(_mm512_set1_ps(1.0f), vnegexp);
-  return vf32{_mm512_rcp14_ps(vdenom)}; // Approximation
+  using traits = simd_traits<type>;
+
+  if constexpr (traits::category == simd_category::fixed)
+  {
+    const size_t tail = n % traits::length();
+    const size_t body = n - tail;
+
+    for (size_t i = 0; i < body; i += traits::length())
+    {
+      const auto v = op(traits::load(reinterpret_cast<const char*>(inputs) + i * traits::scalar_size)...);
+      traits::store(reinterpret_cast<char*>(output) + i * traits::scalar_size, v);
+    }
+
+    if (tail > 0)
+    {
+      const traits::mask_t m = (1 << tail) - 1;
+      const auto v = op(traits::load(reinterpret_cast<const char*>(inputs) + body * traits::scalar_size, m)...);
+      traits::store(reinterpret_cast<char*>(output) + body * traits::scalar_size, m, v);
+    }
+  }
+  else if constexpr (traits::category == simd_category::scalar)
+  {
+    for (size_t i = 0; i < n; ++i)
+    {
+      const auto v = op(reinterpret_cast<const traits::scalar_t*>(inputs)[i]...);
+      reinterpret_cast<traits::scalar_t*>(output)[i] = v;
+    }
+  }
+  else
+  {
+    static_assert([]() { return false; }, "SIMD category not supported yet");
+  }
 }
 
-POPNET_INLINE vf32 vadd(vf32 a, vf32 b) { return vf32{_mm512_add_ps(a.v, b.v)}; }
-POPNET_INLINE vf32 vsub(vf32 a, vf32 b) { return vf32{_mm512_sub_ps(a.v, b.v)}; }
-POPNET_INLINE vf32 vmul(vf32 a, vf32 b) { return vf32{_mm512_mul_ps(a.v, b.v)}; }
-POPNET_INLINE vf32 vdiv(vf32 a, vf32 b) { return vf32{_mm512_div_ps(a.v, b.v)}; }
+using f32_t = simd_traits<POPNET_TYPE_F32>::scalar_t;
+using vf32_t = simd_traits<POPNET_TYPE_F32>::reg_t;
 
-POPNET_INLINE vf32 vfma(vf32 a, vf32 b, vf32 c) { return vf32{_mm512_fmadd_ps(a.v, b.v, c.v)}; }
+#if POPNET_AVX512
+
+POPNET_INLINE vf32_t vabs(vf32_t a) { return _mm512_abs_ps(a); }
+POPNET_INLINE vf32_t vneg(vf32_t a) { return _mm512_sub_ps(_mm512_setzero_ps(), a); }
+
+POPNET_INLINE vf32_t vsqr(vf32_t a) { return _mm512_mul_ps(a, a); }
+POPNET_INLINE vf32_t vsqrt(vf32_t a) { return _mm512_sqrt_ps(a); }
+
+POPNET_INLINE vf32_t vexp(vf32_t a) { return _mm512_exp_ps(a); }
+POPNET_INLINE vf32_t vlog(vf32_t a) { return _mm512_log_ps(a); }
+
+POPNET_INLINE vf32_t vsin(vf32_t a) { return _mm512_sin_ps(a); }
+POPNET_INLINE vf32_t vcos(vf32_t a) { return _mm512_cos_ps(a); }
+POPNET_INLINE vf32_t vtanh(vf32_t a) { return _mm512_tanh_ps(a); }
+
+POPNET_INLINE vf32_t vrelu(vf32_t a) { return _mm512_max_ps(a, _mm512_setzero_ps()); }
+
+POPNET_INLINE vf32_t vsigmoid(vf32_t a)
+{
+  const auto vneg = _mm512_sub_ps(_mm512_setzero_ps(), a);
+  const auto vnegexp = _mm512_exp_ps(vneg);
+  const auto vdenom = _mm512_add_ps(_mm512_set1_ps(1.0f), vnegexp);
+  return _mm512_rcp14_ps(vdenom);
+}
+
+POPNET_INLINE vf32_t vadd(vf32_t a, vf32_t b) { return _mm512_add_ps(a, b); }
+POPNET_INLINE vf32_t vsub(vf32_t a, vf32_t b) { return _mm512_sub_ps(a, b); }
+POPNET_INLINE vf32_t vmul(vf32_t a, vf32_t b) { return _mm512_mul_ps(a, b); }
+POPNET_INLINE vf32_t vdiv(vf32_t a, vf32_t b) { return _mm512_div_ps(a, b); }
+POPNET_INLINE vf32_t vmin(vf32_t a, vf32_t b) { return _mm512_min_ps(a, b); }
+POPNET_INLINE vf32_t vmax(vf32_t a, vf32_t b) { return _mm512_max_ps(a, b); }
+
+POPNET_INLINE vf32_t vfma(vf32_t a, vf32_t b, vf32_t c) { return _mm512_fmadd_ps(a, b, c); }
+
+POPNET_INLINE f32_t vreduce_sum(vf32_t a) { return _mm512_reduce_add_ps(a); }
+POPNET_INLINE f32_t vreduce_min(vf32_t a) { return _mm512_reduce_min_ps(a); }
+POPNET_INLINE f32_t vreduce_max(vf32_t a) { return _mm512_reduce_max_ps(a); }
 
 #else
 
-POPNET_INLINE vf32 vabs(vf32 a) { return vf32{std::fabsf(a.v)}; }
-POPNET_INLINE vf32 vneg(vf32 a) { return vf32{-a.v}; }
+POPNET_INLINE vf32_t vabs(vf32_t a) { return std::fabsf(a); }
+POPNET_INLINE vf32_t vneg(vf32_t a) { return -a; }
 
-POPNET_INLINE vf32 vsqr(vf32 a) { return vf32{a.v * a.v}; }
-POPNET_INLINE vf32 vsqrt(vf32 a) { return vf32{std::sqrtf(a.v)}; }
+POPNET_INLINE vf32_t vsqr(vf32_t a) { return a * a; }
+POPNET_INLINE vf32_t vsqrt(vf32_t a) { return std::sqrtf(a); }
 
-POPNET_INLINE vf32 vexp(vf32 a) { return vf32{std::expf(a.v)}; }
-POPNET_INLINE vf32 vlog(vf32 a) { return vf32{std::logf(a.v)}; }
+POPNET_INLINE vf32_t vexp(vf32_t a) { return std::expf(a); }
+POPNET_INLINE vf32_t vlog(vf32_t a) { return std::logf(a); }
 
-POPNET_INLINE vf32 vsin(vf32 a) { return vf32{std::sinf(a.v)}; }
-POPNET_INLINE vf32 vcos(vf32 a) { return vf32{std::cosf(a.v)}; }
-POPNET_INLINE vf32 vtanh(vf32 a) { return vf32{std::tanhf(a.v)}; }
+POPNET_INLINE vf32_t vsin(vf32_t a) { return std::sinf(a); }
+POPNET_INLINE vf32_t vcos(vf32_t a) { return std::cosf(a); }
+POPNET_INLINE vf32_t vtanh(vf32_t a) { return std::tanhf(a); }
 
-POPNET_INLINE vf32 vrelu(vf32 a) { return vf32{std::max(a.v, 0.0f)}; }
+POPNET_INLINE vf32_t vrelu(vf32_t a) { return std::max(a, 0.0f); }
 
-POPNET_INLINE vf32 vsigmoid(vf32 a) { return vf32{1 / (1 + std::expf(-a.v))}; }
+POPNET_INLINE vf32_t vsigmoid(vf32_t a) { return 1 / (1 + std::expf(-a)); }
 
-POPNET_INLINE vf32 vadd(vf32 a, vf32 b) { return vf32{a.v + b.v}; }
-POPNET_INLINE vf32 vsub(vf32 a, vf32 b) { return vf32{a.v - b.v}; }
-POPNET_INLINE vf32 vmul(vf32 a, vf32 b) { return vf32{a.v * b.v}; }
-POPNET_INLINE vf32 vdiv(vf32 a, vf32 b) { return vf32{a.v / b.v}; }
+POPNET_INLINE vf32_t vadd(vf32_t a, vf32_t b) { return a + b; }
+POPNET_INLINE vf32_t vsub(vf32_t a, vf32_t b) { return a - b; }
+POPNET_INLINE vf32_t vmul(vf32_t a, vf32_t b) { return a * b; }
+POPNET_INLINE vf32_t vdiv(vf32_t a, vf32_t b) { return a / b; }
+POPNET_INLINE vf32_t vmin(vf32_t a, vf32_t b) { return std::min(a, b); }
+POPNET_INLINE vf32_t vmax(vf32_t a, vf32_t b) { return std::max(a, b); }
 
-POPNET_INLINE vf32 vfma(vf32 a, vf32 b, vf32 c) { return vf32{std::fmaf(a.v, b.v, c.v)}; }
+POPNET_INLINE vf32_t vfma(vf32_t a, vf32_t b, vf32_t c) { return std::fmaf(a, b, c); }
+
+POPNET_INLINE f32_t vreduce_sum(vf32_t a) { return a; }
+POPNET_INLINE f32_t vreduce_min(vf32_t a) { return a; }
+POPNET_INLINE f32_t vreduce_max(vf32_t a) { return a; }
 
 #endif
-
-template <auto Func, typename T, typename... TS>
-POPNET_INLINE static void vtransform(T* POPNET_RESTRICT output, size_t n, const TS* POPNET_RESTRICT... inputs)
-{
-  const size_t full_vectors = n / T::elements;
-  const size_t tail_elements = n % T::elements;
-
-  for (size_t i = 0; i < full_vectors; i++)
-  {
-    auto b = Func(T::load(inputs + i)...);
-    b.store(output + i);
-  }
-
-  if (tail_elements > 0)
-  {
-    const T::mask_t m = (1 << tail_elements) - 1;
-    auto b = Func(T::load(inputs + full_vectors, m)...);
-    b.store(output + full_vectors, m);
-  }
-}

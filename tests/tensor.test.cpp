@@ -62,8 +62,8 @@ TEST_CASE("popnet_set_data and popnet_get_data")
     popnet_tensor* t = popnet_empty(POPNET_TYPE_F32, shape);
     REQUIRE(t != nullptr);
 
-    typename simd<DType>::scalar_t values[4] = {0, 1, 0, -1};
-    typename simd<DType>::scalar_t readback[4] = {};
+    typename simd_traits<DType>::scalar_t values[4] = {0, 1, 0, -1};
+    typename simd_traits<DType>::scalar_t readback[4] = {};
 
     SUBCASE("Full write and readback")
     {

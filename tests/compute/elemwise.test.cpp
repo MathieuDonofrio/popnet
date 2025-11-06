@@ -8,7 +8,7 @@
 
 template <popnet_type DType> static auto generate_data(size_t n)
 {
-  std::vector<typename simd<DType>::scalar_t> data;
+  std::vector<typename simd_traits<DType>::scalar_t> data;
   data.reserve(n);
 
   switch (DType)
@@ -83,10 +83,10 @@ TEST_CASE("elementwise unary compute")
     };
 
     SUBCASE("1") { run_for_n(1); }
-    SUBCASE("simd elements") { run_for_n(simd<DType>::elements); }
-    SUBCASE("simd elements + 1") { run_for_n(simd<DType>::elements + 1); }
-    SUBCASE("simd elements * 16") { run_for_n(simd<DType>::elements * 16 + 1); }
-    SUBCASE("simd elements * 16 + 1") { run_for_n(simd<DType>::elements * 16 + 1); }
+    SUBCASE("simd length") { run_for_n(simd_traits<DType>::length()); }
+    SUBCASE("simd length + 1") { run_for_n(simd_traits<DType>::length() + 1); }
+    SUBCASE("simd length * 16") { run_for_n(simd_traits<DType>::length() * 16 + 1); }
+    SUBCASE("simd length * 16 + 1") { run_for_n(simd_traits<DType>::length() * 16 + 1); }
   };
 
   SUBCASE("abs - F32")
@@ -208,10 +208,10 @@ TEST_CASE("element binary compute")
     };
 
     SUBCASE("1") { run_for_n(1); }
-    SUBCASE("simd elements") { run_for_n(simd<DType>::elements); }
-    SUBCASE("simd elements + 1") { run_for_n(simd<DType>::elements + 1); }
-    SUBCASE("simd elements * 16") { run_for_n(simd<DType>::elements * 16); }
-    SUBCASE("simd elements * 16 + 1") { run_for_n(simd<DType>::elements * 16 + 1); }
+    SUBCASE("simd elements") { run_for_n(simd_traits<DType>::length()); }
+    SUBCASE("simd elements + 1") { run_for_n(simd_traits<DType>::length() + 1); }
+    SUBCASE("simd elements * 16") { run_for_n(simd_traits<DType>::length() * 16); }
+    SUBCASE("simd elements * 16 + 1") { run_for_n(simd_traits<DType>::length() * 16 + 1); }
   };
 
   SUBCASE("add - F32")
