@@ -102,8 +102,9 @@ typedef enum
   // Reduce
   POPNET_OP_SUM,
   POPNET_OP_MEAN,
-  POPNET_OP_MAX,
+  POPNET_OP_PRODUCT,
   POPNET_OP_MIN,
+  POPNET_OP_MAX,
 
   // Linear Algebra
   POPNET_OP_MATMUL,
@@ -174,10 +175,11 @@ POPNET_API popnet_tensor* popnet_tanh(popnet_tensor* a);
 POPNET_API popnet_tensor* popnet_relu(popnet_tensor* a);
 POPNET_API popnet_tensor* popnet_sigmoid(popnet_tensor* a);
 
-POPNET_API popnet_tensor* popnet_sum(popnet_tensor* a, uint8_t axis_mask);
-POPNET_API popnet_tensor* popnet_mean(popnet_tensor* a, uint8_t axis_mask);
-POPNET_API popnet_tensor* popnet_max(popnet_tensor* a, uint8_t axis_mask);
-POPNET_API popnet_tensor* popnet_min(popnet_tensor* a, uint8_t axis_mask);
+POPNET_API popnet_tensor* popnet_reduce_sum(popnet_tensor* a, uint8_t axis_mask);
+POPNET_API popnet_tensor* popnet_reduce_mean(popnet_tensor* a, uint8_t axis_mask);
+POPNET_API popnet_tensor* popnet_reduce_product(popnet_tensor* a, uint8_t axis_mask);
+POPNET_API popnet_tensor* popnet_reduce_min(popnet_tensor* a, uint8_t axis_mask);
+POPNET_API popnet_tensor* popnet_reduce_max(popnet_tensor* a, uint8_t axis_mask);
 
 POPNET_API popnet_tensor* popnet_matmul(popnet_tensor* a, popnet_tensor* b);
 POPNET_API popnet_tensor* popnet_transpose(popnet_tensor* a);

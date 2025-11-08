@@ -15,8 +15,10 @@ POPNET_INLINE bool popnet_broadcastable(const popnet_tensor* a, const popnet_ten
 POPNET_INLINE bool popnet_valid_axis_mask(uint8_t axis_mask)
 {
   static_assert(POPNET_MAX_DIMS == 4);
-  return axis_mask != 0               // at least one axis must be reduced
-         && (axis_mask & ~0x0F) == 0; // mask supported dimensions supported
+  return axis_mask == 0x0F; // Currently everything must be reduced
+  // TODO allow any axis to be reduced
+  // return axis_mask != 0               // at least one axis must be reduced
+  //        && (axis_mask & ~0x0F) == 0; // mask supported dimensions supported
 }
 
 POPNET_INLINE popnet_shape popnet_reduce_shape(const popnet_tensor* a, uint8_t axis_mask)

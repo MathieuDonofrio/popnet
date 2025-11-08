@@ -3,14 +3,14 @@
 #include "simd.h"
 #include "tensor.h"
 
-template <auto UnaryOpFunc> POPNET_INLINE static void popnet_compute_unary(popnet_tensor* dst)
+template <auto op> POPNET_INLINE static void popnet_compute_unary(popnet_tensor* dst)
 {
   const popnet_tensor* src = dst->src[0];
   const size_t n = popnet_nelems(dst->shape);
 
   if (src->dtype == POPNET_TYPE_F32 && dst->dtype == POPNET_TYPE_F32)
   {
-    simd_map<UnaryOpFunc, POPNET_TYPE_F32>(dst->data, n, src->data);
+    simd_map<op, POPNET_TYPE_F32>(dst->data, n, src->data);
   }
   else
   {
@@ -18,7 +18,7 @@ template <auto UnaryOpFunc> POPNET_INLINE static void popnet_compute_unary(popne
   }
 }
 
-template <auto BinaryOpFunc> POPNET_INLINE static void popnet_compute_binary(popnet_tensor* dst)
+template <auto op> POPNET_INLINE static void popnet_compute_binary(popnet_tensor* dst)
 {
   const popnet_tensor* src0 = dst->src[0];
   const popnet_tensor* src1 = dst->src[1];
@@ -27,7 +27,8 @@ template <auto BinaryOpFunc> POPNET_INLINE static void popnet_compute_binary(pop
 
   if (src0->dtype == POPNET_TYPE_F32 && src1->dtype == POPNET_TYPE_F32 && dst->dtype == POPNET_TYPE_F32)
   {
-    simd_map<BinaryOpFunc, POPNET_TYPE_F32>(dst->data, n, src0->data, src1->data);
+    // TODO handle broadcasting
+    simd_map<op, POPNET_TYPE_F32>(dst->data, n, src0->data, src1->data);
   }
   else
   {
@@ -35,18 +36,18 @@ template <auto BinaryOpFunc> POPNET_INLINE static void popnet_compute_binary(pop
   }
 }
 
-void popnet_compute_add(popnet_tensor* dst) { popnet_compute_binary<vadd>(dst); }
-void popnet_compute_sub(popnet_tensor* dst) { popnet_compute_binary<vsub>(dst); }
-void popnet_compute_mul(popnet_tensor* dst) { popnet_compute_binary<vmul>(dst); }
-void popnet_compute_div(popnet_tensor* dst) { popnet_compute_binary<vdiv>(dst); }
-void popnet_compute_abs(popnet_tensor* dst) { popnet_compute_unary<vabs>(dst); }
-void popnet_compute_neg(popnet_tensor* dst) { popnet_compute_unary<vneg>(dst); }
-void popnet_compute_sqr(popnet_tensor* dst) { popnet_compute_unary<vsqr>(dst); }
-void popnet_compute_sqrt(popnet_tensor* dst) { popnet_compute_unary<vsqrt>(dst); }
-void popnet_compute_exp(popnet_tensor* dst) { popnet_compute_unary<vexp>(dst); }
-void popnet_compute_log(popnet_tensor* dst) { popnet_compute_unary<vlog>(dst); }
-void popnet_compute_sin(popnet_tensor* dst) { popnet_compute_unary<vsin>(dst); }
-void popnet_compute_cos(popnet_tensor* dst) { popnet_compute_unary<vcos>(dst); }
-void popnet_compute_tanh(popnet_tensor* dst) { popnet_compute_unary<vtanh>(dst); }
-void popnet_compute_relu(popnet_tensor* dst) { popnet_compute_unary<vrelu>(dst); }
-void popnet_compute_sigmoid(popnet_tensor* dst) { popnet_compute_unary<vsigmoid>(dst); }
+void popnet_compute_add(popnet_tensor* dst) { popnet_compute_binary<vadd_f32>(dst); }
+void popnet_compute_sub(popnet_tensor* dst) { popnet_compute_binary<vsub_f32>(dst); }
+void popnet_compute_mul(popnet_tensor* dst) { popnet_compute_binary<vmul_f32>(dst); }
+void popnet_compute_div(popnet_tensor* dst) { popnet_compute_binary<vdiv_f32>(dst); }
+void popnet_compute_abs(popnet_tensor* dst) { popnet_compute_unary<vabs_f32>(dst); }
+void popnet_compute_neg(popnet_tensor* dst) { popnet_compute_unary<vneg_f32>(dst); }
+void popnet_compute_sqr(popnet_tensor* dst) { popnet_compute_unary<vsqr_f32>(dst); }
+void popnet_compute_sqrt(popnet_tensor* dst) { popnet_compute_unary<vsqrt_f32>(dst); }
+void popnet_compute_exp(popnet_tensor* dst) { popnet_compute_unary<vexp_f32>(dst); }
+void popnet_compute_log(popnet_tensor* dst) { popnet_compute_unary<vlog_f32>(dst); }
+void popnet_compute_sin(popnet_tensor* dst) { popnet_compute_unary<vsin_f32>(dst); }
+void popnet_compute_cos(popnet_tensor* dst) { popnet_compute_unary<vcos_f32>(dst); }
+void popnet_compute_tanh(popnet_tensor* dst) { popnet_compute_unary<vtanh_f32>(dst); }
+void popnet_compute_relu(popnet_tensor* dst) { popnet_compute_unary<vrelu_f32>(dst); }
+void popnet_compute_sigmoid(popnet_tensor* dst) { popnet_compute_unary<vsigmoid_f32>(dst); }

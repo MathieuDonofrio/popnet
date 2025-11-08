@@ -16,7 +16,9 @@ template <popnet_type DType> static auto generate_data(size_t n)
   case POPNET_TYPE_F32:
   {
     for (size_t i = 0; i < n; ++i)
+    {
       data.push_back(static_cast<float>(i + 1) * (i % 2 == 0 ? 1.f : -1.f));
+    }
     break;
   }
   default: FAIL_CHECK("Unsupported dtype in generate_data"); break;

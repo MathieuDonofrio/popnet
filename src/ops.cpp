@@ -162,7 +162,7 @@ popnet_tensor* popnet_sigmoid(popnet_tensor* a)
   return result;
 }
 
-popnet_tensor* popnet_sum(popnet_tensor* a, uint8_t axis_mask)
+popnet_tensor* popnet_reduce_sum(popnet_tensor* a, uint8_t axis_mask)
 {
   POPNET_EXPECT(popnet_valid_axis_mask(axis_mask));
 
@@ -174,7 +174,7 @@ popnet_tensor* popnet_sum(popnet_tensor* a, uint8_t axis_mask)
   return result;
 }
 
-popnet_tensor* popnet_mean(popnet_tensor* a, uint8_t axis_mask)
+popnet_tensor* popnet_reduce_mean(popnet_tensor* a, uint8_t axis_mask)
 {
   POPNET_EXPECT(popnet_valid_axis_mask(axis_mask));
 
@@ -186,25 +186,37 @@ popnet_tensor* popnet_mean(popnet_tensor* a, uint8_t axis_mask)
   return result;
 }
 
-popnet_tensor* popnet_max(popnet_tensor* a, uint8_t axis_mask)
+popnet_tensor* popnet_reduce_product(popnet_tensor* a, uint8_t axis_mask)
 {
   POPNET_EXPECT(popnet_valid_axis_mask(axis_mask));
 
   popnet_tensor* result = popnet_empty(a->dtype, popnet_reduce_shape(a, axis_mask));
 
-  result->op = POPNET_OP_MAX;
+  result->op = POPNET_OP_PRODUCT;
   result->src[0] = a;
 
   return result;
 }
 
-popnet_tensor* popnet_min(popnet_tensor* a, uint8_t axis_mask)
+popnet_tensor* popnet_reduce_min(popnet_tensor* a, uint8_t axis_mask)
 {
   POPNET_EXPECT(popnet_valid_axis_mask(axis_mask));
 
   popnet_tensor* result = popnet_empty(a->dtype, popnet_reduce_shape(a, axis_mask));
 
   result->op = POPNET_OP_MIN;
+  result->src[0] = a;
+
+  return result;
+}
+
+popnet_tensor* popnet_reduce_max(popnet_tensor* a, uint8_t axis_mask)
+{
+  POPNET_EXPECT(popnet_valid_axis_mask(axis_mask));
+
+  popnet_tensor* result = popnet_empty(a->dtype, popnet_reduce_shape(a, axis_mask));
+
+  result->op = POPNET_OP_MAX;
   result->src[0] = a;
 
   return result;
