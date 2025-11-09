@@ -70,11 +70,6 @@ extern "C"
 typedef enum
 {
   POPNET_TYPE_NONE = 0,
-  POPNET_TYPE_T,
-  POPNET_TYPE_I8,
-  POPNET_TYPE_I16,
-  POPNET_TYPE_I32,
-  POPNET_TYPE_F16,
   POPNET_TYPE_F32,
 } popnet_type;
 
@@ -118,6 +113,7 @@ typedef struct popnet_shape
 
 POPNET_INLINE size_t popnet_nelems(popnet_shape shape)
 {
+  static_assert(POPNET_MAX_DIMS == 4);
   const size_t size = shape.dim[0] * shape.dim[1] * shape.dim[2] * shape.dim[3];
   POPNET_EXPECT(size > 0);
   return size;
