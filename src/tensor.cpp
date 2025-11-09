@@ -9,9 +9,10 @@ popnet_tensor* popnet_empty(popnet_type dtype, popnet_shape shape)
 
   popnet_tensor* tensor = new popnet_tensor();
 
-  tensor->dtype = dtype;
   tensor->shape = shape;
   tensor->data = popnet_alloc(dtype, shape);
+  tensor->dtype = dtype;
+  tensor->op = POPNET_OP_NONE;
 
   POPNET_EXPECT(popnet_valid_tensor(tensor));
 
@@ -33,9 +34,9 @@ void popnet_free(popnet_tensor* tensor)
 
   popnet_free(tensor->data);
 
-  tensor->dtype = POPNET_TYPE_NONE;
   tensor->shape = popnet_shape{0};
   tensor->data = nullptr;
+  tensor->dtype = POPNET_TYPE_NONE;
 
   delete tensor;
 }

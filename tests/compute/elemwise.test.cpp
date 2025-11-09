@@ -63,11 +63,11 @@ TEST_CASE("elementwise unary compute")
         };
 
         SUBCASE("1") { run_n(1); }
-        SUBCASE("2") { run_n(1); }
-        SUBCASE("3") { run_n(1); }
-        SUBCASE("4") { run_n(1); }
-        SUBCASE("5") { run_n(1); }
-        SUBCASE("1000") { run_n(1); }
+        SUBCASE("2") { run_n(2); }
+        SUBCASE("3") { run_n(3); }
+        SUBCASE("4") { run_n(4); }
+        SUBCASE("5") { run_n(5); }
+        SUBCASE("1000") { run_n(1000); }
         SUBCASE("simd") { run_n(simd_traits<dtype>::length()); }
         SUBCASE("simd + 1") { run_n(simd_traits<dtype>::length() + 1); }
         SUBCASE("simd * 16") { run_n(simd_traits<dtype>::length() * 16 + 1); }
@@ -191,11 +191,11 @@ TEST_CASE("element binary compute")
         };
 
         SUBCASE("1") { run_n(1); }
-        SUBCASE("2") { run_n(1); }
-        SUBCASE("3") { run_n(1); }
-        SUBCASE("4") { run_n(1); }
-        SUBCASE("5") { run_n(1); }
-        SUBCASE("1000") { run_n(1); }
+        SUBCASE("2") { run_n(2); }
+        SUBCASE("3") { run_n(3); }
+        SUBCASE("4") { run_n(4); }
+        SUBCASE("5") { run_n(5); }
+        SUBCASE("1000") { run_n(1000); }
         SUBCASE("simd") { run_n(simd_traits<dtype>::length()); }
         SUBCASE("simd + 1") { run_n(simd_traits<dtype>::length() + 1); }
         SUBCASE("simd * 16") { run_n(simd_traits<dtype>::length() * 16 + 1); }

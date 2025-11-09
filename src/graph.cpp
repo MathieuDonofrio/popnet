@@ -1,6 +1,7 @@
 #include "graph.h"
 
 #include "elemwise.h"
+#include "reduce.h"
 #include "tensor.h"
 
 popnet_graph* popnet_graph_alloc() { return new popnet_graph(); }
@@ -51,18 +52,11 @@ void popnet_graph_compute_forward(popnet_graph* graph)
     case POPNET_OP_TANH: popnet_compute_tanh(node); break;
     case POPNET_OP_RELU: popnet_compute_relu(node); break;
     case POPNET_OP_SIGMOID: popnet_compute_sigmoid(node); break;
-    case POPNET_OP_SUM:
-      POPNET_UNREACHABLE(); // TODO
-      break;
-    case POPNET_OP_MEAN:
-      POPNET_UNREACHABLE(); // TODO
-      break;
-    case POPNET_OP_MAX:
-      POPNET_UNREACHABLE(); // TODO
-      break;
-    case POPNET_OP_MIN:
-      POPNET_UNREACHABLE(); // TODO
-      break;
+    case POPNET_OP_SUM: popnet_compute_reduce_sum(node); break;
+    case POPNET_OP_MEAN: popnet_compute_reduce_mean(node); break;
+    case POPNET_OP_PRODUCT: popnet_compute_reduce_product(node); break;
+    case POPNET_OP_MIN: popnet_compute_reduce_min(node); break;
+    case POPNET_OP_MAX: popnet_compute_reduce_max(node); break;
     case POPNET_OP_MATMUL:
       POPNET_UNREACHABLE(); // TODO
       break;
