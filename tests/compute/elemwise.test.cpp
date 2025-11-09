@@ -5,234 +5,220 @@
 
 #include "simd.h"
 #include "tensor.h"
-
-template <popnet_type DType> static auto generate_data(size_t n)
-{
-  std::vector<typename simd_traits<DType>::scalar_t> data;
-  data.reserve(n);
-
-  switch (DType)
-  {
-  case POPNET_TYPE_F32:
-  {
-    for (size_t i = 0; i < n; ++i)
-    {
-      data.push_back(static_cast<float>(i + 1) * (i % 2 == 0 ? 1.f : -1.f));
-    }
-    break;
-  }
-  default: FAIL_CHECK("Unsupported dtype in generate_data"); break;
-  }
-
-  return data;
-}
+#include "test_utils.h"
 
 TEST_CASE("elementwise unary compute")
 {
-  auto run_for_compute = []<auto Compute, auto ScalarCompute, popnet_type DType>() {
-    auto run_for_n = [](size_t n) {
-      popnet_shape shape{{1, 1, 1, n}};
+  using namespace std::numbers;
 
-      auto input_data = generate_data<DType>(n);
+  auto run =
+      []<auto compute, auto compute_ref, popnet_type dtype, auto lower, auto upper, bool exclude_zero = false>() {
+        auto run_n = [](size_t n) {
+          popnet_shape shape{{1, 1, 1, n}};
 
-      decltype(input_data) expected_data;
-      expected_data.reserve(n);
+          auto input_data = generate_scalar_data<dtype>(n, lower, upper, exclude_zero);
 
-      for (auto v : input_data)
-      {
-        expected_data.push_back(ScalarCompute(v));
-      }
+          decltype(input_data) expected_data;
+          expected_data.reserve(n);
 
-      popnet_tensor* src = popnet_empty(DType, shape);
-      popnet_tensor* dst = popnet_empty(DType, shape);
+          for (auto v : input_data)
+          {
+            expected_data.push_back(compute_ref(v));
+          }
 
-      REQUIRE(src != nullptr);
-      REQUIRE(dst != nullptr);
+          popnet_tensor* src = popnet_empty(dtype, shape);
+          popnet_tensor* dst = popnet_empty(dtype, shape);
 
-      REQUIRE(popnet_set_data(src, input_data.data(), DType, 0, n));
+          REQUIRE(src != nullptr);
+          REQUIRE(dst != nullptr);
 
-      dst->src[0] = src;
+          REQUIRE(popnet_set_data(src, input_data.data(), dtype, 0, n));
 
-      Compute(dst);
+          dst->src[0] = src;
 
-      decltype(expected_data) output_data;
-      output_data.resize(n);
+          compute(dst);
 
-      REQUIRE(popnet_get_data(dst, output_data.data(), DType, 0, n));
+          decltype(expected_data) output_data;
+          output_data.resize(n);
 
-      for (int i = 0; i < n; i++)
-      {
-        const auto out = output_data[i];
-        const auto expected = expected_data[i];
+          REQUIRE(popnet_get_data(dst, output_data.data(), dtype, 0, n));
 
-        if (std::isnan(expected))
-        {
-          CHECK(std::isnan(out));
-        }
-        else if (std::isinf(expected))
-        {
-          CHECK(std::isinf(out));
-          CHECK((out > 0) == (expected > 0)); // same sign of infinity
-        }
-        else
-        {
-          CHECK(out == doctest::Approx(expected).epsilon(1e-4));
-        }
-      }
+          for (int i = 0; i < n; i++)
+          {
+            const auto actual = output_data[i];
+            const auto expected = expected_data[i];
 
-      popnet_free(src);
-      popnet_free(dst);
-    };
+            if constexpr (std::is_floating_point_v<decltype(expected)>)
+            {
+              CHECK(actual == doctest::Approx(expected));
+            }
+            else
+            {
+              CHECK(actual == expected);
+            }
+          }
 
-    SUBCASE("1") { run_for_n(1); }
-    SUBCASE("simd length") { run_for_n(simd_traits<DType>::length()); }
-    SUBCASE("simd length + 1") { run_for_n(simd_traits<DType>::length() + 1); }
-    SUBCASE("simd length * 16") { run_for_n(simd_traits<DType>::length() * 16 + 1); }
-    SUBCASE("simd length * 16 + 1") { run_for_n(simd_traits<DType>::length() * 16 + 1); }
-  };
+          popnet_free(src);
+          popnet_free(dst);
+        };
+
+        SUBCASE("1") { run_n(1); }
+        SUBCASE("2") { run_n(1); }
+        SUBCASE("3") { run_n(1); }
+        SUBCASE("4") { run_n(1); }
+        SUBCASE("5") { run_n(1); }
+        SUBCASE("1000") { run_n(1); }
+        SUBCASE("simd") { run_n(simd_traits<dtype>::length()); }
+        SUBCASE("simd + 1") { run_n(simd_traits<dtype>::length() + 1); }
+        SUBCASE("simd * 16") { run_n(simd_traits<dtype>::length() * 16 + 1); }
+        SUBCASE("simd * 16 + 1") { run_n(simd_traits<dtype>::length() * 16 + 1); }
+      };
 
   SUBCASE("abs - F32")
   {
-    run_for_compute.operator()<popnet_compute_abs, [](float v) { return std::abs(v); }, POPNET_TYPE_F32>();
+    run.operator()<popnet_compute_abs, [](float v) { return std::abs(v); }, POPNET_TYPE_F32, -10.0f, 10.0f>();
   }
 
   SUBCASE("neg - F32")
   {
-    run_for_compute.operator()<popnet_compute_neg, [](float v) { return -v; }, POPNET_TYPE_F32>();
+    run.operator()<popnet_compute_neg, [](float v) { return -v; }, POPNET_TYPE_F32, -10.0f, 10.0f>();
   }
 
   SUBCASE("sqr - F32")
   {
-    run_for_compute.operator()<popnet_compute_sqr, [](float v) { return v * v; }, POPNET_TYPE_F32>();
+    run.operator()<popnet_compute_sqr, [](float v) { return v * v; }, POPNET_TYPE_F32, -10.0f, 10.0f>();
   }
 
   SUBCASE("sqrt - F32")
   {
-    run_for_compute.operator()<popnet_compute_sqrt, [](float v) { return std::sqrt(v); }, POPNET_TYPE_F32>();
+    run.operator()<popnet_compute_sqrt, [](float v) { return std::sqrt(v); }, POPNET_TYPE_F32, 0.0f, 100.0f>();
   }
 
   SUBCASE("exp - F32")
   {
-    run_for_compute.operator()<popnet_compute_exp, [](float v) { return std::exp(v); }, POPNET_TYPE_F32>();
+    run.operator()<popnet_compute_exp, [](float v) { return std::exp(v); }, POPNET_TYPE_F32, -10.0f, 10.0f>();
   }
 
   SUBCASE("log - F32")
   {
-    run_for_compute.operator()<popnet_compute_log, [](float v) { return std::log(v); }, POPNET_TYPE_F32>();
+    run.operator()<popnet_compute_log, [](float v) { return std::log(v); }, POPNET_TYPE_F32, 0.001f, 100.0f>();
   }
 
   SUBCASE("sin - F32")
   {
-    run_for_compute.operator()<popnet_compute_sin, [](float v) { return std::sin(v); }, POPNET_TYPE_F32>();
+    run.operator()<popnet_compute_sin, [](float v) { return std::sin(v); }, POPNET_TYPE_F32, -2.0f * pi_v<float>,
+                   2.0f * pi_v<float>>();
   }
 
   SUBCASE("cos - F32")
   {
-    run_for_compute.operator()<popnet_compute_cos, [](float v) { return std::cos(v); }, POPNET_TYPE_F32>();
+    run.operator()<popnet_compute_cos, [](float v) { return std::cos(v); }, POPNET_TYPE_F32, -2.0f * pi_v<float>,
+                   2.0f * pi_v<float>>();
   }
 
   SUBCASE("tanh - F32")
   {
-    run_for_compute.operator()<popnet_compute_tanh, [](float v) { return std::tanh(v); }, POPNET_TYPE_F32>();
+    run.operator()<popnet_compute_tanh, [](float v) { return std::tanh(v); }, POPNET_TYPE_F32, -10.0f, 10.0f>();
   }
 
   SUBCASE("relu - F32")
   {
-    run_for_compute.operator()<popnet_compute_relu, [](float v) { return v > 0.f ? v : 0.f; }, POPNET_TYPE_F32>();
+    run.operator()<popnet_compute_relu, [](float v) { return v > 0.f ? v : 0.f; }, POPNET_TYPE_F32, -10.0f, 10.0f>();
   }
 
   SUBCASE("sigmoid - F32")
   {
-    run_for_compute
-        .operator()<popnet_compute_sigmoid, [](float v) { return 1.f / (1.f + std::exp(-v)); }, POPNET_TYPE_F32>();
+    run.operator()<popnet_compute_sigmoid, [](float v) { return 1.f / (1.f + std::exp(-v)); }, POPNET_TYPE_F32, -10.0f,
+                   10.0f>();
   }
 }
 
 TEST_CASE("element binary compute")
 {
-  auto run_for_binary = []<auto Compute, auto ScalarCompute, popnet_type DType>() {
-    auto run_for_n = [](size_t n) {
-      popnet_shape shape{{1, 1, 1, n}};
+  auto run =
+      []<auto compute, auto compute_ref, popnet_type dtype, auto lower, auto upper, bool exclude_zero = false>() {
+        auto run_n = [](size_t n) {
+          popnet_shape shape{{1, 1, 1, n}};
 
-      auto lhs_data = generate_data<DType>(n);
-      auto rhs_data = generate_data<DType>(n);
+          auto lhs_data = generate_scalar_data<dtype>(n, lower, upper, exclude_zero, 0);
+          auto rhs_data = generate_scalar_data<dtype>(n, lower, upper, exclude_zero, 1);
 
-      decltype(lhs_data) expected_data;
-      expected_data.reserve(n);
+          decltype(lhs_data) expected_data;
+          expected_data.reserve(n);
 
-      for (size_t i = 0; i < n; ++i)
-      {
-        expected_data.push_back(ScalarCompute(lhs_data[i], rhs_data[i]));
-      }
+          for (size_t i = 0; i < n; ++i)
+          {
+            expected_data.push_back(compute_ref(lhs_data[i], rhs_data[i]));
+          }
 
-      popnet_tensor* lhs = popnet_empty(DType, shape);
-      popnet_tensor* rhs = popnet_empty(DType, shape);
-      popnet_tensor* dst = popnet_empty(DType, shape);
+          popnet_tensor* lhs = popnet_empty(dtype, shape);
+          popnet_tensor* rhs = popnet_empty(dtype, shape);
+          popnet_tensor* dst = popnet_empty(dtype, shape);
 
-      REQUIRE(lhs != nullptr);
-      REQUIRE(rhs != nullptr);
-      REQUIRE(dst != nullptr);
+          REQUIRE(lhs != nullptr);
+          REQUIRE(rhs != nullptr);
+          REQUIRE(dst != nullptr);
 
-      REQUIRE(popnet_set_data(lhs, lhs_data.data(), DType, 0, n));
-      REQUIRE(popnet_set_data(rhs, rhs_data.data(), DType, 0, n));
+          REQUIRE(popnet_set_data(lhs, lhs_data.data(), dtype, 0, n));
+          REQUIRE(popnet_set_data(rhs, rhs_data.data(), dtype, 0, n));
 
-      dst->src[0] = lhs;
-      dst->src[1] = rhs;
+          dst->src[0] = lhs;
+          dst->src[1] = rhs;
 
-      Compute(dst);
+          compute(dst);
 
-      decltype(lhs_data) output_data(n);
-      REQUIRE(popnet_get_data(dst, output_data.data(), DType, 0, n));
+          decltype(lhs_data) output_data(n);
+          REQUIRE(popnet_get_data(dst, output_data.data(), dtype, 0, n));
 
-      for (size_t i = 0; i < n; ++i)
-      {
-        const auto out = output_data[i];
-        const auto expected = expected_data[i];
+          for (size_t i = 0; i < n; ++i)
+          {
+            const auto actual = output_data[i];
+            const auto expected = expected_data[i];
 
-        if (std::isnan(expected))
-        {
-          CHECK(std::isnan(out));
-        }
-        else if (std::isinf(expected))
-        {
-          CHECK(std::isinf(out));
-          CHECK((out > 0) == (expected > 0));
-        }
-        else
-        {
-          CHECK(out == doctest::Approx(expected).epsilon(1e-4));
-        }
-      }
+            if constexpr (std::is_floating_point_v<decltype(expected)>)
+            {
+              CHECK(actual == doctest::Approx(expected));
+            }
+            else
+            {
+              CHECK(actual == expected);
+            }
+          }
 
-      popnet_free(lhs);
-      popnet_free(rhs);
-      popnet_free(dst);
-    };
+          popnet_free(lhs);
+          popnet_free(rhs);
+          popnet_free(dst);
+        };
 
-    SUBCASE("1") { run_for_n(1); }
-    SUBCASE("simd elements") { run_for_n(simd_traits<DType>::length()); }
-    SUBCASE("simd elements + 1") { run_for_n(simd_traits<DType>::length() + 1); }
-    SUBCASE("simd elements * 16") { run_for_n(simd_traits<DType>::length() * 16); }
-    SUBCASE("simd elements * 16 + 1") { run_for_n(simd_traits<DType>::length() * 16 + 1); }
-  };
+        SUBCASE("1") { run_n(1); }
+        SUBCASE("2") { run_n(1); }
+        SUBCASE("3") { run_n(1); }
+        SUBCASE("4") { run_n(1); }
+        SUBCASE("5") { run_n(1); }
+        SUBCASE("1000") { run_n(1); }
+        SUBCASE("simd") { run_n(simd_traits<dtype>::length()); }
+        SUBCASE("simd + 1") { run_n(simd_traits<dtype>::length() + 1); }
+        SUBCASE("simd * 16") { run_n(simd_traits<dtype>::length() * 16 + 1); }
+        SUBCASE("simd * 16 + 1") { run_n(simd_traits<dtype>::length() * 16 + 1); }
+      };
 
   SUBCASE("add - F32")
   {
-    run_for_binary.operator()<popnet_compute_add, [](float a, float b) { return a + b; }, POPNET_TYPE_F32>();
+    run.operator()<popnet_compute_add, [](float a, float b) { return a + b; }, POPNET_TYPE_F32, -100.0f, 100.0f>();
   }
 
   SUBCASE("sub - F32")
   {
-    run_for_binary.operator()<popnet_compute_sub, [](float a, float b) { return a - b; }, POPNET_TYPE_F32>();
+    run.operator()<popnet_compute_sub, [](float a, float b) { return a - b; }, POPNET_TYPE_F32, -100.0f, 100.0f>();
   }
 
   SUBCASE("mul - F32")
   {
-    run_for_binary.operator()<popnet_compute_mul, [](float a, float b) { return a * b; }, POPNET_TYPE_F32>();
+    run.operator()<popnet_compute_mul, [](float a, float b) { return a * b; }, POPNET_TYPE_F32, -10.0f, 10.0f>();
   }
 
   SUBCASE("div - F32")
   {
-    run_for_binary.operator()<popnet_compute_div, [](float a, float b) { return a / b; }, POPNET_TYPE_F32>();
+    run.operator()<popnet_compute_div, [](float a, float b) { return a / b; }, POPNET_TYPE_F32, -10.0f, 10.0f, true>();
   }
 }

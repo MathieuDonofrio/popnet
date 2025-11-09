@@ -7,7 +7,7 @@ template <auto init_state_op, auto merge_op, auto horizontal_op>
 POPNET_INLINE static void popnet_compute_reduce(popnet_tensor* dst)
 {
   const popnet_tensor* src = dst->src[0];
-  const size_t n = popnet_nelems(dst->shape);
+  const size_t n = popnet_nelems(src->shape);
 
   if (src->dtype == POPNET_TYPE_F32 && dst->dtype == POPNET_TYPE_F32)
   {

@@ -12,13 +12,13 @@ TEST_CASE("popnet_nelems computes number of elements correctly")
 
 TEST_CASE("popnet_empty and popnet_empty_like")
 {
-  auto run_test = []<popnet_type DType>() {
+  auto run = []<popnet_type dtype>() {
     popnet_shape shape{{2, 2, 2, 2}};
-    popnet_tensor* t = popnet_empty(POPNET_TYPE_F32, shape);
+    popnet_tensor* t = popnet_empty(dtype, shape);
 
     REQUIRE(t != nullptr);
     CHECK(popnet_valid_tensor(t));
-    CHECK(popnet_dtypeof(t) == POPNET_TYPE_F32);
+    CHECK(popnet_dtypeof(t) == dtype);
     CHECK(popnet_opof(t) == POPNET_OP_NONE);
     CHECK(popnet_shapeof(t) == shape);
 
@@ -30,7 +30,7 @@ TEST_CASE("popnet_empty and popnet_empty_like")
 
       REQUIRE(t2 != nullptr);
       CHECK(popnet_valid_tensor(t2));
-      CHECK(popnet_dtypeof(t2) == POPNET_TYPE_F32);
+      CHECK(popnet_dtypeof(t2) == dtype);
       CHECK(popnet_opof(t2) == POPNET_OP_NONE);
       CHECK(popnet_shapeof(t2) == shape);
       CHECK(t2->data != t->data);
@@ -52,23 +52,23 @@ TEST_CASE("popnet_empty and popnet_empty_like")
     popnet_free(t);
   };
 
-  SUBCASE("F32") { run_test.operator()<POPNET_TYPE_F32>(); }
+  SUBCASE("F32") { run.operator()<POPNET_TYPE_F32>(); }
 }
 
 TEST_CASE("popnet_set_data and popnet_get_data")
 {
-  auto run_for_dtype = []<popnet_type DType>() {
+  auto run = []<popnet_type dtype>() {
     popnet_shape shape{{2, 2, 1, 1}};
-    popnet_tensor* t = popnet_empty(POPNET_TYPE_F32, shape);
+    popnet_tensor* t = popnet_empty(dtype, shape);
     REQUIRE(t != nullptr);
 
-    typename simd_traits<DType>::scalar_t values[4] = {0, 1, 0, -1};
-    typename simd_traits<DType>::scalar_t readback[4] = {};
+    typename simd_traits<dtype>::scalar_t values[4] = {0, 1, 0, -1};
+    typename simd_traits<dtype>::scalar_t readback[4] = {};
 
     SUBCASE("Full write and readback")
     {
-      REQUIRE(popnet_set_data(t, values, POPNET_TYPE_F32, 0, 4) == true);
-      REQUIRE(popnet_get_data(t, readback, POPNET_TYPE_F32, 0, 4) == true);
+      REQUIRE(popnet_set_data(t, values, dtype, 0, 4) == true);
+      REQUIRE(popnet_get_data(t, readback, dtype, 0, 4) == true);
 
       for (int i = 0; i < 4; i++)
       {
@@ -78,8 +78,8 @@ TEST_CASE("popnet_set_data and popnet_get_data")
 
     SUBCASE("Partial write and readback with offset")
     {
-      REQUIRE(popnet_set_data(t, values, POPNET_TYPE_F32, 1, 2) == true);
-      REQUIRE(popnet_get_data(t, readback, POPNET_TYPE_F32, 1, 2) == true);
+      REQUIRE(popnet_set_data(t, values, dtype, 1, 2) == true);
+      REQUIRE(popnet_get_data(t, readback, dtype, 1, 2) == true);
 
       REQUIRE(readback[0] == values[0]);
       REQUIRE(readback[1] == values[1]);
@@ -88,5 +88,5 @@ TEST_CASE("popnet_set_data and popnet_get_data")
     popnet_free(t);
   };
 
-  SUBCASE("F32") { run_for_dtype.operator()<POPNET_TYPE_F32>(); }
+  SUBCASE("F32") { run.operator()<POPNET_TYPE_F32>(); }
 }
