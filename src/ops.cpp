@@ -168,7 +168,7 @@ popnet_tensor* popnet_reduce_sum(popnet_tensor* a, uint8_t axis_mask)
 
   popnet_tensor* result = popnet_empty(a->dtype, popnet_reduce_shape(a->shape, axis_mask));
 
-  result->op = POPNET_OP_SUM;
+  result->op = POPNET_OP_REDUCE_SUM;
   result->src[0] = a;
 
   return result;
@@ -180,7 +180,7 @@ popnet_tensor* popnet_reduce_mean(popnet_tensor* a, uint8_t axis_mask)
 
   popnet_tensor* result = popnet_empty(a->dtype, popnet_reduce_shape(a->shape, axis_mask));
 
-  result->op = POPNET_OP_MEAN;
+  result->op = POPNET_OP_REDUCE_MEAN;
   result->src[0] = a;
 
   return result;
@@ -192,7 +192,7 @@ popnet_tensor* popnet_reduce_product(popnet_tensor* a, uint8_t axis_mask)
 
   popnet_tensor* result = popnet_empty(a->dtype, popnet_reduce_shape(a->shape, axis_mask));
 
-  result->op = POPNET_OP_PRODUCT;
+  result->op = POPNET_OP_REDUCE_PRODUCT;
   result->src[0] = a;
 
   return result;
@@ -204,7 +204,7 @@ popnet_tensor* popnet_reduce_min(popnet_tensor* a, uint8_t axis_mask)
 
   popnet_tensor* result = popnet_empty(a->dtype, popnet_reduce_shape(a->shape, axis_mask));
 
-  result->op = POPNET_OP_MIN;
+  result->op = POPNET_OP_REDUCE_MIN;
   result->src[0] = a;
 
   return result;
@@ -216,7 +216,7 @@ popnet_tensor* popnet_reduce_max(popnet_tensor* a, uint8_t axis_mask)
 
   popnet_tensor* result = popnet_empty(a->dtype, popnet_reduce_shape(a->shape, axis_mask));
 
-  result->op = POPNET_OP_MAX;
+  result->op = POPNET_OP_REDUCE_MAX;
   result->src[0] = a;
 
   return result;

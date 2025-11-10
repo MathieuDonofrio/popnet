@@ -3,7 +3,7 @@
 #include <new>
 #include <stdlib.h>
 
-void* popnet_alloc(popnet_type dtype, popnet_shape shape)
+void* popnet_alloc(popnet_type dtype, popnet_shape shape) noexcept
 {
   const size_t nelems = popnet_nelems(shape);
 
@@ -40,7 +40,7 @@ void* popnet_alloc(popnet_type dtype, popnet_shape shape)
   return ptr;
 }
 
-void popnet_free(void* ptr)
+void popnet_free(void* ptr) noexcept
 {
   if (!ptr) return;
 
@@ -51,7 +51,7 @@ void popnet_free(void* ptr)
 #endif
 }
 
-void popnet_memcpy(void* POPNET_RESTRICT dst, const void* POPNET_RESTRICT src, size_t count, MemcpyKind kind)
+void popnet_memcpy(void* POPNET_RESTRICT dst, const void* POPNET_RESTRICT src, size_t count, MemcpyKind kind) noexcept
 {
   memcpy(dst, src, count);
 }

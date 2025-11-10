@@ -24,7 +24,7 @@ consteval size_t compute_transpose_tile_size(size_t element_size)
 
 template <popnet_type dtype>
 void transpose_kernel(void* POPNET_RESTRICT src, void* POPNET_RESTRICT dst, size_t outer_size, size_t plane_size,
-                      size_t n, size_t m)
+                      size_t n, size_t m) noexcept
 {
   using traits = simd_traits<dtype>;
   using scalar_t = traits::scalar_t;
@@ -45,6 +45,8 @@ void transpose_kernel(void* POPNET_RESTRICT src, void* POPNET_RESTRICT dst, size
       {
         const auto i_max = std::min(i0 + tile, n);
         const auto j_max = std::min(j0 + tile, m);
+
+        // TODO there are some simd optimization opportunities here
 
         for (size_t i = i0; i < i_max; ++i)
         {

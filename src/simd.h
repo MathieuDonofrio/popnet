@@ -88,7 +88,7 @@ using f32_t = simd_traits<POPNET_TYPE_F32>::scalar_t;
 using vf32_t = simd_traits<POPNET_TYPE_F32>::vector_t;
 
 template <auto op, popnet_type type, std::same_as<void>... T>
-POPNET_INLINE static void simd_map(void* POPNET_RESTRICT output, size_t n, const T* POPNET_RESTRICT... inputs)
+POPNET_INLINE static void simd_map(void* POPNET_RESTRICT output, size_t n, const T* POPNET_RESTRICT... inputs) noexcept
 {
   using traits = simd_traits<type>;
 
@@ -125,7 +125,7 @@ POPNET_INLINE static void simd_map(void* POPNET_RESTRICT output, size_t n, const
 }
 
 template <auto state_init_op, auto merge_op, auto horizontal_op, popnet_type type, std::same_as<void>... T>
-POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inputs)
+POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inputs) noexcept
 {
   using traits = simd_traits<type>;
 
