@@ -55,6 +55,11 @@
 #endif
 #endif
 
+#ifndef POPNET_L1_CACHE_KB
+// Approximate: Most x86 CPUs have 32 KB L1D; Apple M-series uses 64 KB.
+#define POPNET_L1_CACHE_KB 32
+#endif
+
 #define POPNET_MAX_DIMS 4
 #define POPNET_MAX_SRC 8
 
