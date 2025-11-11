@@ -36,7 +36,10 @@ TEST_CASE("full reduce compute")
 
           if constexpr (std::is_floating_point_v<decltype(expected)>)
           {
-            CHECK(actual == doctest::Approx(expected));
+            if (actual != expected)
+            {
+              CHECK(actual == doctest::Approx(expected));
+            }
           }
           else
           {

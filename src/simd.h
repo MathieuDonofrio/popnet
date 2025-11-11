@@ -75,6 +75,11 @@ template <> struct simd_traits<POPNET_TYPE_F32>
   POPNET_INLINE static void store(void* p, const vector_t v) { _mm512_storeu_ps(p, v); }
   POPNET_INLINE static void store(void* p, const mask_t m, const vector_t v) { _mm512_mask_storeu_ps(p, m, v); }
 
+  POPNET_INLINE static vector_t blend(const vector_t a, const vector_t b, const mask_t m)
+  {
+    return _mm512_mask_blend_ps(m, a, b);
+  }
+
 #else
   static inline constexpr simd_category category = simd_category::scalar;
 
@@ -144,7 +149,8 @@ POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inpu
     if (tail)
     {
       const traits::mask_t m = (1 << tail) - 1;
-      s = merge_op(traits::load(reinterpret_cast<const char*>(inputs) + body * traits::element_size(), m)..., s);
+      s = traits::blend(
+          s, merge_op(traits::load(reinterpret_cast<const char*>(inputs) + body * traits::element_size(), m)..., s), m);
     }
   }
   else if constexpr (traits::category == simd_category::scalar)

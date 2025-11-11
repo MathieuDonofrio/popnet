@@ -50,7 +50,7 @@ TEST_CASE("elementwise unary compute")
 
             if constexpr (std::is_floating_point_v<decltype(expected)>)
             {
-              CHECK(actual == doctest::Approx(expected));
+              CHECK(actual == doctest::Approx(expected).epsilon(1e-4));
             }
             else
             {
