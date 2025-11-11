@@ -4,17 +4,18 @@
 #include "tensor.h"
 
 template <auto op, popnet_type dtype>
-void unary_kernel(void* POPNET_RESTRICT src, void* POPNET_RESTRICT dst, size_t n) noexcept
+void unary_kernel(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t n) noexcept
 {
-  simd_map<op, dtype>(dst, n, src);
+  simd_map<op, dtype>(b, n, a);
 }
 
 template <auto op, popnet_type dtype>
-void binary_kernel(void* POPNET_RESTRICT src0, void* POPNET_RESTRICT src1, void* POPNET_RESTRICT dst, size_t n) noexcept
+void binary_kernel(const void* POPNET_RESTRICT a, const void* POPNET_RESTRICT b, void* POPNET_RESTRICT c,
+                   size_t n) noexcept
 {
   // TODO handle broadcasting
 
-  simd_map<op, dtype>(dst, n, src0, src1);
+  simd_map<op, dtype>(c, n, a, b);
 }
 
 template <popnet_op op> POPNET_INLINE static void popnet_compute_unary(popnet_tensor* dst)

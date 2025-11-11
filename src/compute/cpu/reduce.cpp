@@ -4,12 +4,12 @@
 #include "tensor.h"
 
 template <auto init_state_op, auto merge_op, auto horizontal_op, popnet_type dtype>
-void reduce_kernel(void* POPNET_RESTRICT src, void* POPNET_RESTRICT dst, size_t n) noexcept
+void reduce_kernel(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t n) noexcept
 {
   using traits = simd_traits<dtype>;
   using scalar_t = typename traits::scalar_t;
 
-  *static_cast<scalar_t*>(dst) = simd_reduce<init_state_op, merge_op, horizontal_op, POPNET_TYPE_F32>(n, src);
+  *static_cast<scalar_t*>(b) = simd_reduce<init_state_op, merge_op, horizontal_op, POPNET_TYPE_F32>(n, a);
 }
 
 template <popnet_op op> POPNET_INLINE static void popnet_compute_reduce(popnet_tensor* dst)

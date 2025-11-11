@@ -2,7 +2,7 @@
 
 popnet_tensor* popnet_add(popnet_tensor* a, popnet_tensor* b)
 {
-  POPNET_EXPECT(popnet_broadcastable(b, a));
+  POPNET_EXPECT(popnet_shape_broadcastable(b, a));
 
   popnet_tensor* result = popnet_empty_like(a);
 
@@ -15,7 +15,7 @@ popnet_tensor* popnet_add(popnet_tensor* a, popnet_tensor* b)
 
 popnet_tensor* popnet_sub(popnet_tensor* a, popnet_tensor* b)
 {
-  POPNET_EXPECT(popnet_broadcastable(b, a));
+  POPNET_EXPECT(popnet_shape_broadcastable(b, a));
 
   popnet_tensor* result = popnet_empty_like(a);
 
@@ -28,7 +28,7 @@ popnet_tensor* popnet_sub(popnet_tensor* a, popnet_tensor* b)
 
 popnet_tensor* popnet_mul(popnet_tensor* a, popnet_tensor* b)
 {
-  POPNET_EXPECT(popnet_broadcastable(b, a));
+  POPNET_EXPECT(popnet_shape_broadcastable(b, a));
 
   popnet_tensor* result = popnet_empty_like(a);
 
@@ -41,7 +41,7 @@ popnet_tensor* popnet_mul(popnet_tensor* a, popnet_tensor* b)
 
 popnet_tensor* popnet_div(popnet_tensor* a, popnet_tensor* b)
 {
-  POPNET_EXPECT(popnet_broadcastable(b, a));
+  POPNET_EXPECT(popnet_shape_broadcastable(b, a));
 
   popnet_tensor* result = popnet_empty_like(a);
 
@@ -224,9 +224,9 @@ popnet_tensor* popnet_reduce_max(popnet_tensor* a, uint8_t axis_mask)
 
 popnet_tensor* popnet_matmul(popnet_tensor* a, popnet_tensor* b)
 {
-  POPNET_EXPECT(popnet_matmul_compatible(a, b));
+  POPNET_EXPECT(popnet_matmul_shape_compatible(a, b));
 
-  popnet_tensor* result = nullptr; // TODO create with correct shape
+  popnet_tensor* result = popnet_empty(a->dtype, popnet_matmul_shape(a->shape, b->shape));
 
   result->op = POPNET_OP_MATMUL;
   result->src[0] = a;

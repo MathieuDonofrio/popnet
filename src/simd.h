@@ -138,20 +138,20 @@ POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inpu
 
     for (size_t i = 0; i < body; i += traits::length())
     {
-      s = merge_op(s, traits::load(reinterpret_cast<const char*>(inputs) + i * traits::element_size())...);
+      s = merge_op(traits::load(reinterpret_cast<const char*>(inputs) + i * traits::element_size())..., s);
     }
 
     if (tail)
     {
       const traits::mask_t m = (1 << tail) - 1;
-      s = merge_op(s, traits::load(reinterpret_cast<const char*>(inputs) + body * traits::element_size(), m)...);
+      s = merge_op(traits::load(reinterpret_cast<const char*>(inputs) + body * traits::element_size(), m)..., s);
     }
   }
   else if constexpr (traits::category == simd_category::scalar)
   {
     for (size_t i = 0; i < n; ++i)
     {
-      s = merge_op(s, reinterpret_cast<const traits::scalar_t*>(inputs)[i]...);
+      s = merge_op(reinterpret_cast<const traits::scalar_t*>(inputs)[i]..., s);
     }
   }
   else
