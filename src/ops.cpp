@@ -2,9 +2,13 @@
 
 popnet_tensor* popnet_add(popnet_tensor* a, popnet_tensor* b)
 {
-  POPNET_EXPECT(popnet_shape_broadcastable(b, a));
+  POPNET_EXPECT(a != nullptr);
+  POPNET_EXPECT(b != nullptr);
+  POPNET_EXPECT(popnet_shape_broadcastable(b->shape, a->shape));
 
   popnet_tensor* result = popnet_empty_like(a);
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_ADD;
   result->src[0] = a;
@@ -15,9 +19,13 @@ popnet_tensor* popnet_add(popnet_tensor* a, popnet_tensor* b)
 
 popnet_tensor* popnet_sub(popnet_tensor* a, popnet_tensor* b)
 {
-  POPNET_EXPECT(popnet_shape_broadcastable(b, a));
+  POPNET_EXPECT(a != nullptr);
+  POPNET_EXPECT(b != nullptr);
+  POPNET_EXPECT(popnet_shape_broadcastable(b->shape, a->shape));
 
   popnet_tensor* result = popnet_empty_like(a);
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_SUB;
   result->src[0] = a;
@@ -28,9 +36,13 @@ popnet_tensor* popnet_sub(popnet_tensor* a, popnet_tensor* b)
 
 popnet_tensor* popnet_mul(popnet_tensor* a, popnet_tensor* b)
 {
-  POPNET_EXPECT(popnet_shape_broadcastable(b, a));
+  POPNET_EXPECT(a != nullptr);
+  POPNET_EXPECT(b != nullptr);
+  POPNET_EXPECT(popnet_shape_broadcastable(b->shape, a->shape));
 
   popnet_tensor* result = popnet_empty_like(a);
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_MUL;
   result->src[0] = a;
@@ -41,9 +53,13 @@ popnet_tensor* popnet_mul(popnet_tensor* a, popnet_tensor* b)
 
 popnet_tensor* popnet_div(popnet_tensor* a, popnet_tensor* b)
 {
-  POPNET_EXPECT(popnet_shape_broadcastable(b, a));
+  POPNET_EXPECT(a != nullptr);
+  POPNET_EXPECT(b != nullptr);
+  POPNET_EXPECT(popnet_shape_broadcastable(b->shape, a->shape));
 
   popnet_tensor* result = popnet_empty_like(a);
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_DIV;
   result->src[0] = a;
@@ -54,7 +70,11 @@ popnet_tensor* popnet_div(popnet_tensor* a, popnet_tensor* b)
 
 popnet_tensor* popnet_abs(popnet_tensor* a)
 {
+  POPNET_EXPECT(a != nullptr);
+
   popnet_tensor* result = popnet_empty_like(a);
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_ABS;
   result->src[0] = a;
@@ -64,7 +84,11 @@ popnet_tensor* popnet_abs(popnet_tensor* a)
 
 popnet_tensor* popnet_neg(popnet_tensor* a)
 {
+  POPNET_EXPECT(a != nullptr);
+
   popnet_tensor* result = popnet_empty_like(a);
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_NEG;
   result->src[0] = a;
@@ -74,7 +98,11 @@ popnet_tensor* popnet_neg(popnet_tensor* a)
 
 popnet_tensor* popnet_sqr(popnet_tensor* a)
 {
+  POPNET_EXPECT(a != nullptr);
+
   popnet_tensor* result = popnet_empty_like(a);
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_SQR;
   result->src[0] = a;
@@ -84,7 +112,11 @@ popnet_tensor* popnet_sqr(popnet_tensor* a)
 
 popnet_tensor* popnet_sqrt(popnet_tensor* a)
 {
+  POPNET_EXPECT(a != nullptr);
+
   popnet_tensor* result = popnet_empty_like(a);
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_SQRT;
   result->src[0] = a;
@@ -94,7 +126,11 @@ popnet_tensor* popnet_sqrt(popnet_tensor* a)
 
 popnet_tensor* popnet_exp(popnet_tensor* a)
 {
+  POPNET_EXPECT(a != nullptr);
+
   popnet_tensor* result = popnet_empty_like(a);
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_EXP;
   result->src[0] = a;
@@ -104,7 +140,11 @@ popnet_tensor* popnet_exp(popnet_tensor* a)
 
 popnet_tensor* popnet_log(popnet_tensor* a)
 {
+  POPNET_EXPECT(a != nullptr);
+
   popnet_tensor* result = popnet_empty_like(a);
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_LOG;
   result->src[0] = a;
@@ -114,7 +154,11 @@ popnet_tensor* popnet_log(popnet_tensor* a)
 
 popnet_tensor* popnet_sin(popnet_tensor* a)
 {
+  POPNET_EXPECT(a != nullptr);
+
   popnet_tensor* result = popnet_empty_like(a);
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_SIN;
   result->src[0] = a;
@@ -124,7 +168,11 @@ popnet_tensor* popnet_sin(popnet_tensor* a)
 
 popnet_tensor* popnet_cos(popnet_tensor* a)
 {
+  POPNET_EXPECT(a != nullptr);
+
   popnet_tensor* result = popnet_empty_like(a);
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_COS;
   result->src[0] = a;
@@ -134,7 +182,11 @@ popnet_tensor* popnet_cos(popnet_tensor* a)
 
 popnet_tensor* popnet_tanh(popnet_tensor* a)
 {
+  POPNET_EXPECT(a != nullptr);
+
   popnet_tensor* result = popnet_empty_like(a);
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_TANH;
   result->src[0] = a;
@@ -144,7 +196,11 @@ popnet_tensor* popnet_tanh(popnet_tensor* a)
 
 popnet_tensor* popnet_relu(popnet_tensor* a)
 {
+  POPNET_EXPECT(a != nullptr);
+
   popnet_tensor* result = popnet_empty_like(a);
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_RELU;
   result->src[0] = a;
@@ -154,7 +210,11 @@ popnet_tensor* popnet_relu(popnet_tensor* a)
 
 popnet_tensor* popnet_sigmoid(popnet_tensor* a)
 {
+  POPNET_EXPECT(a != nullptr);
+
   popnet_tensor* result = popnet_empty_like(a);
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_SIGMOID;
   result->src[0] = a;
@@ -164,9 +224,12 @@ popnet_tensor* popnet_sigmoid(popnet_tensor* a)
 
 popnet_tensor* popnet_reduce_sum(popnet_tensor* a, uint8_t axis_mask)
 {
+  POPNET_EXPECT(a != nullptr);
   POPNET_EXPECT(popnet_valid_axis_mask(axis_mask));
 
   popnet_tensor* result = popnet_empty(a->dtype, popnet_reduce_shape(a->shape, axis_mask));
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_REDUCE_SUM;
   result->src[0] = a;
@@ -176,9 +239,12 @@ popnet_tensor* popnet_reduce_sum(popnet_tensor* a, uint8_t axis_mask)
 
 popnet_tensor* popnet_reduce_mean(popnet_tensor* a, uint8_t axis_mask)
 {
+  POPNET_EXPECT(a != nullptr);
   POPNET_EXPECT(popnet_valid_axis_mask(axis_mask));
 
   popnet_tensor* result = popnet_empty(a->dtype, popnet_reduce_shape(a->shape, axis_mask));
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_REDUCE_MEAN;
   result->src[0] = a;
@@ -188,9 +254,12 @@ popnet_tensor* popnet_reduce_mean(popnet_tensor* a, uint8_t axis_mask)
 
 popnet_tensor* popnet_reduce_product(popnet_tensor* a, uint8_t axis_mask)
 {
+  POPNET_EXPECT(a != nullptr);
   POPNET_EXPECT(popnet_valid_axis_mask(axis_mask));
 
   popnet_tensor* result = popnet_empty(a->dtype, popnet_reduce_shape(a->shape, axis_mask));
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_REDUCE_PRODUCT;
   result->src[0] = a;
@@ -200,9 +269,12 @@ popnet_tensor* popnet_reduce_product(popnet_tensor* a, uint8_t axis_mask)
 
 popnet_tensor* popnet_reduce_min(popnet_tensor* a, uint8_t axis_mask)
 {
+  POPNET_EXPECT(a != nullptr);
   POPNET_EXPECT(popnet_valid_axis_mask(axis_mask));
 
   popnet_tensor* result = popnet_empty(a->dtype, popnet_reduce_shape(a->shape, axis_mask));
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_REDUCE_MIN;
   result->src[0] = a;
@@ -212,9 +284,12 @@ popnet_tensor* popnet_reduce_min(popnet_tensor* a, uint8_t axis_mask)
 
 popnet_tensor* popnet_reduce_max(popnet_tensor* a, uint8_t axis_mask)
 {
+  POPNET_EXPECT(a != nullptr);
   POPNET_EXPECT(popnet_valid_axis_mask(axis_mask));
 
   popnet_tensor* result = popnet_empty(a->dtype, popnet_reduce_shape(a->shape, axis_mask));
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_REDUCE_MAX;
   result->src[0] = a;
@@ -224,9 +299,13 @@ popnet_tensor* popnet_reduce_max(popnet_tensor* a, uint8_t axis_mask)
 
 popnet_tensor* popnet_matmul(popnet_tensor* a, popnet_tensor* b)
 {
-  POPNET_EXPECT(popnet_matmul_shape_compatible(a, b));
+  POPNET_EXPECT(a != nullptr);
+  POPNET_EXPECT(b != nullptr);
+  POPNET_EXPECT(popnet_matmul_shape_compatible(a->shape, b->shape));
 
   popnet_tensor* result = popnet_empty(a->dtype, popnet_matmul_shape(a->shape, b->shape));
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_MATMUL;
   result->src[0] = a;
@@ -237,7 +316,11 @@ popnet_tensor* popnet_matmul(popnet_tensor* a, popnet_tensor* b)
 
 popnet_tensor* popnet_transpose(popnet_tensor* a)
 {
+  POPNET_EXPECT(a != nullptr);
+
   popnet_tensor* result = popnet_empty(a->dtype, popnet_transpose_shape(a->shape));
+
+  POPNET_EXPECT(result != nullptr);
 
   result->op = POPNET_OP_TRANSPOSE;
   result->src[0] = a;

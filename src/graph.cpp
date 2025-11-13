@@ -1,6 +1,7 @@
 #include "graph.h"
 
 #include "elemwise.h"
+#include "linalg.h"
 #include "reduce.h"
 #include "tensor.h"
 
@@ -57,12 +58,8 @@ void popnet_graph_compute_forward(popnet_graph* graph)
     case POPNET_OP_REDUCE_PRODUCT: popnet_compute_reduce_product(node); break;
     case POPNET_OP_REDUCE_MIN: popnet_compute_reduce_min(node); break;
     case POPNET_OP_REDUCE_MAX: popnet_compute_reduce_max(node); break;
-    case POPNET_OP_MATMUL:
-      POPNET_UNREACHABLE(); // TODO
-      break;
-    case POPNET_OP_TRANSPOSE:
-      POPNET_UNREACHABLE(); // TODO
-      break;
+    case POPNET_OP_MATMUL: popnet_compute_matmul(node); break;
+    case POPNET_OP_TRANSPOSE: popnet_compute_transpose(node); break;
     default: POPNET_UNREACHABLE(); break;
     }
   }
