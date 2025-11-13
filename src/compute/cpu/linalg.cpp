@@ -17,14 +17,21 @@ consteval size_t sqrti(size_t x)
   return lo - 1;
 }
 
-consteval size_t compute_matmul_tile_size(size_t element_size)
+constexpr size_t l1_cache_size() noexcept
 {
-  return sqrti((POPNET_L1_CACHE_KB * 1024) / (element_size * 3));
+#ifdef POPNET_L1_CACHE_KB
+  return POPNET_L1_CACHE_KB * 1024;
+#else
+  // Approximate: Most x86 CPUs have 32 KB L1D; Apple M-series uses 64 KB.
+  return 32 * 1024;
+#endif
 }
+
+consteval size_t compute_matmul_tile_size(size_t element_size) { return sqrti(l1_cache_size() / (element_size * 3)); }
 
 consteval size_t compute_transpose_tile_size(size_t element_size)
 {
-  return sqrti((POPNET_L1_CACHE_KB * 1024) / (element_size * 2));
+  return sqrti(l1_cache_size() / (element_size * 2));
 }
 
 template <auto init_state_op, auto merge_op, auto horizontal_op, popnet_type dtype>

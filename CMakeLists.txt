@@ -24,6 +24,8 @@ option(POPNET_BUILD_BENCHMARKS "Build performance benchmarks" OFF)
 option(POPNET_NATIVE "Enable host CPU optimizations (auto-off when cross-compiling)." ON)
 option(POPNET_LTO "Enable link-time optimization (LTO/IPO) if supported." OFF)
 
+set(POPNET_L1_CACHE_KB "" CACHE STRING "Optional override for L1 cache size (KB)")
+
 # Compute Backend
 
 set(POPNET_BACKEND "CPU" CACHE STRING "Select the compute backend (CPU, CUDA)")
@@ -71,6 +73,10 @@ target_include_directories(popnet
 target_include_directories(popnet PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 enable_popnet_ipo(popnet)
+
+if(NOT "${POPNET_L1_CACHE_KB}" STREQUAL "")
+  target_compile_definitions(popnet PUBLIC POPNET_L1_CACHE_KB=${POPNET_L1_CACHE_KB})
+endif()
 
 add_library(popnet_internal INTERFACE)
 
