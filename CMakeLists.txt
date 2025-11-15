@@ -96,3 +96,11 @@ if(POPNET_BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
 endif()
+
+#
+# Benchmarking
+#
+
+if(POPNET_BUILD_BENCHMARKS)
+  add_subdirectory(bench)
+endif()
