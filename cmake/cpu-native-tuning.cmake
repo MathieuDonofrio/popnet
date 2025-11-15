@@ -5,7 +5,7 @@ if(POPNET_NATIVE)
   else()
     # Autodetect CPU flags
 
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
       include(CheckCXXCompilerFlag)
       check_cxx_compiler_flag("-march=native" HAS_MARCH_NATIVE)
       if(HAS_MARCH_NATIVE)
@@ -42,7 +42,7 @@ if(POPNET_NATIVE)
       message(STATUS "Applying MSVC native flags: ${NATIVE_FLAGS}")
       add_compile_options(${NATIVE_FLAGS})
     else()
-      message(WARNING "Unknown compiler (${CMAKE_CXX_COMPILER_ID}): POPNET_NATIVE ignored.")
+      message(WARNING "Unknown compiler ${CMAKE_CXX_COMPILER_ID}. POPNET_NATIVE ignored.")
     endif()
 
     # Autodetect L1 Cache Size

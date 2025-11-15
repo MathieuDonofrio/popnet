@@ -41,6 +41,8 @@ option(POPNET_TSAN "Enable ThreadSanitizer (TSAN) for detecting data races" OFF)
 # Includes
 #
 
+include(cmake/compiler-warnings.cmake)
+include(cmake/conformance.cmake)
 include(cmake/cpu-native-tuning.cmake)
 include(cmake/interprocedural-optimization.cmake)
 include(cmake/sanitizers.cmake)
@@ -72,7 +74,9 @@ target_include_directories(popnet
 
 target_include_directories(popnet PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
+add_target_warnings(popnet)
 enable_popnet_ipo(popnet)
+
 
 if(NOT "${POPNET_L1_CACHE_KB}" STREQUAL "")
   target_compile_definitions(popnet PUBLIC POPNET_L1_CACHE_KB=${POPNET_L1_CACHE_KB})

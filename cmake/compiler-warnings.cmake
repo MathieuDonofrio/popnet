@@ -1,0 +1,13 @@
+function(add_target_warnings TARGET)
+  if (NOT TARGET ${TARGET})
+    message(FATAL_ERROR "add_target_warnings: '${TARGET}' is not a valid target.")
+  endif()
+
+  if (MSVC)
+    target_compile_options(${TARGET} PRIVATE /W4)
+  elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(${TARGET} PRIVATE -Wall -Wextra -Wpedantic)
+  else()
+    message(WARNING "Unknown compiler '${CMAKE_CXX_COMPILER_ID}'. Warnings for target '${TARGET}' not applied.")
+  endif()
+endfunction()

@@ -51,7 +51,8 @@ void popnet_free(void* ptr) noexcept
 #endif
 }
 
-void popnet_memcpy(void* POPNET_RESTRICT dst, const void* POPNET_RESTRICT src, size_t count, MemcpyKind kind) noexcept
+void popnet_memcpy(void* POPNET_RESTRICT dst, const void* POPNET_RESTRICT src, size_t count,
+                   [[maybe_unused]] MemcpyKind kind) noexcept
 {
   memcpy(dst, src, count);
 }
