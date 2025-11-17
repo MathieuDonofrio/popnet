@@ -4,17 +4,15 @@
 #include "tensor.h"
 
 template <auto op, popnet_type dtype>
-void unary_kernel(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t n) noexcept
+POPNET_NO_INLINE void unary_kernel(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t n) noexcept
 {
   simd_map<op, dtype>(b, n, a);
 }
 
 template <auto op, popnet_type dtype>
-void binary_kernel(const void* POPNET_RESTRICT a, const void* POPNET_RESTRICT b, void* POPNET_RESTRICT c,
-                   size_t n) noexcept
+POPNET_NO_INLINE void binary_kernel_matching(const void* POPNET_RESTRICT a, const void* POPNET_RESTRICT b,
+                                             void* POPNET_RESTRICT c, size_t n) noexcept
 {
-  // TODO handle broadcasting
-
   simd_map<op, dtype>(c, n, a, b);
 }
 
@@ -66,13 +64,13 @@ template <auto op> POPNET_INLINE static void popnet_compute_binary(popnet_tensor
   if (src0->dtype == POPNET_TYPE_F32 && src1->dtype == POPNET_TYPE_F32 && dst->dtype == POPNET_TYPE_F32)
   {
     if constexpr (op == POPNET_OP_ADD) //
-      binary_kernel<vadd_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, n);
+      binary_kernel_matching<vadd_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, n);
     else if constexpr (op == POPNET_OP_SUB)
-      binary_kernel<vsub_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, n);
+      binary_kernel_matching<vsub_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, n);
     else if constexpr (op == POPNET_OP_MUL)
-      binary_kernel<vmul_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, n);
+      binary_kernel_matching<vmul_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, n);
     else if constexpr (op == POPNET_OP_DIV)
-      binary_kernel<vdiv_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, n);
+      binary_kernel_matching<vdiv_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, n);
     else
       static_assert([]() { return false; }, "Not implemented");
   }

@@ -32,10 +32,13 @@
 
 #ifdef _MSC_VER
 #define POPNET_INLINE __forceinline
+#define POPNET_NO_INLINE __declspec(noinline)
 #elif defined(__GNUC__) || defined(__clang__)
 #define POPNET_INLINE inline __attribute__((always_inline))
+#define POPNET_NO_INLINE __attribute__((noinline))
 #else
 #define POPNET_INLINE inline
+#define POPNET_NO_INLINE
 #endif
 
 #ifndef NDEBUG
