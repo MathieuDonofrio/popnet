@@ -6,7 +6,7 @@ popnet_tensor* popnet_add(popnet_tensor* a, popnet_tensor* b)
   POPNET_EXPECT(b != nullptr);
   POPNET_EXPECT(popnet_shape_broadcastable(b->shape, a->shape));
 
-  popnet_tensor* result = popnet_empty_like(a);
+  popnet_tensor* result = popnet_empty(a->dtype, popnet_broadcast_shape(a->shape, b->shape));
 
   POPNET_EXPECT(result != nullptr);
 
@@ -23,7 +23,7 @@ popnet_tensor* popnet_sub(popnet_tensor* a, popnet_tensor* b)
   POPNET_EXPECT(b != nullptr);
   POPNET_EXPECT(popnet_shape_broadcastable(b->shape, a->shape));
 
-  popnet_tensor* result = popnet_empty_like(a);
+  popnet_tensor* result = popnet_empty(a->dtype, popnet_broadcast_shape(a->shape, b->shape));
 
   POPNET_EXPECT(result != nullptr);
 
@@ -40,7 +40,7 @@ popnet_tensor* popnet_mul(popnet_tensor* a, popnet_tensor* b)
   POPNET_EXPECT(b != nullptr);
   POPNET_EXPECT(popnet_shape_broadcastable(b->shape, a->shape));
 
-  popnet_tensor* result = popnet_empty_like(a);
+  popnet_tensor* result = popnet_empty(a->dtype, popnet_broadcast_shape(a->shape, b->shape));
 
   POPNET_EXPECT(result != nullptr);
 
@@ -57,7 +57,7 @@ popnet_tensor* popnet_div(popnet_tensor* a, popnet_tensor* b)
   POPNET_EXPECT(b != nullptr);
   POPNET_EXPECT(popnet_shape_broadcastable(b->shape, a->shape));
 
-  popnet_tensor* result = popnet_empty_like(a);
+  popnet_tensor* result = popnet_empty(a->dtype, popnet_broadcast_shape(a->shape, b->shape));
 
   POPNET_EXPECT(result != nullptr);
 

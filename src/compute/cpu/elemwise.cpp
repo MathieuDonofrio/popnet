@@ -19,7 +19,7 @@ POPNET_NO_INLINE void binary_kernel_matching(const void* POPNET_RESTRICT a, cons
 template <popnet_op op> POPNET_INLINE static void popnet_compute_unary(popnet_tensor* dst)
 {
   const popnet_tensor* src = dst->src[0];
-  const size_t n = popnet_nelems(dst->shape);
+  const size_t n = popnet_numel(dst->shape);
 
   if (src->dtype == POPNET_TYPE_F32 && dst->dtype == POPNET_TYPE_F32)
   {
@@ -59,20 +59,25 @@ template <auto op> POPNET_INLINE static void popnet_compute_binary(popnet_tensor
   const popnet_tensor* src0 = dst->src[0];
   const popnet_tensor* src1 = dst->src[1];
 
-  const size_t n = popnet_nelems(dst->shape);
+  const size_t n = popnet_numel(dst->shape);
 
   if (src0->dtype == POPNET_TYPE_F32 && src1->dtype == POPNET_TYPE_F32 && dst->dtype == POPNET_TYPE_F32)
   {
-    if constexpr (op == POPNET_OP_ADD) //
-      binary_kernel_matching<vadd_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, n);
-    else if constexpr (op == POPNET_OP_SUB)
-      binary_kernel_matching<vsub_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, n);
-    else if constexpr (op == POPNET_OP_MUL)
-      binary_kernel_matching<vmul_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, n);
-    else if constexpr (op == POPNET_OP_DIV)
-      binary_kernel_matching<vdiv_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, n);
+    if (src0->shape == src1->shape)
+    {
+      if constexpr (op == POPNET_OP_ADD) //
+        binary_kernel_matching<vadd_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, n);
+      else if constexpr (op == POPNET_OP_SUB)
+        binary_kernel_matching<vsub_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, n);
+      else if constexpr (op == POPNET_OP_MUL)
+        binary_kernel_matching<vmul_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, n);
+      else if constexpr (op == POPNET_OP_DIV)
+        binary_kernel_matching<vdiv_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, n);
+      else
+        static_assert([]() { return false; }, "Not implemented");
+    }
     else
-      static_assert([]() { return false; }, "Not implemented");
+    {}
   }
   else
   {

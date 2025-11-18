@@ -5,7 +5,7 @@
 
 void* popnet_alloc(popnet_type dtype, popnet_shape shape) noexcept
 {
-  const size_t nelems = popnet_nelems(shape);
+  const size_t nelems = popnet_numel(shape);
 
   if (nelems == 0) return nullptr;
 

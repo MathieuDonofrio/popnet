@@ -80,11 +80,11 @@ typedef enum
 {
   POPNET_OP_NONE = 0,
 
-  // Element-wise
   POPNET_OP_ADD,
   POPNET_OP_SUB,
   POPNET_OP_MUL,
   POPNET_OP_DIV,
+
   POPNET_OP_ABS,
   POPNET_OP_NEG,
   POPNET_OP_SQR,
@@ -97,14 +97,12 @@ typedef enum
   POPNET_OP_RELU,
   POPNET_OP_SIGMOID,
 
-  // Reduce
   POPNET_OP_REDUCE_SUM,
   POPNET_OP_REDUCE_MEAN,
   POPNET_OP_REDUCE_PRODUCT,
   POPNET_OP_REDUCE_MIN,
   POPNET_OP_REDUCE_MAX,
 
-  // Linear Algebra
   POPNET_OP_MATMUL,
   POPNET_OP_TRANSPOSE,
 } popnet_op;
@@ -114,7 +112,7 @@ typedef struct popnet_shape
   size_t dim[POPNET_MAX_DIMS];
 } popnet_shape;
 
-POPNET_INLINE size_t popnet_nelems(popnet_shape shape)
+POPNET_INLINE size_t popnet_numel(popnet_shape shape)
 {
   static_assert(POPNET_MAX_DIMS == 4);
   const size_t size = shape.dim[0] * shape.dim[1] * shape.dim[2] * shape.dim[3];

@@ -13,7 +13,7 @@ TEST_CASE("full reduce compute")
         auto run_shape = [&](size_t d0, size_t d1, size_t d2, size_t d3) {
           popnet_shape shape{{d0, d1, d2, d3}};
 
-          size_t n = popnet_nelems(shape);
+          size_t n = popnet_numel(shape);
 
           auto input_data = generate_scalar_data<dtype>(n, lower, upper, exclude_zero);
 

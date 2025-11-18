@@ -4,10 +4,10 @@
 
 #include "simd.h"
 
-TEST_CASE("popnet_nelems computes number of elements correctly")
+TEST_CASE("popnet_numel computes number of elements correctly")
 {
   popnet_shape shape{{2, 3, 4, 5}};
-  REQUIRE(popnet_nelems(shape) == 2 * 3 * 4 * 5);
+  REQUIRE(popnet_numel(shape) == 2 * 3 * 4 * 5);
 }
 
 TEST_CASE("popnet_empty and popnet_empty_like")

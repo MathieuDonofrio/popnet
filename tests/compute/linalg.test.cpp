@@ -93,15 +93,15 @@ TEST_CASE("matmul")
     popnet_tensor* b = popnet_empty(POPNET_TYPE_F32, b_shape);
     popnet_tensor* c = popnet_empty(POPNET_TYPE_F32, c_shape);
 
-    REQUIRE(popnet_set_data(a, a_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(a_shape)));
-    REQUIRE(popnet_set_data(b, b_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(b_shape)));
+    REQUIRE(popnet_set_data(a, a_data.data(), POPNET_TYPE_F32, 0, popnet_numel(a_shape)));
+    REQUIRE(popnet_set_data(b, b_data.data(), POPNET_TYPE_F32, 0, popnet_numel(b_shape)));
 
     c->src[0] = a;
     c->src[1] = b;
     popnet_compute_matmul(c);
 
-    std::vector<float> output_data(popnet_nelems(c_shape));
-    REQUIRE(popnet_get_data(c, output_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(c_shape)));
+    std::vector<float> output_data(popnet_numel(c_shape));
+    REQUIRE(popnet_get_data(c, output_data.data(), POPNET_TYPE_F32, 0, popnet_numel(c_shape)));
     for (size_t i = 0; i < output_data.size(); ++i)
     {
       CHECK(output_data[i] == doctest::Approx(expected_data[i]).epsilon(1e-5f).scale(1.0f));
@@ -126,15 +126,15 @@ TEST_CASE("matmul")
     popnet_tensor* b = popnet_empty(POPNET_TYPE_F32, b_shape);
     popnet_tensor* c = popnet_empty(POPNET_TYPE_F32, c_shape);
 
-    REQUIRE(popnet_set_data(a, a_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(a_shape)));
-    REQUIRE(popnet_set_data(b, b_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(b_shape)));
+    REQUIRE(popnet_set_data(a, a_data.data(), POPNET_TYPE_F32, 0, popnet_numel(a_shape)));
+    REQUIRE(popnet_set_data(b, b_data.data(), POPNET_TYPE_F32, 0, popnet_numel(b_shape)));
 
     c->src[0] = a;
     c->src[1] = b;
     popnet_compute_matmul(c);
 
-    std::vector<float> output_data(popnet_nelems(c_shape));
-    REQUIRE(popnet_get_data(c, output_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(c_shape)));
+    std::vector<float> output_data(popnet_numel(c_shape));
+    REQUIRE(popnet_get_data(c, output_data.data(), POPNET_TYPE_F32, 0, popnet_numel(c_shape)));
     for (size_t i = 0; i < output_data.size(); ++i)
     {
       CHECK(output_data[i] == doctest::Approx(expected_data[i]).epsilon(1e-5f).scale(1.0f));
@@ -158,15 +158,15 @@ TEST_CASE("matmul")
     popnet_tensor* b = popnet_empty(POPNET_TYPE_F32, b_shape);
     popnet_tensor* c = popnet_empty(POPNET_TYPE_F32, c_shape);
 
-    REQUIRE(popnet_set_data(a, a_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(a_shape)));
-    REQUIRE(popnet_set_data(b, b_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(b_shape)));
+    REQUIRE(popnet_set_data(a, a_data.data(), POPNET_TYPE_F32, 0, popnet_numel(a_shape)));
+    REQUIRE(popnet_set_data(b, b_data.data(), POPNET_TYPE_F32, 0, popnet_numel(b_shape)));
 
     c->src[0] = a;
     c->src[1] = b;
     popnet_compute_matmul(c);
 
-    std::vector<float> output_data(popnet_nelems(c_shape));
-    REQUIRE(popnet_get_data(c, output_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(c_shape)));
+    std::vector<float> output_data(popnet_numel(c_shape));
+    REQUIRE(popnet_get_data(c, output_data.data(), POPNET_TYPE_F32, 0, popnet_numel(c_shape)));
     for (size_t i = 0; i < output_data.size(); ++i)
     {
       CHECK(output_data[i] == doctest::Approx(expected_data[i]).epsilon(1e-5f).scale(1.0f));
@@ -191,15 +191,15 @@ TEST_CASE("matmul")
     popnet_tensor* b = popnet_empty(POPNET_TYPE_F32, b_shape);
     popnet_tensor* c = popnet_empty(POPNET_TYPE_F32, c_shape);
 
-    REQUIRE(popnet_set_data(a, a_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(a_shape)));
-    REQUIRE(popnet_set_data(b, b_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(b_shape)));
+    REQUIRE(popnet_set_data(a, a_data.data(), POPNET_TYPE_F32, 0, popnet_numel(a_shape)));
+    REQUIRE(popnet_set_data(b, b_data.data(), POPNET_TYPE_F32, 0, popnet_numel(b_shape)));
 
     c->src[0] = a;
     c->src[1] = b;
     popnet_compute_matmul(c);
 
-    std::vector<float> output_data(popnet_nelems(c_shape));
-    REQUIRE(popnet_get_data(c, output_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(c_shape)));
+    std::vector<float> output_data(popnet_numel(c_shape));
+    REQUIRE(popnet_get_data(c, output_data.data(), POPNET_TYPE_F32, 0, popnet_numel(c_shape)));
     for (size_t i = 0; i < output_data.size(); ++i)
     {
       CHECK(output_data[i] == doctest::Approx(expected_data[i]).epsilon(1e-5f).scale(1.0f));
@@ -216,8 +216,8 @@ TEST_CASE("matmul")
     const size_t n = b_shape.dim[2];
     const popnet_shape c_shape = {{a_shape.dim[0], a_shape.dim[1], m, n}};
 
-    const auto a_data = generate_scalar_data<dtype>(popnet_nelems(a_shape), lower, upper, false);
-    const auto b_data = generate_scalar_data<dtype>(popnet_nelems(b_shape), lower, upper, false);
+    const auto a_data = generate_scalar_data<dtype>(popnet_numel(a_shape), lower, upper, false);
+    const auto b_data = generate_scalar_data<dtype>(popnet_numel(b_shape), lower, upper, false);
 
     const auto expected_data = matmul_ref<dtype>(a_data, b_data, outer_size, m, n, k);
 
@@ -225,15 +225,15 @@ TEST_CASE("matmul")
     popnet_tensor* B = popnet_empty(dtype, b_shape);
     popnet_tensor* C = popnet_empty(dtype, c_shape);
 
-    REQUIRE(popnet_set_data(A, a_data.data(), dtype, 0, popnet_nelems(a_shape)));
-    REQUIRE(popnet_set_data(B, b_data.data(), dtype, 0, popnet_nelems(b_shape)));
+    REQUIRE(popnet_set_data(A, a_data.data(), dtype, 0, popnet_numel(a_shape)));
+    REQUIRE(popnet_set_data(B, b_data.data(), dtype, 0, popnet_numel(b_shape)));
 
     C->src[0] = A;
     C->src[1] = B;
     popnet_compute_matmul(C);
 
-    std::vector<scalar_t> output_data(popnet_nelems(c_shape));
-    REQUIRE(popnet_get_data(C, output_data.data(), dtype, 0, popnet_nelems(c_shape)));
+    std::vector<scalar_t> output_data(popnet_numel(c_shape));
+    REQUIRE(popnet_get_data(C, output_data.data(), dtype, 0, popnet_numel(c_shape)));
 
     for (size_t i = 0; i < output_data.size(); ++i)
     {
@@ -309,13 +309,13 @@ TEST_CASE("transpose")
     popnet_tensor* src = popnet_empty(POPNET_TYPE_F32, src_shape);
     popnet_tensor* dst = popnet_empty(POPNET_TYPE_F32, dst_shape);
 
-    REQUIRE(popnet_set_data(src, src_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(src_shape)));
+    REQUIRE(popnet_set_data(src, src_data.data(), POPNET_TYPE_F32, 0, popnet_numel(src_shape)));
     dst->src[0] = src;
 
     popnet_compute_transpose(dst);
 
-    std::vector<float> output_data(popnet_nelems(dst_shape));
-    REQUIRE(popnet_get_data(dst, output_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(dst_shape)));
+    std::vector<float> output_data(popnet_numel(dst_shape));
+    REQUIRE(popnet_get_data(dst, output_data.data(), POPNET_TYPE_F32, 0, popnet_numel(dst_shape)));
     REQUIRE(output_data == expected_data);
   }
 
@@ -332,13 +332,13 @@ TEST_CASE("transpose")
     popnet_tensor* src = popnet_empty(POPNET_TYPE_F32, src_shape);
     popnet_tensor* dst = popnet_empty(POPNET_TYPE_F32, dst_shape);
 
-    REQUIRE(popnet_set_data(src, src_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(src_shape)));
+    REQUIRE(popnet_set_data(src, src_data.data(), POPNET_TYPE_F32, 0, popnet_numel(src_shape)));
 
     dst->src[0] = src;
     popnet_compute_transpose(dst);
 
-    std::vector<float> output_data(popnet_nelems(dst_shape));
-    REQUIRE(popnet_get_data(dst, output_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(dst_shape)));
+    std::vector<float> output_data(popnet_numel(dst_shape));
+    REQUIRE(popnet_get_data(dst, output_data.data(), POPNET_TYPE_F32, 0, popnet_numel(dst_shape)));
     REQUIRE(output_data == expected_data);
   }
 
@@ -355,13 +355,13 @@ TEST_CASE("transpose")
     popnet_tensor* src = popnet_empty(POPNET_TYPE_F32, src_shape);
     popnet_tensor* dst = popnet_empty(POPNET_TYPE_F32, dst_shape);
 
-    REQUIRE(popnet_set_data(src, src_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(src_shape)));
+    REQUIRE(popnet_set_data(src, src_data.data(), POPNET_TYPE_F32, 0, popnet_numel(src_shape)));
 
     dst->src[0] = src;
     popnet_compute_transpose(dst);
 
-    std::vector<float> output_data(popnet_nelems(dst_shape));
-    REQUIRE(popnet_get_data(dst, output_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(dst_shape)));
+    std::vector<float> output_data(popnet_numel(dst_shape));
+    REQUIRE(popnet_get_data(dst, output_data.data(), POPNET_TYPE_F32, 0, popnet_numel(dst_shape)));
     REQUIRE(output_data == expected_data);
   }
 
@@ -378,13 +378,13 @@ TEST_CASE("transpose")
     popnet_tensor* src = popnet_empty(POPNET_TYPE_F32, src_shape);
     popnet_tensor* dst = popnet_empty(POPNET_TYPE_F32, dst_shape);
 
-    REQUIRE(popnet_set_data(src, src_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(src_shape)));
+    REQUIRE(popnet_set_data(src, src_data.data(), POPNET_TYPE_F32, 0, popnet_numel(src_shape)));
 
     dst->src[0] = src;
     popnet_compute_transpose(dst);
 
-    std::vector<float> output_data(popnet_nelems(dst_shape));
-    REQUIRE(popnet_get_data(dst, output_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(dst_shape)));
+    std::vector<float> output_data(popnet_numel(dst_shape));
+    REQUIRE(popnet_get_data(dst, output_data.data(), POPNET_TYPE_F32, 0, popnet_numel(dst_shape)));
     REQUIRE(output_data == expected_data);
   }
 
@@ -401,13 +401,13 @@ TEST_CASE("transpose")
     popnet_tensor* src = popnet_empty(POPNET_TYPE_F32, src_shape);
     popnet_tensor* dst = popnet_empty(POPNET_TYPE_F32, dst_shape);
 
-    REQUIRE(popnet_set_data(src, src_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(src_shape)));
+    REQUIRE(popnet_set_data(src, src_data.data(), POPNET_TYPE_F32, 0, popnet_numel(src_shape)));
 
     dst->src[0] = src;
     popnet_compute_transpose(dst);
 
-    std::vector<float> output_data(popnet_nelems(dst_shape));
-    REQUIRE(popnet_get_data(dst, output_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(dst_shape)));
+    std::vector<float> output_data(popnet_numel(dst_shape));
+    REQUIRE(popnet_get_data(dst, output_data.data(), POPNET_TYPE_F32, 0, popnet_numel(dst_shape)));
     REQUIRE(output_data == expected_data);
   }
 
@@ -425,12 +425,12 @@ TEST_CASE("transpose")
     popnet_tensor* src = popnet_empty(POPNET_TYPE_F32, src_shape);
     popnet_tensor* dst = popnet_empty(POPNET_TYPE_F32, dst_shape);
 
-    REQUIRE(popnet_set_data(src, src_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(src_shape)));
+    REQUIRE(popnet_set_data(src, src_data.data(), POPNET_TYPE_F32, 0, popnet_numel(src_shape)));
     dst->src[0] = src;
     popnet_compute_transpose(dst);
 
-    std::vector<float> output_data(popnet_nelems(dst_shape));
-    REQUIRE(popnet_get_data(dst, output_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(dst_shape)));
+    std::vector<float> output_data(popnet_numel(dst_shape));
+    REQUIRE(popnet_get_data(dst, output_data.data(), POPNET_TYPE_F32, 0, popnet_numel(dst_shape)));
     REQUIRE(output_data == expected_data);
   }
 
@@ -448,12 +448,12 @@ TEST_CASE("transpose")
     popnet_tensor* src = popnet_empty(POPNET_TYPE_F32, src_shape);
     popnet_tensor* dst = popnet_empty(POPNET_TYPE_F32, dst_shape);
 
-    REQUIRE(popnet_set_data(src, src_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(src_shape)));
+    REQUIRE(popnet_set_data(src, src_data.data(), POPNET_TYPE_F32, 0, popnet_numel(src_shape)));
     dst->src[0] = src;
     popnet_compute_transpose(dst);
 
-    std::vector<float> output_data(popnet_nelems(dst_shape));
-    REQUIRE(popnet_get_data(dst, output_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(dst_shape)));
+    std::vector<float> output_data(popnet_numel(dst_shape));
+    REQUIRE(popnet_get_data(dst, output_data.data(), POPNET_TYPE_F32, 0, popnet_numel(dst_shape)));
     REQUIRE(output_data == expected_data);
   }
 
@@ -473,12 +473,12 @@ TEST_CASE("transpose")
     popnet_tensor* src = popnet_empty(POPNET_TYPE_F32, src_shape);
     popnet_tensor* dst = popnet_empty(POPNET_TYPE_F32, dst_shape);
 
-    REQUIRE(popnet_set_data(src, src_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(src_shape)));
+    REQUIRE(popnet_set_data(src, src_data.data(), POPNET_TYPE_F32, 0, popnet_numel(src_shape)));
     dst->src[0] = src;
     popnet_compute_transpose(dst);
 
-    std::vector<float> output_data(popnet_nelems(dst_shape));
-    REQUIRE(popnet_get_data(dst, output_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(dst_shape)));
+    std::vector<float> output_data(popnet_numel(dst_shape));
+    REQUIRE(popnet_get_data(dst, output_data.data(), POPNET_TYPE_F32, 0, popnet_numel(dst_shape)));
     REQUIRE(output_data == expected_data);
   }
 
@@ -486,19 +486,19 @@ TEST_CASE("transpose")
     const size_t outer_size = src_shape.dim[0] * src_shape.dim[1];
     const popnet_shape dst_shape = popnet_transpose_shape(src_shape);
 
-    const auto src_data = generate_scalar_data<dtype>(popnet_nelems(src_shape), lower, upper, false);
+    const auto src_data = generate_scalar_data<dtype>(popnet_numel(src_shape), lower, upper, false);
     const auto expected_data = transpose_ref<dtype>(src_data, outer_size, src_shape.dim[2], src_shape.dim[3]);
 
     popnet_tensor* src = popnet_empty(POPNET_TYPE_F32, src_shape);
     popnet_tensor* dst = popnet_empty(POPNET_TYPE_F32, dst_shape);
 
-    REQUIRE(popnet_set_data(src, src_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(src_shape)));
+    REQUIRE(popnet_set_data(src, src_data.data(), POPNET_TYPE_F32, 0, popnet_numel(src_shape)));
 
     dst->src[0] = src;
     popnet_compute_transpose(dst);
 
-    std::vector<float> output_data(popnet_nelems(dst_shape));
-    REQUIRE(popnet_get_data(dst, output_data.data(), POPNET_TYPE_F32, 0, popnet_nelems(dst_shape)));
+    std::vector<float> output_data(popnet_numel(dst_shape));
+    REQUIRE(popnet_get_data(dst, output_data.data(), POPNET_TYPE_F32, 0, popnet_numel(dst_shape)));
     REQUIRE(output_data == expected_data);
   };
 

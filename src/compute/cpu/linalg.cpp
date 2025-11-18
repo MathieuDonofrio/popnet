@@ -35,8 +35,8 @@ consteval size_t compute_transpose_tile_size(size_t element_size)
 }
 
 template <auto init_state_op, auto merge_op, auto horizontal_op, popnet_type dtype>
-void matmul_kernel(const void* POPNET_RESTRICT a, const void* POPNET_RESTRICT b, void* POPNET_RESTRICT c,
-                   size_t outer_size, size_t n, size_t m, size_t k)
+POPNET_NO_INLINE void matmul_kernel(const void* POPNET_RESTRICT a, const void* POPNET_RESTRICT b,
+                                    void* POPNET_RESTRICT c, size_t outer_size, size_t n, size_t m, size_t k)
 {
   using traits = simd_traits<dtype>;
   using scalar_t = traits::scalar_t;
@@ -90,8 +90,8 @@ void matmul_kernel(const void* POPNET_RESTRICT a, const void* POPNET_RESTRICT b,
 }
 
 template <popnet_type dtype>
-void transpose_kernel(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t outer_size, size_t n,
-                      size_t m) noexcept
+POPNET_NO_INLINE void transpose_kernel(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t outer_size,
+                                       size_t n, size_t m) noexcept
 {
   using traits = simd_traits<dtype>;
   using scalar_t = traits::scalar_t;
