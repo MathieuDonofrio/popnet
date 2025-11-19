@@ -75,6 +75,8 @@ template <> struct simd_traits<POPNET_TYPE_F32>
   POPNET_INLINE static void store(void* p, const vector_t v) { _mm512_storeu_ps(p, v); }
   POPNET_INLINE static void store(void* p, const mask_t m, const vector_t v) { _mm512_mask_storeu_ps(p, m, v); }
 
+  POPNET_INLINE static vector_t broadcast(scalar_t a) { return _mm512_set1_ps(a); }
+
   POPNET_INLINE static vector_t blend(const vector_t a, const vector_t b, const mask_t m)
   {
     return _mm512_mask_blend_ps(m, a, b);
@@ -87,6 +89,10 @@ template <> struct simd_traits<POPNET_TYPE_F32>
 
   POPNET_INLINE static consteval size_t length() { return 1; }
 #endif
+
+  POPNET_INLINE static scalar_t load_scalar(const void* p) { return *static_cast<const scalar_t*>(p); }
+
+  POPNET_INLINE static void store_scalar(void* p, scalar_t v) { *static_cast<scalar_t*>(p) = v; }
 };
 
 using f32_t = simd_traits<POPNET_TYPE_F32>::scalar_t;
@@ -99,20 +105,30 @@ POPNET_INLINE static void simd_map(void* POPNET_RESTRICT output, size_t n, const
 
   if constexpr (traits::category == simd_category::fixed)
   {
-    const size_t tail = n % traits::length();
+    constexpr size_t simd_length = traits::length();
+    constexpr size_t element_size = traits::element_size();
+    constexpr size_t simd_size = simd_length * element_size;
+
+    const size_t tail = n % simd_length;
     const size_t body = n - tail;
 
-    for (size_t i = 0; i < body; i += traits::length())
+    void* const output_body_end = reinterpret_cast<char*>(output) + body * element_size;
+
+    while (output != output_body_end)
     {
-      const auto v = op(traits::load(reinterpret_cast<const char*>(inputs) + i * traits::element_size())...);
-      traits::store(reinterpret_cast<char*>(output) + i * traits::element_size(), v);
+      const auto v = op(traits::load(inputs)...);
+
+      traits::store(output, v);
+
+      output = reinterpret_cast<char*>(output) + simd_size;
+      ((inputs = reinterpret_cast<const char*>(inputs) + simd_size), ...);
     }
 
     if (tail)
     {
       const traits::mask_t m = (1 << tail) - 1;
-      const auto v = op(traits::load(reinterpret_cast<const char*>(inputs) + body * traits::element_size(), m)...);
-      traits::store(reinterpret_cast<char*>(output) + body * traits::element_size(), m, v);
+      const auto v = op(traits::load(inputs, m)...);
+      traits::store(output, m, v);
     }
   }
   else if constexpr (traits::category == simd_category::scalar)
@@ -177,7 +193,6 @@ POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inpu
 
 #if POPNET_AVX512
 
-POPNET_INLINE vf32_t vset_f32(f32_t a) { return _mm512_set1_ps(a); }
 POPNET_INLINE vf32_t vset_zero_f32() { return _mm512_setzero_ps(); }
 POPNET_INLINE vf32_t vset_one_f32() { return _mm512_set1_ps(1.0f); }
 POPNET_INLINE vf32_t vset_neg_inf_f32() { return _mm512_set1_ps(-std::numeric_limits<f32_t>::infinity()); }
@@ -223,7 +238,6 @@ POPNET_INLINE f32_t vreduce_max_f32(vf32_t a) { return _mm512_reduce_max_ps(a); 
 
 #else
 
-POPNET_INLINE vf32_t vset_f32(f32_t a) { return a; }
 POPNET_INLINE vf32_t vset_zero_f32() { return 0; }
 POPNET_INLINE vf32_t vset_one_f32() { return 1; }
 POPNET_INLINE vf32_t vset_neg_inf_f32() { return -std::numeric_limits<f32_t>::infinity(); }
