@@ -3,6 +3,7 @@
 #include <doctest/doctest.h>
 #include <vector>
 
+#include "ops.h"
 #include "simd.h"
 #include "tensor.h"
 #include "test_utils.h"
@@ -133,44 +134,93 @@ TEST_CASE("elementwise unary compute")
   }
 }
 
+size_t broadcast_index(size_t flat_idx, const popnet_shape& out_shape, const popnet_shape& in_shape)
+{
+  size_t in_flat = 0;
+  size_t stride = 1;
+
+  // walk dims from last to first (right-aligned)
+  for (int d = POPNET_MAX_DIMS - 1; d >= 0; --d)
+  {
+    size_t out_dim = out_shape.dim[d];
+    size_t in_dim = in_shape.dim[d];
+
+    size_t coord = flat_idx % out_dim;
+    flat_idx /= out_dim;
+
+    // broadcast if input dim == 1
+    size_t in_coord = (in_dim == 1 ? 0 : coord);
+
+    in_flat += in_coord * stride;
+    stride *= in_dim;
+  }
+
+  return in_flat;
+}
+
+template <popnet_type dtype, auto compute_ref>
+static auto binary_ref(const auto& lhs, const popnet_shape& lhs_shape, const auto& rhs, const popnet_shape& rhs_shape,
+                       const popnet_shape& out_shape)
+{
+  using traits = simd_traits<dtype>;
+  using scalar_t = typename traits::scalar_t;
+
+  const size_t n = popnet_numel(out_shape);
+
+  std::vector<scalar_t> out(n);
+
+  for (size_t i = 0; i < n; ++i)
+  {
+    const size_t il = broadcast_index(i, out_shape, lhs_shape);
+    const size_t ir = broadcast_index(i, out_shape, rhs_shape);
+
+    out[i] = compute_ref(lhs[il], rhs[ir]);
+  }
+
+  return out;
+}
+
 TEST_CASE("element binary compute")
 {
   auto run =
       []<auto compute, auto compute_ref, popnet_type dtype, auto lower, auto upper, bool exclude_zero = false>() {
-        auto run_n = [](size_t n) {
-          popnet_shape shape{{1, 1, 1, n}};
+        using traits = simd_traits<dtype>;
+        using scalar_t = typename traits::scalar_t;
 
-          auto lhs_data = generate_scalar_data<dtype>(n, lower, upper, exclude_zero, 0);
-          auto rhs_data = generate_scalar_data<dtype>(n, lower, upper, exclude_zero, 1);
+        auto run_shape = [](const popnet_shape lhs_shape, const popnet_shape rhs_shape) {
+          const auto dst_shape = popnet_broadcast_shape(lhs_shape, rhs_shape);
 
-          decltype(lhs_data) expected_data;
-          expected_data.reserve(n);
+          const auto lhs_n = popnet_numel(lhs_shape);
+          const auto rhs_n = popnet_numel(rhs_shape);
+          const auto dst_n = popnet_numel(dst_shape);
 
-          for (size_t i = 0; i < n; ++i)
-          {
-            expected_data.push_back(compute_ref(lhs_data[i], rhs_data[i]));
-          }
+          const auto lhs_data = generate_scalar_data<dtype>(lhs_n, lower, upper, exclude_zero, 0);
+          const auto rhs_data = generate_scalar_data<dtype>(rhs_n, lower, upper, exclude_zero, 1);
 
-          popnet_tensor* lhs = popnet_empty(dtype, shape);
-          popnet_tensor* rhs = popnet_empty(dtype, shape);
-          popnet_tensor* dst = popnet_empty(dtype, shape);
+          const auto expected_data =
+              binary_ref<dtype, compute_ref>(lhs_data, lhs_shape, rhs_data, rhs_shape, dst_shape);
+
+          popnet_tensor* lhs = popnet_empty(dtype, lhs_shape);
+          popnet_tensor* rhs = popnet_empty(dtype, rhs_shape);
+          popnet_tensor* dst = popnet_empty(dtype, dst_shape);
 
           REQUIRE(lhs != nullptr);
           REQUIRE(rhs != nullptr);
           REQUIRE(dst != nullptr);
 
-          REQUIRE(popnet_set_data(lhs, lhs_data.data(), dtype, 0, n));
-          REQUIRE(popnet_set_data(rhs, rhs_data.data(), dtype, 0, n));
+          REQUIRE(popnet_set_data(lhs, lhs_data.data(), dtype, 0, lhs_n));
+          REQUIRE(popnet_set_data(rhs, rhs_data.data(), dtype, 0, rhs_n));
 
           dst->src[0] = lhs;
           dst->src[1] = rhs;
 
           compute(dst);
 
-          decltype(lhs_data) output_data(n);
-          REQUIRE(popnet_get_data(dst, output_data.data(), dtype, 0, n));
+          std::vector<scalar_t> output_data(dst_n);
 
-          for (size_t i = 0; i < n; ++i)
+          REQUIRE(popnet_get_data(dst, output_data.data(), dtype, 0, dst_n));
+
+          for (size_t i = 0; i < dst_n; ++i)
           {
             const auto actual = output_data[i];
             const auto expected = expected_data[i];
@@ -190,16 +240,43 @@ TEST_CASE("element binary compute")
           popnet_free(dst);
         };
 
-        SUBCASE("1") { run_n(1); }
-        SUBCASE("2") { run_n(2); }
-        SUBCASE("3") { run_n(3); }
-        SUBCASE("4") { run_n(4); }
-        SUBCASE("5") { run_n(5); }
-        SUBCASE("1000") { run_n(1000); }
-        SUBCASE("simd") { run_n(simd_traits<dtype>::length()); }
-        SUBCASE("simd + 1") { run_n(simd_traits<dtype>::length() + 1); }
-        SUBCASE("simd * 16") { run_n(simd_traits<dtype>::length() * 16 + 1); }
-        SUBCASE("simd * 16 + 1") { run_n(simd_traits<dtype>::length() * 16 + 1); }
+        SUBCASE("1x1x1x1 1x1x1x1") { run_shape(popnet_shape{{1, 1, 1, 1}}, popnet_shape{{1, 1, 1, 1}}); }
+        SUBCASE("1x1x1x2 1x1x1x2") { run_shape(popnet_shape{{1, 1, 1, 2}}, popnet_shape{{1, 1, 1, 2}}); }
+        SUBCASE("1x1x1x3 1x1x1x3") { run_shape(popnet_shape{{1, 1, 1, 3}}, popnet_shape{{1, 1, 1, 3}}); }
+        SUBCASE("1x1x1x4 1x1x1x4") { run_shape(popnet_shape{{1, 1, 1, 4}}, popnet_shape{{1, 1, 1, 4}}); }
+        SUBCASE("1x1x1x5 1x1x1x5") { run_shape(popnet_shape{{1, 1, 1, 5}}, popnet_shape{{1, 1, 1, 5}}); }
+        SUBCASE("1x1x1x1000 1x1x1x1000") { run_shape(popnet_shape{{1, 1, 1, 1000}}, popnet_shape{{1, 1, 1, 1000}}); }
+        SUBCASE("1x1x1x(simd) 1x1x1x(simd)")
+        {
+          const size_t n = simd_traits<dtype>::length();
+          run_shape(popnet_shape{{1, 1, 1, n}}, popnet_shape{{1, 1, 1, n}});
+        }
+        SUBCASE("1x1x1x(simd+1) 1x1x1x(simd+1)")
+        {
+          const size_t n = simd_traits<dtype>::length() + 1;
+          run_shape(popnet_shape{{1, 1, 1, n}}, popnet_shape{{1, 1, 1, n}});
+        }
+        SUBCASE("1x1x1x(simd*16) 1x1x1x(simd*16)")
+        {
+          const size_t n = simd_traits<dtype>::length() * 16;
+          run_shape(popnet_shape{{1, 1, 1, n}}, popnet_shape{{1, 1, 1, n}});
+        }
+        SUBCASE("1x1x1x(simd*16+1) 1x1x1x(simd*16+1)")
+        {
+          const size_t n = simd_traits<dtype>::length() * 16 + 1;
+          run_shape(popnet_shape{{1, 1, 1, n}}, popnet_shape{{1, 1, 1, n}});
+        }
+
+        SUBCASE("1x1x1x1 1x1x1x8") { run_shape(popnet_shape{{1, 1, 1, 1}}, popnet_shape{{1, 1, 1, 8}}); }
+        SUBCASE("1x1x1x16 1x1x1x1") { run_shape(popnet_shape{{1, 1, 1, 16}}, popnet_shape{{1, 1, 1, 1}}); }
+        SUBCASE("1x1x4x5 1x3x1x5") { run_shape(popnet_shape{{1, 1, 4, 5}}, popnet_shape{{1, 3, 1, 5}}); }
+        SUBCASE("1x2x1x7 1x1x9x7") { run_shape(popnet_shape{{1, 2, 1, 7}}, popnet_shape{{1, 1, 9, 7}}); }
+        SUBCASE("1x1x4x1 1x3x1x8") { run_shape(popnet_shape{{1, 1, 4, 1}}, popnet_shape{{1, 3, 1, 8}}); }
+        SUBCASE("1x2x1x1 1x1x5x6") { run_shape(popnet_shape{{1, 2, 1, 1}}, popnet_shape{{1, 1, 5, 6}}); }
+        SUBCASE("1x1x7x1 1x8x1x9") { run_shape(popnet_shape{{1, 1, 7, 1}}, popnet_shape{{1, 8, 1, 9}}); }
+        SUBCASE("1x4x1x9 1x1x6x1") { run_shape(popnet_shape{{1, 4, 1, 9}}, popnet_shape{{1, 1, 6, 1}}); }
+        SUBCASE("1x3x1x5 4x1x6x1") { run_shape(popnet_shape{{1, 3, 1, 5}}, popnet_shape{{4, 1, 6, 1}}); }
+        SUBCASE("2x1x7x1 1x5x1x9") { run_shape(popnet_shape{{2, 1, 7, 1}}, popnet_shape{{1, 5, 1, 9}}); }
       };
 
   SUBCASE("add - F32")
