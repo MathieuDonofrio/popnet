@@ -5,13 +5,13 @@
 #include <vector>
 
 #include "ops.h"
-#include "simd.h"
 #include "tensor.h"
 #include "test_utils.h"
+#include "traits.h"
 
 template <popnet_type dtype> static auto transpose_ref(const auto& src, size_t outer_size, size_t n, size_t m)
 {
-  using traits = simd_traits<dtype>;
+  using traits = traits<dtype>;
   using scalar_t = typename traits::scalar_t;
 
   const size_t plane_size = n * m;
@@ -39,7 +39,7 @@ template <popnet_type dtype> static auto transpose_ref(const auto& src, size_t o
 template <popnet_type dtype>
 static auto matmul_ref(const auto& a, const auto& b, size_t outer_size, size_t m, size_t n, size_t k)
 {
-  using traits = simd_traits<dtype>;
+  using traits = traits<dtype>;
   using scalar_t = typename traits::scalar_t;
 
   const size_t a_plane_size = m * k;
@@ -207,7 +207,7 @@ TEST_CASE("matmul")
   }
 
   auto run = []<popnet_type dtype, auto lower, auto upper>(popnet_shape a_shape, popnet_shape b_shape) {
-    using traits = simd_traits<dtype>;
+    using traits = traits<dtype>;
     using scalar_t = typename traits::scalar_t;
 
     const size_t outer_size = a_shape.dim[0] * a_shape.dim[1];

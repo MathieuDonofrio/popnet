@@ -4,9 +4,9 @@
 #include <vector>
 
 #include "ops.h"
-#include "simd.h"
 #include "tensor.h"
 #include "test_utils.h"
+#include "traits.h"
 
 TEST_CASE("elementwise unary compute")
 {
@@ -69,10 +69,10 @@ TEST_CASE("elementwise unary compute")
         SUBCASE("4") { run_n(4); }
         SUBCASE("5") { run_n(5); }
         SUBCASE("1000") { run_n(1000); }
-        SUBCASE("simd") { run_n(simd_traits<dtype>::length()); }
-        SUBCASE("simd + 1") { run_n(simd_traits<dtype>::length() + 1); }
-        SUBCASE("simd * 16") { run_n(simd_traits<dtype>::length() * 16 + 1); }
-        SUBCASE("simd * 16 + 1") { run_n(simd_traits<dtype>::length() * 16 + 1); }
+        SUBCASE("simd") { run_n(traits<dtype>::vector_length()); }
+        SUBCASE("simd + 1") { run_n(traits<dtype>::vector_length() + 1); }
+        SUBCASE("simd * 16") { run_n(traits<dtype>::vector_length() * 16 + 1); }
+        SUBCASE("simd * 16 + 1") { run_n(traits<dtype>::vector_length() * 16 + 1); }
       };
 
   SUBCASE("abs - F32")
@@ -162,7 +162,7 @@ template <popnet_type dtype, auto compute_ref>
 static auto binary_ref(const auto& lhs, const popnet_shape& lhs_shape, const auto& rhs, const popnet_shape& rhs_shape,
                        const popnet_shape& out_shape)
 {
-  using traits = simd_traits<dtype>;
+  using traits = traits<dtype>;
   using scalar_t = typename traits::scalar_t;
 
   const size_t n = popnet_numel(out_shape);
@@ -184,7 +184,7 @@ TEST_CASE("element binary compute")
 {
   auto run =
       []<auto compute, auto compute_ref, popnet_type dtype, auto lower, auto upper, bool exclude_zero = false>() {
-        using traits = simd_traits<dtype>;
+        using traits = traits<dtype>;
         using scalar_t = typename traits::scalar_t;
 
         auto run_shape = [](const popnet_shape lhs_shape, const popnet_shape rhs_shape) {
@@ -248,22 +248,22 @@ TEST_CASE("element binary compute")
         SUBCASE("1x1x1x1000 1x1x1x1000") { run_shape(popnet_shape{{1, 1, 1, 1000}}, popnet_shape{{1, 1, 1, 1000}}); }
         SUBCASE("1x1x1x(simd) 1x1x1x(simd)")
         {
-          const size_t n = simd_traits<dtype>::length();
+          const size_t n = traits::vector_length();
           run_shape(popnet_shape{{1, 1, 1, n}}, popnet_shape{{1, 1, 1, n}});
         }
         SUBCASE("1x1x1x(simd+1) 1x1x1x(simd+1)")
         {
-          const size_t n = simd_traits<dtype>::length() + 1;
+          const size_t n = traits::vector_length() + 1;
           run_shape(popnet_shape{{1, 1, 1, n}}, popnet_shape{{1, 1, 1, n}});
         }
         SUBCASE("1x1x1x(simd*16) 1x1x1x(simd*16)")
         {
-          const size_t n = simd_traits<dtype>::length() * 16;
+          const size_t n = traits::vector_length() * 16;
           run_shape(popnet_shape{{1, 1, 1, n}}, popnet_shape{{1, 1, 1, n}});
         }
         SUBCASE("1x1x1x(simd*16+1) 1x1x1x(simd*16+1)")
         {
-          const size_t n = simd_traits<dtype>::length() * 16 + 1;
+          const size_t n = traits::vector_length() * 16 + 1;
           run_shape(popnet_shape{{1, 1, 1, n}}, popnet_shape{{1, 1, 1, n}});
         }
 

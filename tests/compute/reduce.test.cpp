@@ -2,9 +2,9 @@
 
 #include <doctest/doctest.h>
 
-#include "simd.h"
 #include "tensor.h"
 #include "test_utils.h"
+#include "traits.h"
 
 TEST_CASE("full reduce compute")
 {
@@ -56,27 +56,36 @@ TEST_CASE("full reduce compute")
         SUBCASE("4x4x4x4") { run_shape(4, 4, 4, 4); }
         SUBCASE("8x2x3x5") { run_shape(8, 2, 3, 5); }
 
-        SUBCASE("1x1x1x(simd)") { run_shape(1, 1, 1, simd_traits<dtype>::length()); }
-        SUBCASE("1x1x1x(simd+1)") { run_shape(1, 1, 1, simd_traits<dtype>::length() + 1); }
-        SUBCASE("1x1x1x(simd*4)") { run_shape(1, 1, 1, simd_traits<dtype>::length() * 4); }
-        SUBCASE("1x1x1x(simd*4+1)") { run_shape(1, 1, 1, simd_traits<dtype>::length() * 4 + 1); }
-        SUBCASE("(simd)x1x1x1") { run_shape(simd_traits<dtype>::length(), 1, 1, 1); }
-        SUBCASE("(simd+1)x1x1x1") { run_shape(simd_traits<dtype>::length() + 1, 1, 1, 1); }
-        SUBCASE("(simd*4)x1x1x1") { run_shape(simd_traits<dtype>::length() * 4, 1, 1, 1); }
-        SUBCASE("(simd*4+1)x1x1x1") { run_shape(simd_traits<dtype>::length() * 4 + 1, 1, 1, 1); }
-        SUBCASE("1x(simd)x1x1") { run_shape(1, simd_traits<dtype>::length(), 1, 1); }
-        SUBCASE("1x(simd+1)x1x1") { run_shape(1, simd_traits<dtype>::length() + 1, 1, 1); }
-        SUBCASE("1x(simd*4)x1x1") { run_shape(1, simd_traits<dtype>::length() * 4, 1, 1); }
-        SUBCASE("1x(simd*4+1)x1x1") { run_shape(1, simd_traits<dtype>::length() * 4 + 1, 1, 1); }
-        SUBCASE("1x1x(simd)x1") { run_shape(1, 1, simd_traits<dtype>::length(), 1); }
-        SUBCASE("1x1x(simd+1)x1") { run_shape(1, 1, simd_traits<dtype>::length() + 1, 1); }
-        SUBCASE("1x1x(simd*4)x1") { run_shape(1, 1, simd_traits<dtype>::length() * 4, 1); }
-        SUBCASE("1x1x(simd*4+1)x1") { run_shape(1, 1, simd_traits<dtype>::length() * 4 + 1, 1); }
+        SUBCASE("1x1x1x(simd)") { run_shape(1, 1, 1, traits<dtype>::vector_length()); }
+        SUBCASE("1x1x1x(simd+1)") { run_shape(1, 1, 1, traits<dtype>::vector_length() + 1); }
+        SUBCASE("1x1x1x(simd*4)") { run_shape(1, 1, 1, traits<dtype>::vector_length() * 4); }
+        SUBCASE("1x1x1x(simd*4+1)") { run_shape(1, 1, 1, traits<dtype>::vector_length() * 4 + 1); }
+        SUBCASE("(simd)x1x1x1") { run_shape(traits<dtype>::vector_length(), 1, 1, 1); }
+        SUBCASE("(simd+1)x1x1x1") { run_shape(traits<dtype>::vector_length() + 1, 1, 1, 1); }
+        SUBCASE("(simd*4)x1x1x1") { run_shape(traits<dtype>::vector_length() * 4, 1, 1, 1); }
+        SUBCASE("(simd*4+1)x1x1x1") { run_shape(traits<dtype>::vector_length() * 4 + 1, 1, 1, 1); }
+        SUBCASE("1x(simd)x1x1") { run_shape(1, traits<dtype>::vector_length(), 1, 1); }
+        SUBCASE("1x(simd+1)x1x1") { run_shape(1, traits<dtype>::vector_length() + 1, 1, 1); }
+        SUBCASE("1x(simd*4)x1x1") { run_shape(1, traits<dtype>::vector_length() * 4, 1, 1); }
+        SUBCASE("1x(simd*4+1)x1x1") { run_shape(1, traits<dtype>::vector_length() * 4 + 1, 1, 1); }
+        SUBCASE("1x1x(simd)x1") { run_shape(1, 1, traits<dtype>::vector_length(), 1); }
+        SUBCASE("1x1x(simd+1)x1") { run_shape(1, 1, traits<dtype>::vector_length() + 1, 1); }
+        SUBCASE("1x1x(simd*4)x1") { run_shape(1, 1, traits<dtype>::vector_length() * 4, 1); }
+        SUBCASE("1x1x(simd*4+1)x1") { run_shape(1, 1, traits<dtype>::vector_length() * 4 + 1, 1); }
 
-        SUBCASE("(simd+1)x2x2x2") { run_shape(simd_traits<dtype>::length() + 1, 2, 2, 2); }
-        SUBCASE("(simd)x(simd)x2x2") { run_shape(simd_traits<dtype>::length(), simd_traits<dtype>::length(), 2, 2); }
-        SUBCASE("(simd)x1x(simd)x1") { run_shape(simd_traits<dtype>::length(), 1, simd_traits<dtype>::length(), 1); }
-        SUBCASE("1x(simd)x1x(simd)") { run_shape(1, simd_traits<dtype>::length(), 1, simd_traits<dtype>::length()); }
+        SUBCASE("(simd+1)x2x2x2") { run_shape(traits<dtype>::vector_length() + 1, 2, 2, 2); }
+        SUBCASE("(simd)x(simd)x2x2")
+        {
+          run_shape(traits<dtype>::vector_length(), traits<dtype>::vector_length(), 2, 2);
+        }
+        SUBCASE("(simd)x1x(simd)x1")
+        {
+          run_shape(traits<dtype>::vector_length(), 1, traits<dtype>::vector_length(), 1);
+        }
+        SUBCASE("1x(simd)x1x(simd)")
+        {
+          run_shape(1, traits<dtype>::vector_length(), 1, traits<dtype>::vector_length());
+        }
       };
 
   SUBCASE("sum - F32")

@@ -1,7 +1,7 @@
 #include "linalg.h"
 
-#include "simd.h"
 #include "tensor.h"
+#include "traits.h"
 
 consteval size_t sqrti(size_t x)
 {
@@ -38,7 +38,7 @@ template <auto init_state_op, auto merge_op, auto horizontal_op, popnet_type dty
 POPNET_NO_INLINE void matmul_kernel(const void* POPNET_RESTRICT a, const void* POPNET_RESTRICT b,
                                     void* POPNET_RESTRICT c, size_t outer_size, size_t n, size_t m, size_t k)
 {
-  using traits = simd_traits<dtype>;
+  using traits = traits<dtype>;
   using scalar_t = traits::scalar_t;
 
   static constexpr size_t tile = compute_matmul_tile_size(sizeof(scalar_t));
@@ -93,7 +93,7 @@ template <popnet_type dtype>
 POPNET_NO_INLINE void transpose_kernel(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t outer_size,
                                        size_t n, size_t m) noexcept
 {
-  using traits = simd_traits<dtype>;
+  using traits = traits<dtype>;
   using scalar_t = traits::scalar_t;
 
   static constexpr size_t tile = compute_transpose_tile_size(sizeof(scalar_t));

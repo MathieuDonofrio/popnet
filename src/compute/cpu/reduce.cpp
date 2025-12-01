@@ -1,12 +1,12 @@
 #include "reduce.h"
 
-#include "simd.h"
 #include "tensor.h"
+#include "traits.h"
 
 template <auto init_state_op, auto merge_op, auto horizontal_op, popnet_type dtype>
 POPNET_NO_INLINE void reduce_kernel(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t n) noexcept
 {
-  using traits = simd_traits<dtype>;
+  using traits = traits<dtype>;
   using scalar_t = typename traits::scalar_t;
 
   *static_cast<scalar_t*>(b) = simd_reduce<init_state_op, merge_op, horizontal_op, POPNET_TYPE_F32>(n, a);

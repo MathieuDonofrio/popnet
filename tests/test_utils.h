@@ -8,12 +8,12 @@
 #include <vector>
 
 #include "popnet.h"
-#include "simd.h"
+#include "traits.h"
 
 template <popnet_type dtype>
 static auto generate_scalar_data(size_t n, auto lower, auto upper, bool exclude_zero, size_t index = 0)
 {
-  using traits = simd_traits<dtype>;
+  using traits = traits<dtype>;
   using scalar_t = typename traits::scalar_t;
 
   const size_t seed = 0x9E3779B9u * (index + 1);

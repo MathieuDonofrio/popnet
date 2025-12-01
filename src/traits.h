@@ -54,9 +54,9 @@ enum class simd_category
   variable
 };
 
-template <popnet_type Type> struct simd_traits;
+template <popnet_type Type> struct traits;
 
-template <> struct simd_traits<POPNET_TYPE_F32>
+template <> struct traits<POPNET_TYPE_F32>
 {
   using scalar_t = float;
 
@@ -66,14 +66,13 @@ template <> struct simd_traits<POPNET_TYPE_F32>
   using vector_t = __m512;
   using mask_t = __mmask16;
 
-  POPNET_INLINE static consteval size_t element_size() { return sizeof(scalar_t); }
-  POPNET_INLINE static consteval size_t length() { return sizeof(vector_t) / element_size(); }
+  POPNET_INLINE static consteval size_t vector_length() { return sizeof(vector_t) / element_size(); }
 
-  POPNET_INLINE static vector_t load(const void* p) { return {_mm512_loadu_ps(p)}; }
-  POPNET_INLINE static vector_t load(const void* p, const mask_t m) { return {_mm512_maskz_loadu_ps(m, p)}; }
+  POPNET_INLINE static vector_t loadv(const void* p) { return {_mm512_loadu_ps(p)}; }
+  POPNET_INLINE static vector_t loadv(const void* p, const mask_t m) { return {_mm512_maskz_loadu_ps(m, p)}; }
 
-  POPNET_INLINE static void store(void* p, const vector_t v) { _mm512_storeu_ps(p, v); }
-  POPNET_INLINE static void store(void* p, const mask_t m, const vector_t v) { _mm512_mask_storeu_ps(p, m, v); }
+  POPNET_INLINE static void storev(void* p, const vector_t v) { _mm512_storeu_ps(p, v); }
+  POPNET_INLINE static void storev(void* p, const mask_t m, const vector_t v) { _mm512_mask_storeu_ps(p, m, v); }
 
   POPNET_INLINE static vector_t broadcast(scalar_t a) { return _mm512_set1_ps(a); }
 
@@ -87,56 +86,71 @@ template <> struct simd_traits<POPNET_TYPE_F32>
 
   using vector_t = scalar_t;
 
-  POPNET_INLINE static consteval size_t length() { return 1; }
+  POPNET_INLINE static consteval size_t vector_length() { return 1; }
 #endif
 
-  POPNET_INLINE static scalar_t load_scalar(const void* p) { return *static_cast<const scalar_t*>(p); }
+  POPNET_INLINE static consteval size_t element_size() { return sizeof(scalar_t); }
 
-  POPNET_INLINE static void store_scalar(void* p, scalar_t v) { *static_cast<scalar_t*>(p) = v; }
+  POPNET_INLINE static scalar_t load(const void* p) { return *static_cast<const scalar_t*>(p); }
+
+  POPNET_INLINE static void store(void* p, scalar_t v) { *static_cast<scalar_t*>(p) = v; }
+
+  POPNET_INLINE static void* advance(void* p, size_t n) { return static_cast<scalar_t*>(p) + n; }
+  POPNET_INLINE static const void* advance(const void* p, size_t n) { return static_cast<const scalar_t*>(p) + n; }
+
+  POPNET_INLINE static void* next(void* p) { return advance(p, 1); }
+  POPNET_INLINE static const void* next(const void* p) { return advance(p, 1); }
 };
 
-using f32_t = simd_traits<POPNET_TYPE_F32>::scalar_t;
-using vf32_t = simd_traits<POPNET_TYPE_F32>::vector_t;
+using f32_t = traits<POPNET_TYPE_F32>::scalar_t;
+using vf32_t = traits<POPNET_TYPE_F32>::vector_t;
 
 template <auto op, popnet_type type, std::same_as<void>... T>
+requires(sizeof...(T) >= 1)
 POPNET_INLINE static void simd_map(void* POPNET_RESTRICT output, size_t n, const T* POPNET_RESTRICT... inputs) noexcept
 {
-  using traits = simd_traits<type>;
+  using traits = traits<type>;
 
   if constexpr (traits::category == simd_category::fixed)
   {
-    constexpr size_t simd_length = traits::length();
-    constexpr size_t element_size = traits::element_size();
-    constexpr size_t simd_size = simd_length * element_size;
+    constexpr size_t vector_length = traits::vector_length();
 
-    const size_t tail = n % simd_length;
+    const size_t tail = n % vector_length;
     const size_t body = n - tail;
 
-    void* const output_body_end = reinterpret_cast<char*>(output) + body * element_size;
+    const void* const output_body_end = traits::advance(output, body);
 
     while (output != output_body_end)
     {
-      const auto v = op(traits::load(inputs)...);
+      const auto value = op(traits::loadv(inputs)...);
 
-      traits::store(output, v);
+      traits::storev(output, value);
 
-      output = reinterpret_cast<char*>(output) + simd_size;
-      ((inputs = reinterpret_cast<const char*>(inputs) + simd_size), ...);
+      output = traits::advance(output, vector_length);
+      ((inputs = traits::advance(inputs, vector_length)), ...);
     }
 
     if (tail)
     {
       const traits::mask_t m = (1 << tail) - 1;
-      const auto v = op(traits::load(inputs, m)...);
-      traits::store(output, m, v);
+
+      const auto v = op(traits::loadv(inputs, m)...);
+
+      traits::storev(output, m, v);
     }
   }
   else if constexpr (traits::category == simd_category::scalar)
   {
-    for (size_t i = 0; i < n; ++i)
+    const void* const output_end = traits::advance(output, n);
+
+    while (output != output_end)
     {
-      const auto v = op(reinterpret_cast<const traits::scalar_t*>(inputs)[i]...);
-      reinterpret_cast<traits::scalar_t*>(output)[i] = v;
+      const auto value = op(traits::load(inputs)...);
+
+      traits::store(output, value);
+
+      output = traits::next(output);
+      ((inputs = traits::next(inputs)), ...);
     }
   }
   else
@@ -146,34 +160,45 @@ POPNET_INLINE static void simd_map(void* POPNET_RESTRICT output, size_t n, const
 }
 
 template <auto state_init_op, auto merge_op, auto horizontal_op, popnet_type type, std::same_as<void>... T>
+requires(sizeof...(T) >= 1)
 POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inputs) noexcept
 {
-  using traits = simd_traits<type>;
+  using traits = traits<type>;
 
   auto s = state_init_op();
 
   if constexpr (traits::category == simd_category::fixed)
   {
-    const size_t tail = n % traits::length();
+    constexpr size_t vector_length = traits::vector_length();
+
+    const size_t tail = n % vector_length;
     const size_t body = n - tail;
 
-    for (size_t i = 0; i < body; i += traits::length())
+    const void* const first_input_end = traits::advance(std::get<0>(std::forward_as_tuple(inputs...)), body);
+
+    while (std::get<0>(std::forward_as_tuple(inputs...)) != first_input_end)
     {
-      s = merge_op(traits::load(reinterpret_cast<const char*>(inputs) + i * traits::element_size())..., s);
+      s = merge_op(traits::loadv(inputs)..., s);
+
+      ((inputs = traits::advance(inputs, vector_length)), ...);
     }
 
     if (tail)
     {
       const traits::mask_t m = (1 << tail) - 1;
-      s = traits::blend(
-          s, merge_op(traits::load(reinterpret_cast<const char*>(inputs) + body * traits::element_size(), m)..., s), m);
+
+      s = traits::blend(s, merge_op(traits::loadv(inputs, m)..., s), m);
     }
   }
   else if constexpr (traits::category == simd_category::scalar)
   {
-    for (size_t i = 0; i < n; ++i)
+    const void* const first_input_end = traits::advance(std::get<0>(std::forward_as_tuple(inputs...)), n);
+
+    while (std::get<0>(std::forward_as_tuple(inputs...)) != first_input_end)
     {
-      s = merge_op(reinterpret_cast<const traits::scalar_t*>(inputs)[i]..., s);
+      s = merge_op(traits::load(inputs)..., s);
+
+      ((inputs = traits::next(inputs)), ...);
     }
   }
   else

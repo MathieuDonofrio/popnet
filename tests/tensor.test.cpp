@@ -2,7 +2,7 @@
 
 #include <doctest/doctest.h>
 
-#include "simd.h"
+#include "traits.h"
 
 TEST_CASE("popnet_numel computes number of elements correctly")
 {
@@ -62,8 +62,8 @@ TEST_CASE("popnet_set_data and popnet_get_data")
     popnet_tensor* t = popnet_empty(dtype, shape);
     REQUIRE(t != nullptr);
 
-    typename simd_traits<dtype>::scalar_t values[4] = {0, 1, 0, -1};
-    typename simd_traits<dtype>::scalar_t readback[4] = {};
+    typename traits<dtype>::scalar_t values[4] = {0, 1, 0, -1};
+    typename traits<dtype>::scalar_t readback[4] = {};
 
     SUBCASE("Full write and readback")
     {
