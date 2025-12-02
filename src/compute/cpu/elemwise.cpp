@@ -18,6 +18,22 @@ POPNET_NO_INLINE void binary_kernel_matching(const void* POPNET_RESTRICT a, cons
   simd_map<op, dtype>(c, n, a, b);
 }
 
+template <auto op, popnet_type dtype>
+POPNET_NO_INLINE void binary_kernel_lscalar(const void* POPNET_RESTRICT a, const void* POPNET_RESTRICT b,
+                                            void* POPNET_RESTRICT c, size_t n) noexcept
+{
+  POPNET_EXPECT(n > 0);
+  simd_map<op, dtype>(c, n, static_cast<const broadcast*>(a), b);
+}
+
+template <auto op, popnet_type dtype>
+POPNET_NO_INLINE void binary_kernel_rscalar(const void* POPNET_RESTRICT a, const void* POPNET_RESTRICT b,
+                                            void* POPNET_RESTRICT c, size_t n) noexcept
+{
+  POPNET_EXPECT(n > 0);
+  simd_map<op, dtype>(c, n, a, static_cast<const broadcast*>(b));
+}
+
 template <popnet_op op> POPNET_INLINE static void popnet_compute_unary(popnet_tensor* dst)
 {
   const popnet_tensor* src = dst->src[0];
@@ -76,8 +92,32 @@ template <auto op> POPNET_INLINE static void popnet_compute_binary(popnet_tensor
       else
         static_assert([]() { return false; }, "Not implemented");
     }
-    else
-    {}
+    else if (src0->shape == popnet_shape{{1, 1, 1, 1}})
+    {
+      if constexpr (op == POPNET_OP_ADD) //
+        binary_kernel_lscalar<vadd_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
+      else if constexpr (op == POPNET_OP_SUB)
+        binary_kernel_lscalar<vsub_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
+      else if constexpr (op == POPNET_OP_MUL)
+        binary_kernel_lscalar<vmul_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
+      else if constexpr (op == POPNET_OP_DIV)
+        binary_kernel_lscalar<vdiv_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
+      else
+        static_assert([]() { return false; }, "Not implemented");
+    }
+    else if (src1->shape == popnet_shape{{1, 1, 1, 1}})
+    {
+      if constexpr (op == POPNET_OP_ADD) //
+        binary_kernel_rscalar<vadd_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
+      else if constexpr (op == POPNET_OP_SUB)
+        binary_kernel_rscalar<vsub_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
+      else if constexpr (op == POPNET_OP_MUL)
+        binary_kernel_rscalar<vmul_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
+      else if constexpr (op == POPNET_OP_DIV)
+        binary_kernel_rscalar<vdiv_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
+      else
+        static_assert([]() { return false; }, "Not implemented");
+    }
   }
   else
   {
