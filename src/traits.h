@@ -87,8 +87,6 @@ template <> struct traits<POPNET_TYPE_F32>
   using vector_t = scalar_t;
 
   POPNET_INLINE static consteval size_t vector_length() { return 1; }
-
-  POPNET_INLINE static scalar_t broadcast(scalar_t a) { return a; }
 #endif
 
   POPNET_INLINE static consteval size_t element_size() { return sizeof(scalar_t); }
@@ -107,7 +105,12 @@ template <> struct traits<POPNET_TYPE_F32>
 using f32_t = traits<POPNET_TYPE_F32>::scalar_t;
 using vf32_t = traits<POPNET_TYPE_F32>::vector_t;
 
-template <auto op, popnet_type dtype, std::same_as<void>... T>
+template <class T, class... Ts> constexpr T&& pack_first_element(T&& t, Ts&&...) noexcept { return std::forward<T>(t); }
+
+struct broadcast
+{};
+
+template <auto op, popnet_type dtype, typename... T>
 requires(sizeof...(T) >= 1)
 POPNET_INLINE static void simd_map(void* POPNET_RESTRICT output, size_t n, const T* POPNET_RESTRICT... inputs) noexcept
 {
@@ -161,7 +164,7 @@ POPNET_INLINE static void simd_map(void* POPNET_RESTRICT output, size_t n, const
   }
 }
 
-template <auto state_init_op, auto merge_op, auto horizontal_op, popnet_type dtype, std::same_as<void>... T>
+template <auto state_init_op, auto merge_op, auto horizontal_op, popnet_type dtype, typename... T>
 requires(sizeof...(T) >= 1)
 POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inputs) noexcept
 {
@@ -176,9 +179,9 @@ POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inpu
     const size_t tail = n % vector_length;
     const size_t body = n - tail;
 
-    const void* const first_input_end = traits::advance(std::get<0>(std::forward_as_tuple(inputs...)), body);
+    const void* const first_input_end = traits::advance(pack_first_element(inputs...), body);
 
-    while (std::get<0>(std::forward_as_tuple(inputs...)) != first_input_end)
+    while (pack_first_element(inputs...) != first_input_end)
     {
       s = merge_op(traits::loadv(inputs)..., s);
 
@@ -194,9 +197,9 @@ POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inpu
   }
   else if constexpr (traits::category == simd_category::scalar)
   {
-    const void* const first_input_end = traits::advance(std::get<0>(std::forward_as_tuple(inputs...)), n);
+    const void* const first_input_end = traits::advance(pack_first_element(inputs...), n);
 
-    while (std::get<0>(std::forward_as_tuple(inputs...)) != first_input_end)
+    while (pack_first_element(inputs...) != first_input_end)
     {
       s = merge_op(traits::load(inputs)..., s);
 
