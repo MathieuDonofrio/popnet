@@ -87,6 +87,8 @@ template <> struct traits<POPNET_TYPE_F32>
   using vector_t = scalar_t;
 
   POPNET_INLINE static consteval size_t vector_length() { return 1; }
+
+  POPNET_INLINE static scalar_t broadcast(scalar_t a) { return a; }
 #endif
 
   POPNET_INLINE static consteval size_t element_size() { return sizeof(scalar_t); }
@@ -105,11 +107,11 @@ template <> struct traits<POPNET_TYPE_F32>
 using f32_t = traits<POPNET_TYPE_F32>::scalar_t;
 using vf32_t = traits<POPNET_TYPE_F32>::vector_t;
 
-template <auto op, popnet_type type, std::same_as<void>... T>
+template <auto op, popnet_type dtype, std::same_as<void>... T>
 requires(sizeof...(T) >= 1)
 POPNET_INLINE static void simd_map(void* POPNET_RESTRICT output, size_t n, const T* POPNET_RESTRICT... inputs) noexcept
 {
-  using traits = traits<type>;
+  using traits = traits<dtype>;
 
   if constexpr (traits::category == simd_category::fixed)
   {
@@ -159,11 +161,11 @@ POPNET_INLINE static void simd_map(void* POPNET_RESTRICT output, size_t n, const
   }
 }
 
-template <auto state_init_op, auto merge_op, auto horizontal_op, popnet_type type, std::same_as<void>... T>
+template <auto state_init_op, auto merge_op, auto horizontal_op, popnet_type dtype, std::same_as<void>... T>
 requires(sizeof...(T) >= 1)
 POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inputs) noexcept
 {
-  using traits = traits<type>;
+  using traits = traits<dtype>;
 
   auto s = state_init_op();
 
