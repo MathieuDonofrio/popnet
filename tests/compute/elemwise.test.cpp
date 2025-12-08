@@ -269,6 +269,14 @@ TEST_CASE("element binary compute")
 
         SUBCASE("1x1x1x1 1x1x1x8") { run_shape(popnet_shape{{1, 1, 1, 1}}, popnet_shape{{1, 1, 1, 8}}); }
         SUBCASE("1x1x1x16 1x1x1x1") { run_shape(popnet_shape{{1, 1, 1, 16}}, popnet_shape{{1, 1, 1, 1}}); }
+        SUBCASE("1x1x4x5 1x3x1x5") { run_shape(popnet_shape{{1, 1, 4, 5}}, popnet_shape{{1, 3, 1, 5}}); }
+        SUBCASE("1x2x1x7 1x1x9x7") { run_shape(popnet_shape{{1, 2, 1, 7}}, popnet_shape{{1, 1, 9, 7}}); }
+        SUBCASE("1x1x4x1 1x3x1x8") { run_shape(popnet_shape{{1, 1, 4, 1}}, popnet_shape{{1, 3, 1, 8}}); }
+        SUBCASE("1x2x1x1 1x1x5x6") { run_shape(popnet_shape{{1, 2, 1, 1}}, popnet_shape{{1, 1, 5, 6}}); }
+        SUBCASE("1x1x7x1 1x8x1x9") { run_shape(popnet_shape{{1, 1, 7, 1}}, popnet_shape{{1, 8, 1, 9}}); }
+        SUBCASE("1x4x1x9 1x1x6x1") { run_shape(popnet_shape{{1, 4, 1, 9}}, popnet_shape{{1, 1, 6, 1}}); }
+        SUBCASE("1x3x1x5 4x1x6x1") { run_shape(popnet_shape{{1, 3, 1, 5}}, popnet_shape{{4, 1, 6, 1}}); }
+        SUBCASE("2x1x7x1 1x5x1x9") { run_shape(popnet_shape{{2, 1, 7, 1}}, popnet_shape{{1, 5, 1, 9}}); }
       };
 
   SUBCASE("add - F32")
