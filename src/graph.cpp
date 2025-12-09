@@ -37,29 +37,29 @@ void popnet_graph_compute_forward(popnet_graph* graph)
   {
     switch (node->op)
     {
-    case POPNET_OP_NONE: break; // Input or constant node
-    case POPNET_OP_ADD: popnet_compute_add(node); break;
-    case POPNET_OP_SUB: popnet_compute_sub(node); break;
-    case POPNET_OP_MUL: popnet_compute_mul(node); break;
-    case POPNET_OP_DIV: popnet_compute_div(node); break;
-    case POPNET_OP_ABS: popnet_compute_abs(node); break;
-    case POPNET_OP_NEG: popnet_compute_neg(node); break;
-    case POPNET_OP_SQR: popnet_compute_sqr(node); break;
-    case POPNET_OP_SQRT: popnet_compute_sqrt(node); break;
-    case POPNET_OP_EXP: popnet_compute_exp(node); break;
-    case POPNET_OP_LOG: popnet_compute_log(node); break;
-    case POPNET_OP_SIN: popnet_compute_sin(node); break;
-    case POPNET_OP_COS: popnet_compute_cos(node); break;
-    case POPNET_OP_TANH: popnet_compute_tanh(node); break;
-    case POPNET_OP_RELU: popnet_compute_relu(node); break;
-    case POPNET_OP_SIGMOID: popnet_compute_sigmoid(node); break;
-    case POPNET_OP_REDUCE_SUM: popnet_compute_reduce_sum(node); break;
-    case POPNET_OP_REDUCE_MEAN: popnet_compute_reduce_mean(node); break;
-    case POPNET_OP_REDUCE_PRODUCT: popnet_compute_reduce_product(node); break;
-    case POPNET_OP_REDUCE_MIN: popnet_compute_reduce_min(node); break;
-    case POPNET_OP_REDUCE_MAX: popnet_compute_reduce_max(node); break;
-    case POPNET_OP_MATMUL: popnet_compute_matmul(node); break;
-    case POPNET_OP_TRANSPOSE: popnet_compute_transpose(node); break;
+    case popnet_op_none: break; // Input or constant node
+    case popnet_op_add: popnet_compute_add(node); break;
+    case popnet_op_sub: popnet_compute_sub(node); break;
+    case popnet_op_mul: popnet_compute_mul(node); break;
+    case popnet_op_div: popnet_compute_div(node); break;
+    case popnet_op_abs: popnet_compute_abs(node); break;
+    case popnet_op_neg: popnet_compute_neg(node); break;
+    case popnet_op_sqr: popnet_compute_sqr(node); break;
+    case popnet_op_sqrt: popnet_compute_sqrt(node); break;
+    case popnet_op_exp: popnet_compute_exp(node); break;
+    case popnet_op_log: popnet_compute_log(node); break;
+    case popnet_op_sin: popnet_compute_sin(node); break;
+    case popnet_op_cos: popnet_compute_cos(node); break;
+    case popnet_op_tanh: popnet_compute_tanh(node); break;
+    case popnet_op_relu: popnet_compute_relu(node); break;
+    case popnet_op_sigmoid: popnet_compute_sigmoid(node); break;
+    case popnet_op_reduce_sum: popnet_compute_reduce_sum(node); break;
+    case popnet_op_reduce_mean: popnet_compute_reduce_mean(node); break;
+    case popnet_op_reduce_product: popnet_compute_reduce_product(node); break;
+    case popnet_op_reduce_min: popnet_compute_reduce_min(node); break;
+    case popnet_op_reduce_max: popnet_compute_reduce_max(node); break;
+    case popnet_op_matmul: popnet_compute_matmul(node); break;
+    case popnet_op_transpose: popnet_compute_transpose(node); break;
     default: POPNET_UNREACHABLE(); break;
     }
   }

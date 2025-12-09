@@ -55,7 +55,7 @@ enum class simd_category
 };
 template <popnet_type Type> struct traits;
 
-template <> struct traits<POPNET_TYPE_F32>
+template <> struct traits<popnet_type_f32>
 {
   using scalar_t = float;
 
@@ -143,10 +143,21 @@ template <popnet_type dtype, typename T> const T* maybe_broadcast_advance(const 
   }
 }
 
-using f32_t = traits<POPNET_TYPE_F32>::scalar_t;
-using vf32_t = traits<POPNET_TYPE_F32>::vector_t;
+using f32_t = traits<popnet_type_f32>::scalar_t;
+using vf32_t = traits<popnet_type_f32>::vector_t;
 
-template <class T, class... Ts> constexpr T&& pack_first_element(T&& t, Ts&&...) noexcept { return std::forward<T>(t); }
+template <class T, class... Ts>
+constexpr T&& pack_first_element([[maybe_unused]] T&& t, [[maybe_unused]] Ts&&... ts) noexcept
+{
+  if constexpr (std::same_as<T, broadcast> && sizeof...(ts) > 0)
+  {
+    return pack_first_element(std::forward<Ts>(ts)...);
+  }
+  else
+  {
+    return std::forward<T>(t);
+  }
+}
 
 template <auto op, popnet_type dtype, typename... T>
 requires(sizeof...(T) >= 1)

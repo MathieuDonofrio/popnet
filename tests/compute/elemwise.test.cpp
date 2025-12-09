@@ -77,59 +77,59 @@ TEST_CASE("elementwise unary compute")
 
   SUBCASE("abs - F32")
   {
-    run.operator()<popnet_compute_abs, [](float v) { return std::abs(v); }, POPNET_TYPE_F32, -10.0f, 10.0f>();
+    run.operator()<popnet_compute_abs, [](float v) { return std::abs(v); }, popnet_type_f32, -10.0f, 10.0f>();
   }
 
   SUBCASE("neg - F32")
   {
-    run.operator()<popnet_compute_neg, [](float v) { return -v; }, POPNET_TYPE_F32, -10.0f, 10.0f>();
+    run.operator()<popnet_compute_neg, [](float v) { return -v; }, popnet_type_f32, -10.0f, 10.0f>();
   }
 
   SUBCASE("sqr - F32")
   {
-    run.operator()<popnet_compute_sqr, [](float v) { return v * v; }, POPNET_TYPE_F32, -10.0f, 10.0f>();
+    run.operator()<popnet_compute_sqr, [](float v) { return v * v; }, popnet_type_f32, -10.0f, 10.0f>();
   }
 
   SUBCASE("sqrt - F32")
   {
-    run.operator()<popnet_compute_sqrt, [](float v) { return std::sqrt(v); }, POPNET_TYPE_F32, 0.0f, 100.0f>();
+    run.operator()<popnet_compute_sqrt, [](float v) { return std::sqrt(v); }, popnet_type_f32, 0.0f, 100.0f>();
   }
 
   SUBCASE("exp - F32")
   {
-    run.operator()<popnet_compute_exp, [](float v) { return std::exp(v); }, POPNET_TYPE_F32, -10.0f, 10.0f>();
+    run.operator()<popnet_compute_exp, [](float v) { return std::exp(v); }, popnet_type_f32, -10.0f, 10.0f>();
   }
 
   SUBCASE("log - F32")
   {
-    run.operator()<popnet_compute_log, [](float v) { return std::log(v); }, POPNET_TYPE_F32, 0.001f, 100.0f>();
+    run.operator()<popnet_compute_log, [](float v) { return std::log(v); }, popnet_type_f32, 0.001f, 100.0f>();
   }
 
   SUBCASE("sin - F32")
   {
-    run.operator()<popnet_compute_sin, [](float v) { return std::sin(v); }, POPNET_TYPE_F32, -2.0f * pi_v<float>,
+    run.operator()<popnet_compute_sin, [](float v) { return std::sin(v); }, popnet_type_f32, -2.0f * pi_v<float>,
                    2.0f * pi_v<float>>();
   }
 
   SUBCASE("cos - F32")
   {
-    run.operator()<popnet_compute_cos, [](float v) { return std::cos(v); }, POPNET_TYPE_F32, -2.0f * pi_v<float>,
+    run.operator()<popnet_compute_cos, [](float v) { return std::cos(v); }, popnet_type_f32, -2.0f * pi_v<float>,
                    2.0f * pi_v<float>>();
   }
 
   SUBCASE("tanh - F32")
   {
-    run.operator()<popnet_compute_tanh, [](float v) { return std::tanh(v); }, POPNET_TYPE_F32, -10.0f, 10.0f>();
+    run.operator()<popnet_compute_tanh, [](float v) { return std::tanh(v); }, popnet_type_f32, -10.0f, 10.0f>();
   }
 
   SUBCASE("relu - F32")
   {
-    run.operator()<popnet_compute_relu, [](float v) { return v > 0.f ? v : 0.f; }, POPNET_TYPE_F32, -10.0f, 10.0f>();
+    run.operator()<popnet_compute_relu, [](float v) { return v > 0.f ? v : 0.f; }, popnet_type_f32, -10.0f, 10.0f>();
   }
 
   SUBCASE("sigmoid - F32")
   {
-    run.operator()<popnet_compute_sigmoid, [](float v) { return 1.f / (1.f + std::exp(-v)); }, POPNET_TYPE_F32, -10.0f,
+    run.operator()<popnet_compute_sigmoid, [](float v) { return 1.f / (1.f + std::exp(-v)); }, popnet_type_f32, -10.0f,
                    10.0f>();
   }
 }
@@ -281,21 +281,21 @@ TEST_CASE("element binary compute")
 
   SUBCASE("add - F32")
   {
-    run.operator()<popnet_compute_add, [](float a, float b) { return a + b; }, POPNET_TYPE_F32, -100.0f, 100.0f>();
+    run.operator()<popnet_compute_add, [](float a, float b) { return a + b; }, popnet_type_f32, -100.0f, 100.0f>();
   }
 
   SUBCASE("sub - F32")
   {
-    run.operator()<popnet_compute_sub, [](float a, float b) { return a - b; }, POPNET_TYPE_F32, -100.0f, 100.0f>();
+    run.operator()<popnet_compute_sub, [](float a, float b) { return a - b; }, popnet_type_f32, -100.0f, 100.0f>();
   }
 
   SUBCASE("mul - F32")
   {
-    run.operator()<popnet_compute_mul, [](float a, float b) { return a * b; }, POPNET_TYPE_F32, -10.0f, 10.0f>();
+    run.operator()<popnet_compute_mul, [](float a, float b) { return a * b; }, popnet_type_f32, -10.0f, 10.0f>();
   }
 
   SUBCASE("div - F32")
   {
-    run.operator()<popnet_compute_div, [](float a, float b) { return a / b; }, POPNET_TYPE_F32, -10.0f, 10.0f, true>();
+    run.operator()<popnet_compute_div, [](float a, float b) { return a / b; }, popnet_type_f32, -10.0f, 10.0f, true>();
   }
 }

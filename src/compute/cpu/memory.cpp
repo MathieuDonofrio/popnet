@@ -13,7 +13,7 @@ void* popnet_alloc(popnet_type dtype, popnet_shape shape) noexcept
 
   switch (dtype)
   {
-  case POPNET_TYPE_F32: size = sizeof(float) * nelems; break;
+  case popnet_type_f32: size = sizeof(float) * nelems; break;
   default: POPNET_UNREACHABLE(); break;
   }
 
@@ -52,7 +52,7 @@ void popnet_free(void* ptr) noexcept
 }
 
 void popnet_memcpy(void* POPNET_RESTRICT dst, const void* POPNET_RESTRICT src, size_t count,
-                   [[maybe_unused]] MemcpyKind kind) noexcept
+                   [[maybe_unused]] memcpy_kind kind) noexcept
 {
   memcpy(dst, src, count);
 }

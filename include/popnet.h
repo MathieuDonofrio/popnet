@@ -72,45 +72,47 @@ extern "C"
 
 typedef enum
 {
-  POPNET_TYPE_NONE = 0,
-  POPNET_TYPE_F32,
+  popnet_type_none = 0,
+  popnet_type_f32,
 } popnet_type;
 
 typedef enum
 {
-  POPNET_OP_NONE = 0,
+  popnet_op_none = 0,
 
-  POPNET_OP_ADD,
-  POPNET_OP_SUB,
-  POPNET_OP_MUL,
-  POPNET_OP_DIV,
+  popnet_op_add,
+  popnet_op_sub,
+  popnet_op_mul,
+  popnet_op_div,
 
-  POPNET_OP_ABS,
-  POPNET_OP_NEG,
-  POPNET_OP_SQR,
-  POPNET_OP_SQRT,
-  POPNET_OP_EXP,
-  POPNET_OP_LOG,
-  POPNET_OP_SIN,
-  POPNET_OP_COS,
-  POPNET_OP_TANH,
-  POPNET_OP_RELU,
-  POPNET_OP_SIGMOID,
+  popnet_op_abs,
+  popnet_op_neg,
+  popnet_op_sqr,
+  popnet_op_sqrt,
+  popnet_op_exp,
+  popnet_op_log,
+  popnet_op_sin,
+  popnet_op_cos,
+  popnet_op_tanh,
+  popnet_op_relu,
+  popnet_op_sigmoid,
 
-  POPNET_OP_REDUCE_SUM,
-  POPNET_OP_REDUCE_MEAN,
-  POPNET_OP_REDUCE_PRODUCT,
-  POPNET_OP_REDUCE_MIN,
-  POPNET_OP_REDUCE_MAX,
+  popnet_op_reduce_sum,
+  popnet_op_reduce_mean,
+  popnet_op_reduce_product,
+  popnet_op_reduce_min,
+  popnet_op_reduce_max,
 
-  POPNET_OP_MATMUL,
-  POPNET_OP_TRANSPOSE,
+  popnet_op_matmul,
+  popnet_op_transpose,
 } popnet_op;
 
 typedef struct popnet_shape
 {
   size_t dim[POPNET_MAX_DIMS];
 } popnet_shape;
+
+const popnet_shape popnet_scalar_shape = {.dim = {1, 1, 1, 1}};
 
 POPNET_INLINE size_t popnet_numel(popnet_shape shape)
 {

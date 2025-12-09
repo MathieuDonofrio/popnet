@@ -153,9 +153,9 @@ void popnet_compute_matmul(popnet_tensor* dst)
   POPNET_EXPECT(dst->shape.dim[2] == m);
   POPNET_EXPECT(dst->shape.dim[3] == n);
 
-  if (src0->dtype == POPNET_TYPE_F32 && src1->dtype == POPNET_TYPE_F32 && dst->dtype == POPNET_TYPE_F32)
+  if (src0->dtype == popnet_type_f32 && src1->dtype == popnet_type_f32 && dst->dtype == popnet_type_f32)
   {
-    matmul_kernel<vset_zero_f32, vfma_f32, vreduce_sum_f32, POPNET_TYPE_F32>(src0->data, src1->data, dst->data,
+    matmul_kernel<vset_zero_f32, vfma_f32, vreduce_sum_f32, popnet_type_f32>(src0->data, src1->data, dst->data,
                                                                              outer_size, n, m, k);
   }
   else
@@ -172,9 +172,9 @@ void popnet_compute_transpose(popnet_tensor* dst)
   const size_t n = src->shape.dim[2];
   const size_t m = src->shape.dim[3];
 
-  if (src->dtype == POPNET_TYPE_F32 && dst->dtype == POPNET_TYPE_F32)
+  if (src->dtype == popnet_type_f32 && dst->dtype == popnet_type_f32)
   {
-    transpose_kernel<POPNET_TYPE_F32>(src->data, dst->data, outer_size, n, m);
+    transpose_kernel<popnet_type_f32>(src->data, dst->data, outer_size, n, m);
   }
   else
   {

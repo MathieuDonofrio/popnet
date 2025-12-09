@@ -12,7 +12,7 @@ popnet_tensor* popnet_empty(popnet_type dtype, popnet_shape shape)
   tensor->shape = shape;
   tensor->data = popnet_alloc(dtype, shape);
   tensor->dtype = dtype;
-  tensor->op = POPNET_OP_NONE;
+  tensor->op = popnet_op_none;
 
   POPNET_EXPECT(popnet_valid_tensor(tensor));
 
@@ -36,19 +36,16 @@ void popnet_free(popnet_tensor* tensor)
 
   tensor->shape = popnet_shape{0};
   tensor->data = nullptr;
-  tensor->dtype = POPNET_TYPE_NONE;
+  tensor->dtype = popnet_type_none;
 
   delete tensor;
 }
 
-popnet_type popnet_dtypeof(const popnet_tensor* tensor)
-{
-  return tensor ? tensor->dtype : popnet_type::POPNET_TYPE_NONE;
-}
+popnet_type popnet_dtypeof(const popnet_tensor* tensor) { return tensor ? tensor->dtype : popnet_type_none; }
 
 popnet_shape popnet_shapeof(const popnet_tensor* tensor) { return tensor ? tensor->shape : popnet_shape{0}; }
 
-popnet_op popnet_opof(const popnet_tensor* tensor) { return tensor ? tensor->op : POPNET_OP_NONE; }
+popnet_op popnet_opof(const popnet_tensor* tensor) { return tensor ? tensor->op : popnet_op_none; }
 
 bool popnet_set_data(const popnet_tensor* tensor, const void* src, popnet_type src_dtype, size_t offset, size_t n)
 {
@@ -57,9 +54,9 @@ bool popnet_set_data(const popnet_tensor* tensor, const void* src, popnet_type s
   POPNET_EXPECT(popnet_valid_dtype(src_dtype));
   POPNET_EXPECT(offset + n <= popnet_numel(tensor->shape));
 
-  if (tensor->dtype == POPNET_TYPE_F32 && src_dtype == POPNET_TYPE_F32)
+  if (tensor->dtype == popnet_type_f32 && src_dtype == popnet_type_f32)
   {
-    popnet_memcpy(static_cast<float*>(tensor->data) + offset, src, n * sizeof(float), MemcpyKind::HostToDevice);
+    popnet_memcpy(static_cast<float*>(tensor->data) + offset, src, n * sizeof(float), memcpy_kind::host_to_device);
     return true;
   }
 
@@ -73,9 +70,10 @@ bool popnet_get_data(const popnet_tensor* tensor, void* dst, popnet_type dst_dty
   POPNET_EXPECT(popnet_valid_dtype(dst_dtype));
   POPNET_EXPECT(offset + n <= popnet_numel(tensor->shape));
 
-  if (tensor->dtype == POPNET_TYPE_F32 && dst_dtype == POPNET_TYPE_F32)
+  if (tensor->dtype == popnet_type_f32 && dst_dtype == popnet_type_f32)
   {
-    popnet_memcpy(dst, static_cast<const float*>(tensor->data) + offset, n * sizeof(float), MemcpyKind::DeviceToHost);
+    popnet_memcpy(dst, static_cast<const float*>(tensor->data) + offset, n * sizeof(float),
+                  memcpy_kind::device_to_host);
     return true;
   }
 

@@ -27,7 +27,7 @@ static auto generate_scalar_data(size_t n, auto lower, auto upper, bool exclude_
 
   switch (dtype)
   {
-  case POPNET_TYPE_F32:
+  case popnet_type_f32:
   {
     std::uniform_real_distribution<float> dist(lower, upper);
 

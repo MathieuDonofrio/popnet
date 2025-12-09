@@ -92,7 +92,7 @@ TEST_CASE("full reduce compute")
   {
     run.operator()<popnet_compute_reduce_sum,
                    [](const std::vector<float>& v) { return std::accumulate(v.begin(), v.end(), 0.0f); },
-                   POPNET_TYPE_F32, -10.0f, 10.0f>();
+                   popnet_type_f32, -10.0f, 10.0f>();
   }
 
   SUBCASE("mean - F32")
@@ -101,7 +101,7 @@ TEST_CASE("full reduce compute")
                    [](const std::vector<float>& v) {
                      return std::accumulate(v.begin(), v.end(), 0.0f) / static_cast<float>(v.size());
                    },
-                   POPNET_TYPE_F32, -10.0f, 10.0f>();
+                   popnet_type_f32, -10.0f, 10.0f>();
   }
 
   SUBCASE("product - F32")
@@ -110,20 +110,20 @@ TEST_CASE("full reduce compute")
                    [](const std::vector<float>& v) {
                      return std::accumulate(v.begin(), v.end(), 1.0f, std::multiplies<float>());
                    },
-                   POPNET_TYPE_F32, 0.5f, 2.0f>(); // avoids zero underflow
+                   popnet_type_f32, 0.5f, 2.0f>(); // avoids zero underflow
   }
 
   SUBCASE("min - F32")
   {
     run.operator()<popnet_compute_reduce_min,
-                   [](const std::vector<float>& v) { return *std::min_element(v.begin(), v.end()); }, POPNET_TYPE_F32,
+                   [](const std::vector<float>& v) { return *std::min_element(v.begin(), v.end()); }, popnet_type_f32,
                    -100.0f, 100.0f>();
   }
 
   SUBCASE("max - F32")
   {
     run.operator()<popnet_compute_reduce_max,
-                   [](const std::vector<float>& v) { return *std::max_element(v.begin(), v.end()); }, POPNET_TYPE_F32,
+                   [](const std::vector<float>& v) { return *std::max_element(v.begin(), v.end()); }, popnet_type_f32,
                    -100.0f, 100.0f>();
   }
 }
