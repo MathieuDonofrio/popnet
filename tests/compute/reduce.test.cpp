@@ -124,6 +124,9 @@ TEST_CASE("reduce compute")
         SUBCASE("3x4x1x1 -> 1x1x1x1") { run_shape({{3, 4, 1, 1}}, popnet_scalar_shape); }
         SUBCASE("3x1x1x1 -> 1x1x1x1") { run_shape({{3, 1, 1, 1}}, popnet_scalar_shape); }
         SUBCASE("12x34x56x78 -> 1x1x1x1") { run_shape({{4, 4, 4, 4}}, popnet_scalar_shape); }
+        SUBCASE("2x3x4x5 -> 2x3x4x1") { run_shape({{2, 3, 4, 5}}, {{2, 3, 4, 1}}); }
+        SUBCASE("2x3x4x5 -> 2x3x1x1") { run_shape({{2, 3, 4, 5}}, {{2, 3, 1, 1}}); }
+        SUBCASE("2x3x4x5 -> 2x1x1x1") { run_shape({{2, 3, 4, 5}}, {{2, 1, 1, 1}}); }
       };
 
   SUBCASE("sum - F32")

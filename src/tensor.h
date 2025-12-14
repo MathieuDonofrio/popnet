@@ -22,6 +22,16 @@ POPNET_INLINE bool operator==(const popnet_shape& a, const popnet_shape& b)
   return a.dim[0] == b.dim[0] && a.dim[1] == b.dim[1] && a.dim[2] == b.dim[2] && a.dim[3] == b.dim[3];
 }
 
+POPNET_INLINE size_t popnet_inner_numel(popnet_shape shape, size_t split_axis)
+{
+  size_t numel = 1;
+  for (size_t i = split_axis; i < POPNET_MAX_DIMS; ++i)
+  {
+    numel *= shape.dim[i];
+  }
+  return numel;
+}
+
 POPNET_INLINE bool popnet_valid_shape(popnet_shape shape)
 {
   static_assert(POPNET_MAX_DIMS == 4);
