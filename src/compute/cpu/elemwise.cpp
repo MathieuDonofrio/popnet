@@ -1,6 +1,7 @@
 #include "elemwise.h"
 
 #include "dtype_traits.h"
+#include "simd_algorithms.h"
 #include "tensor.h"
 
 template <auto op, popnet_dtype dtype>

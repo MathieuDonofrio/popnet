@@ -1,6 +1,7 @@
 #include "linalg.h"
 
 #include "dtype_traits.h"
+#include "simd_algorithms.h"
 #include "tensor.h"
 
 consteval size_t sqrti(size_t x)

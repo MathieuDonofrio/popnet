@@ -1,6 +1,7 @@
 #include "reduce.h"
 
 #include "dtype_traits.h"
+#include "simd_algorithms.h"
 #include "tensor.h"
 
 template <auto init_state_op, auto merge_op, auto horizontal_op, popnet_dtype dtype>
