@@ -1,23 +1,23 @@
 #include "reduce.h"
 
+#include "dtype_traits.h"
 #include "tensor.h"
-#include "traits.h"
 
-template <auto init_state_op, auto merge_op, auto horizontal_op, popnet_type dtype>
+template <auto init_state_op, auto merge_op, auto horizontal_op, popnet_dtype dtype>
 POPNET_NO_INLINE void reduce_kernel_scalar(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t n) noexcept
 {
-  using traits = traits<dtype>;
-  using scalar_t = typename traits::scalar_t;
+  using dtype_traits = dtype_traits<dtype>;
+  using scalar_t = typename dtype_traits::scalar_t;
 
-  *static_cast<scalar_t*>(b) = simd_reduce<init_state_op, merge_op, horizontal_op, popnet_type_f32>(n, a);
+  *static_cast<scalar_t*>(b) = simd_reduce<init_state_op, merge_op, horizontal_op, popnet_dtype_f32>(n, a);
 }
 
-template <auto init_state_op, auto merge_op, auto horizontal_op, popnet_type dtype>
+template <auto init_state_op, auto merge_op, auto horizontal_op, popnet_dtype dtype>
 POPNET_NO_INLINE void reduce_kernel_contiguous(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b,
                                                size_t outer_size, size_t reduce_size) noexcept
 {
-  using traits = traits<dtype>;
-  using scalar_t = typename traits::scalar_t;
+  using dtype_traits = dtype_traits<dtype>;
+  using scalar_t = typename dtype_traits::scalar_t;
 
   const auto* src = static_cast<const scalar_t*>(a);
   auto* dst = static_cast<scalar_t*>(b);
@@ -25,7 +25,7 @@ POPNET_NO_INLINE void reduce_kernel_contiguous(const void* POPNET_RESTRICT a, vo
   for (size_t outer = 0; outer < outer_size; ++outer)
   {
     dst[outer] =
-        simd_reduce<init_state_op, merge_op, horizontal_op, popnet_type_f32>(reduce_size, src + outer * reduce_size);
+        simd_reduce<init_state_op, merge_op, horizontal_op, popnet_dtype_f32>(reduce_size, src + outer * reduce_size);
   }
 }
 
@@ -57,7 +57,7 @@ template <popnet_op op> POPNET_INLINE static void popnet_compute_reduce(popnet_t
 
   const size_t first_reduce_dim = first_reduction_dim(src->shape, dst->shape);
 
-  if (src->dtype == popnet_type_f32 && dst->dtype == popnet_type_f32)
+  if (src->dtype == popnet_dtype_f32 && dst->dtype == popnet_dtype_f32)
   {
     if (first_reduce_dim == POPNET_MAX_DIMS)
     {
@@ -66,15 +66,15 @@ template <popnet_op op> POPNET_INLINE static void popnet_compute_reduce(popnet_t
       if (dst->shape == popnet_scalar_shape)
       {
         if constexpr (op == popnet_op_reduce_sum)
-          reduce_kernel_scalar<vset_zero_f32, vadd_f32, vreduce_sum_f32, popnet_type_f32>(src->data, dst->data, n);
+          reduce_kernel_scalar<vset_zero_f32, vadd_f32, vreduce_sum_f32, popnet_dtype_f32>(src->data, dst->data, n);
         else if constexpr (op == popnet_op_reduce_mean)
-          reduce_kernel_scalar<vset_zero_f32, vadd_f32, vreduce_mean_f32, popnet_type_f32>(src->data, dst->data, n);
+          reduce_kernel_scalar<vset_zero_f32, vadd_f32, vreduce_mean_f32, popnet_dtype_f32>(src->data, dst->data, n);
         else if constexpr (op == popnet_op_reduce_product)
-          reduce_kernel_scalar<vset_one_f32, vmul_f32, vreduce_product_f32, popnet_type_f32>(src->data, dst->data, n);
+          reduce_kernel_scalar<vset_one_f32, vmul_f32, vreduce_product_f32, popnet_dtype_f32>(src->data, dst->data, n);
         else if constexpr (op == popnet_op_reduce_min)
-          reduce_kernel_scalar<vset_pos_inf_f32, vmin_f32, vreduce_min_f32, popnet_type_f32>(src->data, dst->data, n);
+          reduce_kernel_scalar<vset_pos_inf_f32, vmin_f32, vreduce_min_f32, popnet_dtype_f32>(src->data, dst->data, n);
         else if constexpr (op == popnet_op_reduce_max)
-          reduce_kernel_scalar<vset_neg_inf_f32, vmax_f32, vreduce_max_f32, popnet_type_f32>(src->data, dst->data, n);
+          reduce_kernel_scalar<vset_neg_inf_f32, vmax_f32, vreduce_max_f32, popnet_dtype_f32>(src->data, dst->data, n);
         else
           static_assert([]() { return false; }, "Not implemented");
       }
@@ -89,20 +89,20 @@ template <popnet_op op> POPNET_INLINE static void popnet_compute_reduce(popnet_t
       const size_t outer_size = popnet_numel(dst->shape);
 
       if constexpr (op == popnet_op_reduce_sum)
-        reduce_kernel_contiguous<vset_zero_f32, vadd_f32, vreduce_sum_f32, popnet_type_f32>(src->data, dst->data,
-                                                                                            outer_size, reduce_size);
-      else if constexpr (op == popnet_op_reduce_mean)
-        reduce_kernel_contiguous<vset_zero_f32, vadd_f32, vreduce_mean_f32, popnet_type_f32>(src->data, dst->data,
+        reduce_kernel_contiguous<vset_zero_f32, vadd_f32, vreduce_sum_f32, popnet_dtype_f32>(src->data, dst->data,
                                                                                              outer_size, reduce_size);
+      else if constexpr (op == popnet_op_reduce_mean)
+        reduce_kernel_contiguous<vset_zero_f32, vadd_f32, vreduce_mean_f32, popnet_dtype_f32>(src->data, dst->data,
+                                                                                              outer_size, reduce_size);
       else if constexpr (op == popnet_op_reduce_product)
-        reduce_kernel_contiguous<vset_one_f32, vmul_f32, vreduce_product_f32, popnet_type_f32>(src->data, dst->data,
-                                                                                               outer_size, reduce_size);
+        reduce_kernel_contiguous<vset_one_f32, vmul_f32, vreduce_product_f32, popnet_dtype_f32>(
+            src->data, dst->data, outer_size, reduce_size);
       else if constexpr (op == popnet_op_reduce_min)
-        reduce_kernel_contiguous<vset_pos_inf_f32, vmin_f32, vreduce_min_f32, popnet_type_f32>(src->data, dst->data,
-                                                                                               outer_size, reduce_size);
+        reduce_kernel_contiguous<vset_pos_inf_f32, vmin_f32, vreduce_min_f32, popnet_dtype_f32>(
+            src->data, dst->data, outer_size, reduce_size);
       else if constexpr (op == popnet_op_reduce_max)
-        reduce_kernel_contiguous<vset_neg_inf_f32, vmax_f32, vreduce_max_f32, popnet_type_f32>(src->data, dst->data,
-                                                                                               outer_size, reduce_size);
+        reduce_kernel_contiguous<vset_neg_inf_f32, vmax_f32, vreduce_max_f32, popnet_dtype_f32>(
+            src->data, dst->data, outer_size, reduce_size);
       else
         static_assert([]() { return false; }, "Not implemented");
     }

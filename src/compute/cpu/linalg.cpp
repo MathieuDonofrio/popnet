@@ -1,7 +1,7 @@
 #include "linalg.h"
 
+#include "dtype_traits.h"
 #include "tensor.h"
-#include "traits.h"
 
 consteval size_t sqrti(size_t x)
 {
@@ -34,12 +34,12 @@ consteval size_t compute_transpose_tile_size(size_t element_size)
   return sqrti(l1_cache_size() / (element_size * 2));
 }
 
-template <auto init_state_op, auto merge_op, auto horizontal_op, popnet_type dtype>
+template <auto init_state_op, auto merge_op, auto horizontal_op, popnet_dtype dtype>
 POPNET_NO_INLINE void matmul_kernel(const void* POPNET_RESTRICT a, const void* POPNET_RESTRICT b,
                                     void* POPNET_RESTRICT c, size_t outer_size, size_t n, size_t m, size_t k)
 {
-  using traits = traits<dtype>;
-  using scalar_t = traits::scalar_t;
+  using dtype_traits = dtype_traits<dtype>;
+  using scalar_t = dtype_traits::scalar_t;
 
   static constexpr size_t tile = compute_matmul_tile_size(sizeof(scalar_t));
 
@@ -89,12 +89,12 @@ POPNET_NO_INLINE void matmul_kernel(const void* POPNET_RESTRICT a, const void* P
   }
 }
 
-template <popnet_type dtype>
+template <popnet_dtype dtype>
 POPNET_NO_INLINE void transpose_kernel(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t outer_size,
                                        size_t n, size_t m) noexcept
 {
-  using traits = traits<dtype>;
-  using scalar_t = traits::scalar_t;
+  using dtype_traits = dtype_traits<dtype>;
+  using scalar_t = dtype_traits::scalar_t;
 
   static constexpr size_t tile = compute_transpose_tile_size(sizeof(scalar_t));
 
@@ -153,10 +153,10 @@ void popnet_compute_matmul(popnet_tensor* dst)
   POPNET_EXPECT(dst->shape.dim[2] == m);
   POPNET_EXPECT(dst->shape.dim[3] == n);
 
-  if (src0->dtype == popnet_type_f32 && src1->dtype == popnet_type_f32 && dst->dtype == popnet_type_f32)
+  if (src0->dtype == popnet_dtype_f32 && src1->dtype == popnet_dtype_f32 && dst->dtype == popnet_dtype_f32)
   {
-    matmul_kernel<vset_zero_f32, vfma_f32, vreduce_sum_f32, popnet_type_f32>(src0->data, src1->data, dst->data,
-                                                                             outer_size, n, m, k);
+    matmul_kernel<vset_zero_f32, vfma_f32, vreduce_sum_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data,
+                                                                              outer_size, n, m, k);
   }
   else
   {
@@ -172,9 +172,9 @@ void popnet_compute_transpose(popnet_tensor* dst)
   const size_t n = src->shape.dim[2];
   const size_t m = src->shape.dim[3];
 
-  if (src->dtype == popnet_type_f32 && dst->dtype == popnet_type_f32)
+  if (src->dtype == popnet_dtype_f32 && dst->dtype == popnet_dtype_f32)
   {
-    transpose_kernel<popnet_type_f32>(src->data, dst->data, outer_size, n, m);
+    transpose_kernel<popnet_dtype_f32>(src->data, dst->data, outer_size, n, m);
   }
   else
   {

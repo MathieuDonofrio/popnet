@@ -3,17 +3,17 @@
 #include <doctest/doctest.h>
 #include <vector>
 
+#include "dtype_traits.h"
 #include "ops.h"
 #include "tensor.h"
 #include "test_utils.h"
-#include "traits.h"
 
 TEST_CASE("elementwise unary compute")
 {
   using namespace std::numbers;
 
   auto run =
-      []<auto compute, auto compute_ref, popnet_type dtype, auto lower, auto upper, bool exclude_zero = false>() {
+      []<auto compute, auto compute_ref, popnet_dtype dtype, auto lower, auto upper, bool exclude_zero = false>() {
         auto run_n = [](size_t n) {
           popnet_shape shape{{1, 1, 1, n}};
 
@@ -69,67 +69,63 @@ TEST_CASE("elementwise unary compute")
         SUBCASE("4") { run_n(4); }
         SUBCASE("5") { run_n(5); }
         SUBCASE("1000") { run_n(1000); }
-        SUBCASE("simd") { run_n(traits<dtype>::vector_length()); }
-        SUBCASE("simd + 1") { run_n(traits<dtype>::vector_length() + 1); }
-        SUBCASE("simd * 16") { run_n(traits<dtype>::vector_length() * 16 + 1); }
-        SUBCASE("simd * 16 + 1") { run_n(traits<dtype>::vector_length() * 16 + 1); }
       };
 
   SUBCASE("abs - F32")
   {
-    run.operator()<popnet_compute_abs, [](float v) { return std::abs(v); }, popnet_type_f32, -10.0f, 10.0f>();
+    run.operator()<popnet_compute_abs, [](float v) { return std::abs(v); }, popnet_dtype_f32, -10.0f, 10.0f>();
   }
 
   SUBCASE("neg - F32")
   {
-    run.operator()<popnet_compute_neg, [](float v) { return -v; }, popnet_type_f32, -10.0f, 10.0f>();
+    run.operator()<popnet_compute_neg, [](float v) { return -v; }, popnet_dtype_f32, -10.0f, 10.0f>();
   }
 
   SUBCASE("sqr - F32")
   {
-    run.operator()<popnet_compute_sqr, [](float v) { return v * v; }, popnet_type_f32, -10.0f, 10.0f>();
+    run.operator()<popnet_compute_sqr, [](float v) { return v * v; }, popnet_dtype_f32, -10.0f, 10.0f>();
   }
 
   SUBCASE("sqrt - F32")
   {
-    run.operator()<popnet_compute_sqrt, [](float v) { return std::sqrt(v); }, popnet_type_f32, 0.0f, 100.0f>();
+    run.operator()<popnet_compute_sqrt, [](float v) { return std::sqrt(v); }, popnet_dtype_f32, 0.0f, 100.0f>();
   }
 
   SUBCASE("exp - F32")
   {
-    run.operator()<popnet_compute_exp, [](float v) { return std::exp(v); }, popnet_type_f32, -10.0f, 10.0f>();
+    run.operator()<popnet_compute_exp, [](float v) { return std::exp(v); }, popnet_dtype_f32, -10.0f, 10.0f>();
   }
 
   SUBCASE("log - F32")
   {
-    run.operator()<popnet_compute_log, [](float v) { return std::log(v); }, popnet_type_f32, 0.001f, 100.0f>();
+    run.operator()<popnet_compute_log, [](float v) { return std::log(v); }, popnet_dtype_f32, 0.001f, 100.0f>();
   }
 
   SUBCASE("sin - F32")
   {
-    run.operator()<popnet_compute_sin, [](float v) { return std::sin(v); }, popnet_type_f32, -2.0f * pi_v<float>,
+    run.operator()<popnet_compute_sin, [](float v) { return std::sin(v); }, popnet_dtype_f32, -2.0f * pi_v<float>,
                    2.0f * pi_v<float>>();
   }
 
   SUBCASE("cos - F32")
   {
-    run.operator()<popnet_compute_cos, [](float v) { return std::cos(v); }, popnet_type_f32, -2.0f * pi_v<float>,
+    run.operator()<popnet_compute_cos, [](float v) { return std::cos(v); }, popnet_dtype_f32, -2.0f * pi_v<float>,
                    2.0f * pi_v<float>>();
   }
 
   SUBCASE("tanh - F32")
   {
-    run.operator()<popnet_compute_tanh, [](float v) { return std::tanh(v); }, popnet_type_f32, -10.0f, 10.0f>();
+    run.operator()<popnet_compute_tanh, [](float v) { return std::tanh(v); }, popnet_dtype_f32, -10.0f, 10.0f>();
   }
 
   SUBCASE("relu - F32")
   {
-    run.operator()<popnet_compute_relu, [](float v) { return v > 0.f ? v : 0.f; }, popnet_type_f32, -10.0f, 10.0f>();
+    run.operator()<popnet_compute_relu, [](float v) { return v > 0.f ? v : 0.f; }, popnet_dtype_f32, -10.0f, 10.0f>();
   }
 
   SUBCASE("sigmoid - F32")
   {
-    run.operator()<popnet_compute_sigmoid, [](float v) { return 1.f / (1.f + std::exp(-v)); }, popnet_type_f32, -10.0f,
+    run.operator()<popnet_compute_sigmoid, [](float v) { return 1.f / (1.f + std::exp(-v)); }, popnet_dtype_f32, -10.0f,
                    10.0f>();
   }
 }
@@ -158,12 +154,12 @@ size_t broadcast_index(size_t flat_idx, const popnet_shape& out_shape, const pop
   return in_flat;
 }
 
-template <popnet_type dtype, auto compute_ref>
+template <popnet_dtype dtype, auto compute_ref>
 static auto binary_ref(const auto& lhs, const popnet_shape& lhs_shape, const auto& rhs, const popnet_shape& rhs_shape,
                        const popnet_shape& out_shape)
 {
-  using traits = traits<dtype>;
-  using scalar_t = typename traits::scalar_t;
+  using dtype_traits = dtype_traits<dtype>;
+  using scalar_t = typename dtype_traits::scalar_t;
 
   const size_t n = popnet_numel(out_shape);
 
@@ -183,9 +179,9 @@ static auto binary_ref(const auto& lhs, const popnet_shape& lhs_shape, const aut
 TEST_CASE("element binary compute")
 {
   auto run =
-      []<auto compute, auto compute_ref, popnet_type dtype, auto lower, auto upper, bool exclude_zero = false>() {
-        using traits = traits<dtype>;
-        using scalar_t = typename traits::scalar_t;
+      []<auto compute, auto compute_ref, popnet_dtype dtype, auto lower, auto upper, bool exclude_zero = false>() {
+        using dtype_traits = dtype_traits<dtype>;
+        using scalar_t = typename dtype_traits::scalar_t;
 
         auto run_shape = [](const popnet_shape lhs_shape, const popnet_shape rhs_shape) {
           const auto dst_shape = popnet_broadcast_shape(lhs_shape, rhs_shape);
@@ -245,28 +241,6 @@ TEST_CASE("element binary compute")
         SUBCASE("1x1x1x3 1x1x1x3") { run_shape(popnet_shape{{1, 1, 1, 3}}, popnet_shape{{1, 1, 1, 3}}); }
         SUBCASE("1x1x1x4 1x1x1x4") { run_shape(popnet_shape{{1, 1, 1, 4}}, popnet_shape{{1, 1, 1, 4}}); }
         SUBCASE("1x1x1x5 1x1x1x5") { run_shape(popnet_shape{{1, 1, 1, 5}}, popnet_shape{{1, 1, 1, 5}}); }
-        SUBCASE("1x1x1x1000 1x1x1x1000") { run_shape(popnet_shape{{1, 1, 1, 1000}}, popnet_shape{{1, 1, 1, 1000}}); }
-        SUBCASE("1x1x1x(simd) 1x1x1x(simd)")
-        {
-          const size_t n = traits::vector_length();
-          run_shape(popnet_shape{{1, 1, 1, n}}, popnet_shape{{1, 1, 1, n}});
-        }
-        SUBCASE("1x1x1x(simd+1) 1x1x1x(simd+1)")
-        {
-          const size_t n = traits::vector_length() + 1;
-          run_shape(popnet_shape{{1, 1, 1, n}}, popnet_shape{{1, 1, 1, n}});
-        }
-        SUBCASE("1x1x1x(simd*16) 1x1x1x(simd*16)")
-        {
-          const size_t n = traits::vector_length() * 16;
-          run_shape(popnet_shape{{1, 1, 1, n}}, popnet_shape{{1, 1, 1, n}});
-        }
-        SUBCASE("1x1x1x(simd*16+1) 1x1x1x(simd*16+1)")
-        {
-          const size_t n = traits::vector_length() * 16 + 1;
-          run_shape(popnet_shape{{1, 1, 1, n}}, popnet_shape{{1, 1, 1, n}});
-        }
-
         SUBCASE("1x1x1x1 1x1x1x8") { run_shape(popnet_shape{{1, 1, 1, 1}}, popnet_shape{{1, 1, 1, 8}}); }
         SUBCASE("1x1x1x16 1x1x1x1") { run_shape(popnet_shape{{1, 1, 1, 16}}, popnet_shape{{1, 1, 1, 1}}); }
         SUBCASE("1x1x4x5 1x3x1x5") { run_shape(popnet_shape{{1, 1, 4, 5}}, popnet_shape{{1, 3, 1, 5}}); }
@@ -277,25 +251,26 @@ TEST_CASE("element binary compute")
         SUBCASE("1x4x1x9 1x1x6x1") { run_shape(popnet_shape{{1, 4, 1, 9}}, popnet_shape{{1, 1, 6, 1}}); }
         SUBCASE("1x3x1x5 4x1x6x1") { run_shape(popnet_shape{{1, 3, 1, 5}}, popnet_shape{{4, 1, 6, 1}}); }
         SUBCASE("2x1x7x1 1x5x1x9") { run_shape(popnet_shape{{2, 1, 7, 1}}, popnet_shape{{1, 5, 1, 9}}); }
+        SUBCASE("1x1x1x1000 1x1x1x1000") { run_shape(popnet_shape{{1, 1, 1, 1000}}, popnet_shape{{1, 1, 1, 1000}}); }
       };
 
   SUBCASE("add - F32")
   {
-    run.operator()<popnet_compute_add, [](float a, float b) { return a + b; }, popnet_type_f32, -100.0f, 100.0f>();
+    run.operator()<popnet_compute_add, [](float a, float b) { return a + b; }, popnet_dtype_f32, -100.0f, 100.0f>();
   }
 
   SUBCASE("sub - F32")
   {
-    run.operator()<popnet_compute_sub, [](float a, float b) { return a - b; }, popnet_type_f32, -100.0f, 100.0f>();
+    run.operator()<popnet_compute_sub, [](float a, float b) { return a - b; }, popnet_dtype_f32, -100.0f, 100.0f>();
   }
 
   SUBCASE("mul - F32")
   {
-    run.operator()<popnet_compute_mul, [](float a, float b) { return a * b; }, popnet_type_f32, -10.0f, 10.0f>();
+    run.operator()<popnet_compute_mul, [](float a, float b) { return a * b; }, popnet_dtype_f32, -10.0f, 10.0f>();
   }
 
   SUBCASE("div - F32")
   {
-    run.operator()<popnet_compute_div, [](float a, float b) { return a / b; }, popnet_type_f32, -10.0f, 10.0f, true>();
+    run.operator()<popnet_compute_div, [](float a, float b) { return a / b; }, popnet_dtype_f32, -10.0f, 10.0f, true>();
   }
 }

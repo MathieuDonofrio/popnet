@@ -11,9 +11,9 @@ TEST_CASE("popnet_graph build forward")
   REQUIRE(graph != nullptr);
 
   popnet_shape shape{{2, 2, 1, 1}};
-  popnet_tensor* a = popnet_empty(popnet_type_f32, shape);
-  popnet_tensor* b = popnet_empty(popnet_type_f32, shape);
-  popnet_tensor* c = popnet_empty(popnet_type_f32, shape);
+  popnet_tensor* a = popnet_empty(popnet_dtype_f32, shape);
+  popnet_tensor* b = popnet_empty(popnet_dtype_f32, shape);
+  popnet_tensor* c = popnet_empty(popnet_dtype_f32, shape);
 
   SUBCASE("nullptr")
   {
@@ -145,14 +145,14 @@ TEST_CASE("popnet_graph compute forward")
   REQUIRE(graph != nullptr);
 
   popnet_shape shape{{2, 2, 1, 1}};
-  popnet_tensor* a = popnet_empty(popnet_type_f32, shape);
-  popnet_tensor* b = popnet_empty(popnet_type_f32, shape);
+  popnet_tensor* a = popnet_empty(popnet_dtype_f32, shape);
+  popnet_tensor* b = popnet_empty(popnet_dtype_f32, shape);
 
   float a_values[4] = {1, 2, 3, 4};
   float b_values[4] = {10, 20, 30, 40};
 
-  REQUIRE(popnet_set_data(a, a_values, popnet_type_f32, 0, 4));
-  REQUIRE(popnet_set_data(b, b_values, popnet_type_f32, 0, 4));
+  REQUIRE(popnet_set_data(a, a_values, popnet_dtype_f32, 0, 4));
+  REQUIRE(popnet_set_data(b, b_values, popnet_dtype_f32, 0, 4));
 
   SUBCASE("null graph pointer") { popnet_graph_compute_forward(nullptr); }
 
@@ -164,7 +164,7 @@ TEST_CASE("popnet_graph compute forward")
     popnet_graph_compute_forward(graph);
 
     float out[4] = {};
-    REQUIRE(popnet_get_data(a, out, popnet_type_f32, 0, 4));
+    REQUIRE(popnet_get_data(a, out, popnet_dtype_f32, 0, 4));
 
     for (int i = 0; i < 4; ++i)
     {
@@ -183,8 +183,8 @@ TEST_CASE("popnet_graph compute forward")
     popnet_graph_compute_forward(graph);
 
     float c1_out[4], c2_out[4];
-    REQUIRE(popnet_get_data(c1, c1_out, popnet_type_f32, 0, 4));
-    REQUIRE(popnet_get_data(c2, c2_out, popnet_type_f32, 0, 4));
+    REQUIRE(popnet_get_data(c1, c1_out, popnet_dtype_f32, 0, 4));
+    REQUIRE(popnet_get_data(c2, c2_out, popnet_dtype_f32, 0, 4));
 
     for (int i = 0; i < 4; ++i)
     {
@@ -205,8 +205,8 @@ TEST_CASE("popnet_graph compute forward")
     popnet_graph_compute_forward(graph);
 
     float c_out[4], d_out[4];
-    REQUIRE(popnet_get_data(c, c_out, popnet_type_f32, 0, 4));
-    REQUIRE(popnet_get_data(d, d_out, popnet_type_f32, 0, 4));
+    REQUIRE(popnet_get_data(c, c_out, popnet_dtype_f32, 0, 4));
+    REQUIRE(popnet_get_data(d, d_out, popnet_dtype_f32, 0, 4));
 
     for (int i = 0; i < 4; ++i)
     {
@@ -227,8 +227,8 @@ TEST_CASE("popnet_graph compute forward")
     popnet_graph_compute_forward(graph);
 
     float c_out[4], d_out[4];
-    REQUIRE(popnet_get_data(c, c_out, popnet_type_f32, 0, 4));
-    REQUIRE(popnet_get_data(d, d_out, popnet_type_f32, 0, 4));
+    REQUIRE(popnet_get_data(c, c_out, popnet_dtype_f32, 0, 4));
+    REQUIRE(popnet_get_data(d, d_out, popnet_dtype_f32, 0, 4));
 
     for (int i = 0; i < 4; ++i)
     {
@@ -250,9 +250,9 @@ TEST_CASE("popnet_graph compute forward")
     popnet_graph_compute_forward(graph);
 
     float c_out[4], d_out[4], e_out[4];
-    REQUIRE(popnet_get_data(c, c_out, popnet_type_f32, 0, 4));
-    REQUIRE(popnet_get_data(d, d_out, popnet_type_f32, 0, 4));
-    REQUIRE(popnet_get_data(e, e_out, popnet_type_f32, 0, 4));
+    REQUIRE(popnet_get_data(c, c_out, popnet_dtype_f32, 0, 4));
+    REQUIRE(popnet_get_data(d, d_out, popnet_dtype_f32, 0, 4));
+    REQUIRE(popnet_get_data(e, e_out, popnet_dtype_f32, 0, 4));
 
     for (int i = 0; i < 4; ++i)
     {
@@ -276,9 +276,9 @@ TEST_CASE("popnet_graph compute forward")
     popnet_graph_compute_forward(graph);
 
     float c1_out[4], c2_out[4], d_out[4];
-    REQUIRE(popnet_get_data(c1, c1_out, popnet_type_f32, 0, 4));
-    REQUIRE(popnet_get_data(c2, c2_out, popnet_type_f32, 0, 4));
-    REQUIRE(popnet_get_data(d, d_out, popnet_type_f32, 0, 4));
+    REQUIRE(popnet_get_data(c1, c1_out, popnet_dtype_f32, 0, 4));
+    REQUIRE(popnet_get_data(c2, c2_out, popnet_dtype_f32, 0, 4));
+    REQUIRE(popnet_get_data(d, d_out, popnet_dtype_f32, 0, 4));
 
     for (int i = 0; i < 4; ++i)
     {
@@ -298,14 +298,14 @@ TEST_CASE("popnet_graph compute forward")
     const int TENSOR_SIZE = 4;
 
     popnet_shape shape{{1, 1, 1, (size_t)TENSOR_SIZE}};
-    popnet_tensor* base_a = popnet_empty(popnet_type_f32, shape);
-    popnet_tensor* base_b = popnet_empty(popnet_type_f32, shape);
+    popnet_tensor* base_a = popnet_empty(popnet_dtype_f32, shape);
+    popnet_tensor* base_b = popnet_empty(popnet_dtype_f32, shape);
 
     float a_values[TENSOR_SIZE] = {1, 2, 3, 4};
     float b_values[TENSOR_SIZE] = {5, 6, 7, 8};
 
-    REQUIRE(popnet_set_data(base_a, a_values, popnet_type_f32, 0, TENSOR_SIZE));
-    REQUIRE(popnet_set_data(base_b, b_values, popnet_type_f32, 0, TENSOR_SIZE));
+    REQUIRE(popnet_set_data(base_a, a_values, popnet_dtype_f32, 0, TENSOR_SIZE));
+    REQUIRE(popnet_set_data(base_b, b_values, popnet_dtype_f32, 0, TENSOR_SIZE));
 
     std::vector<popnet_tensor*> nodes;
     nodes.push_back(base_a);
@@ -329,7 +329,7 @@ TEST_CASE("popnet_graph compute forward")
     popnet_graph_compute_forward(graph);
 
     float last_out[TENSOR_SIZE] = {};
-    REQUIRE(popnet_get_data(prev, last_out, popnet_type_f32, 0, TENSOR_SIZE));
+    REQUIRE(popnet_get_data(prev, last_out, popnet_dtype_f32, 0, TENSOR_SIZE));
 
     std::vector<float> expected(TENSOR_SIZE);
     for (int j = 0; j < TENSOR_SIZE; ++j)

@@ -10,7 +10,7 @@ enum class memcpy_kind
   device_to_device
 };
 
-void* popnet_alloc(popnet_type dtype, popnet_shape shape) noexcept;
+void* popnet_alloc(popnet_dtype dtype, popnet_shape shape) noexcept;
 
 void popnet_free(void* ptr) noexcept;
 

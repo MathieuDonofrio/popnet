@@ -2,7 +2,7 @@
 
 #include <doctest/doctest.h>
 
-#include "traits.h"
+#include "dtype_traits.h"
 
 TEST_CASE("popnet_numel computes number of elements correctly")
 {
@@ -12,7 +12,7 @@ TEST_CASE("popnet_numel computes number of elements correctly")
 
 TEST_CASE("popnet_empty and popnet_empty_like")
 {
-  auto run = []<popnet_type dtype>() {
+  auto run = []<popnet_dtype dtype>() {
     popnet_shape shape{{2, 2, 2, 2}};
     popnet_tensor* t = popnet_empty(dtype, shape);
 
@@ -44,7 +44,7 @@ TEST_CASE("popnet_empty and popnet_empty_like")
 
       REQUIRE(bad == nullptr);
       CHECK_FALSE(popnet_valid_tensor(bad));
-      CHECK(popnet_dtypeof(bad) == popnet_type_none);
+      CHECK(popnet_dtypeof(bad) == popnet_dtype_none);
       CHECK(popnet_opof(bad) == popnet_op_none);
       CHECK(popnet_shapeof(bad) == popnet_shape{{0, 0, 0, 0}});
     }
@@ -52,18 +52,18 @@ TEST_CASE("popnet_empty and popnet_empty_like")
     popnet_free(t);
   };
 
-  SUBCASE("F32") { run.operator()<popnet_type_f32>(); }
+  SUBCASE("F32") { run.operator()<popnet_dtype_f32>(); }
 }
 
 TEST_CASE("popnet_set_data and popnet_get_data")
 {
-  auto run = []<popnet_type dtype>() {
+  auto run = []<popnet_dtype dtype>() {
     popnet_shape shape{{2, 2, 1, 1}};
     popnet_tensor* t = popnet_empty(dtype, shape);
     REQUIRE(t != nullptr);
 
-    typename traits<dtype>::scalar_t values[4] = {0, 1, 0, -1};
-    typename traits<dtype>::scalar_t readback[4] = {};
+    typename dtype_traits<dtype>::scalar_t values[4] = {0, 1, 0, -1};
+    typename dtype_traits<dtype>::scalar_t readback[4] = {};
 
     SUBCASE("Full write and readback")
     {
@@ -88,5 +88,5 @@ TEST_CASE("popnet_set_data and popnet_get_data")
     popnet_free(t);
   };
 
-  SUBCASE("F32") { run.operator()<popnet_type_f32>(); }
+  SUBCASE("F32") { run.operator()<popnet_dtype_f32>(); }
 }

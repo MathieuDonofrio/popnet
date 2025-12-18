@@ -3,7 +3,7 @@
 #include <new>
 #include <stdlib.h>
 
-void* popnet_alloc(popnet_type dtype, popnet_shape shape) noexcept
+void* popnet_alloc(popnet_dtype dtype, popnet_shape shape) noexcept
 {
   const size_t nelems = popnet_numel(shape);
 
@@ -13,7 +13,7 @@ void* popnet_alloc(popnet_type dtype, popnet_shape shape) noexcept
 
   switch (dtype)
   {
-  case popnet_type_f32: size = sizeof(float) * nelems; break;
+  case popnet_dtype_f32: size = sizeof(float) * nelems; break;
   default: POPNET_UNREACHABLE(); break;
   }
 

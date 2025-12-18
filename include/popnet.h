@@ -72,9 +72,9 @@ extern "C"
 
 typedef enum
 {
-  popnet_type_none = 0,
-  popnet_type_f32,
-} popnet_type;
+  popnet_dtype_none = 0,
+  popnet_dtype_f32,
+} popnet_dtype;
 
 typedef enum
 {
@@ -124,18 +124,19 @@ POPNET_INLINE size_t popnet_numel(popnet_shape shape)
 
 typedef struct popnet_tensor popnet_tensor;
 
-POPNET_API popnet_tensor* popnet_empty(popnet_type dtype, popnet_shape shape);
+POPNET_API popnet_tensor* popnet_empty(popnet_dtype dtype, popnet_shape shape);
 POPNET_API popnet_tensor* popnet_empty_like(const popnet_tensor* tensor);
 
 POPNET_API void popnet_free(popnet_tensor* tensor);
 
-POPNET_API popnet_type popnet_dtypeof(const popnet_tensor* tensor);
+POPNET_API popnet_dtype popnet_dtypeof(const popnet_tensor* tensor);
 POPNET_API popnet_shape popnet_shapeof(const popnet_tensor* tensor);
 POPNET_API popnet_op popnet_opof(const popnet_tensor* tensor);
 
-POPNET_API bool popnet_set_data(const popnet_tensor* tensor, const void* src, popnet_type src_dtype, size_t offset,
+POPNET_API bool popnet_set_data(const popnet_tensor* tensor, const void* src, popnet_dtype src_dtype, size_t offset,
                                 size_t n);
-POPNET_API bool popnet_get_data(const popnet_tensor* tensor, void* dst, popnet_type dst_dtype, size_t offset, size_t n);
+POPNET_API bool popnet_get_data(const popnet_tensor* tensor, void* dst, popnet_dtype dst_dtype, size_t offset,
+                                size_t n);
 
 ///
 /// Graph

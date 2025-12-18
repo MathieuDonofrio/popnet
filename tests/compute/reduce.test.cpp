@@ -4,16 +4,16 @@
 #include <limits>
 #include <vector>
 
+#include "dtype_traits.h"
 #include "tensor.h"
 #include "test_utils.h"
-#include "traits.h"
 
-template <popnet_type dtype, class InitFn, class MergeFn, class FinalizeFn>
+template <popnet_dtype dtype, class InitFn, class MergeFn, class FinalizeFn>
 static auto reduce_ref(const auto& src, popnet_shape src_shape, auto& dst, popnet_shape dst_shape, InitFn init_fn,
                        MergeFn merge_fn, FinalizeFn finalize_fn)
 {
-  using traits = traits<dtype>;
-  using scalar_t = typename traits::scalar_t;
+  using dtype_traits = dtype_traits<dtype>;
+  using scalar_t = typename dtype_traits::scalar_t;
 
   const size_t src_numel = popnet_numel(src_shape);
   const size_t dst_numel = popnet_numel(dst_shape);
@@ -72,10 +72,10 @@ static auto reduce_ref(const auto& src, popnet_shape src_shape, auto& dst, popne
 TEST_CASE("reduce compute")
 {
   auto run =
-      []<auto compute, auto compute_ref, popnet_type dtype, auto lower, auto upper, bool exclude_zero = false>() {
+      []<auto compute, auto compute_ref, popnet_dtype dtype, auto lower, auto upper, bool exclude_zero = false>() {
         auto run_shape = [&](popnet_shape src_shape, popnet_shape dst_shape) {
-          using dtype_traits = traits<dtype>;
-          using scalar_t = typename dtype_traits::scalar_t;
+          using dtype_dtype_traits = dtype_traits<dtype>;
+          using scalar_t = typename dtype_dtype_traits::scalar_t;
 
           const size_t n = popnet_numel(src_shape);
 
@@ -134,11 +134,11 @@ TEST_CASE("reduce compute")
     run.operator()<popnet_compute_reduce_sum,
                    [](const std::vector<float>& src, popnet_shape src_shape, popnet_shape dst_shape) {
                      std::vector<float> dst;
-                     return reduce_ref<popnet_type_f32>(
+                     return reduce_ref<popnet_dtype_f32>(
                          src, src_shape, dst, dst_shape, [] { return 0.0f; }, [](float& acc, float v) { acc += v; },
                          [](float acc, size_t) { return acc; });
                    },
-                   popnet_type_f32, -10.0f, 10.0f>();
+                   popnet_dtype_f32, -10.0f, 10.0f>();
   }
 
   SUBCASE("mean - F32")
@@ -146,11 +146,11 @@ TEST_CASE("reduce compute")
     run.operator()<popnet_compute_reduce_mean,
                    [](const std::vector<float>& src, popnet_shape src_shape, popnet_shape dst_shape) {
                      std::vector<float> dst;
-                     return reduce_ref<popnet_type_f32>(
+                     return reduce_ref<popnet_dtype_f32>(
                          src, src_shape, dst, dst_shape, [] { return 0.0f; }, [](float& acc, float v) { acc += v; },
                          [](float acc, size_t count) { return acc / count; });
                    },
-                   popnet_type_f32, -10.0f, 10.0f>();
+                   popnet_dtype_f32, -10.0f, 10.0f>();
   }
 
   SUBCASE("product - F32")
@@ -158,11 +158,11 @@ TEST_CASE("reduce compute")
     run.operator()<popnet_compute_reduce_product,
                    [](const std::vector<float>& src, popnet_shape src_shape, popnet_shape dst_shape) {
                      std::vector<float> dst;
-                     return reduce_ref<popnet_type_f32>(
+                     return reduce_ref<popnet_dtype_f32>(
                          src, src_shape, dst, dst_shape, [] { return 1.0f; }, [](float& acc, float v) { acc *= v; },
                          [](float acc, size_t) { return acc; });
                    },
-                   popnet_type_f32, 0.5f, 2.0f>(); // avoids zero underflow
+                   popnet_dtype_f32, 0.5f, 2.0f>(); // avoids zero underflow
   }
 
   SUBCASE("min - F32")
@@ -170,11 +170,11 @@ TEST_CASE("reduce compute")
     run.operator()<popnet_compute_reduce_min,
                    [](const std::vector<float>& src, popnet_shape src_shape, popnet_shape dst_shape) {
                      std::vector<float> dst;
-                     return reduce_ref<popnet_type_f32>(
+                     return reduce_ref<popnet_dtype_f32>(
                          src, src_shape, dst, dst_shape, [] { return std::numeric_limits<float>::infinity(); },
                          [](float& acc, float v) { acc = std::min(acc, v); }, [](float acc, size_t) { return acc; });
                    },
-                   popnet_type_f32, -100.0f, 100.0f>();
+                   popnet_dtype_f32, -100.0f, 100.0f>();
   }
 
   SUBCASE("max - F32")
@@ -182,10 +182,10 @@ TEST_CASE("reduce compute")
     run.operator()<popnet_compute_reduce_max,
                    [](const std::vector<float>& src, popnet_shape src_shape, popnet_shape dst_shape) {
                      std::vector<float> dst;
-                     return reduce_ref<popnet_type_f32>(
+                     return reduce_ref<popnet_dtype_f32>(
                          src, src_shape, dst, dst_shape, [] { return -std::numeric_limits<float>::infinity(); },
                          [](float& acc, float v) { acc = std::max(acc, v); }, [](float acc, size_t) { return acc; });
                    },
-                   popnet_type_f32, -100.0f, 100.0f>();
+                   popnet_dtype_f32, -100.0f, 100.0f>();
   }
 }

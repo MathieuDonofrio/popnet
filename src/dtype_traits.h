@@ -7,60 +7,23 @@
 #include <limits>
 #include <utility>
 
-#include "popnet.h"
+#include "platform.h"
 
-#ifdef _MSC_VER
-#include <intrin.h>
-#endif
-
-#if defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) || defined(_M_X64)
-#include <immintrin.h>
-#endif
-
-#if defined(__ARM_NEON) || defined(__ARM_NEON__)
-#include <arm_neon.h>
-#endif
-
-#if defined(__ARM_FEATURE_SVE) || defined(__ARM_FEATURE_SVE2)
-#include <arm_sve.h>
-#endif
-
-#if defined(__riscv_vector) || defined(__riscv_v_intrinsic)
-#include <riscv_vector.h>
-#endif
-
-#if defined(__AVX512F__) || defined(__AVX512__)
-#define POPNET_AVX512 1
-#elif defined(__AVX2__)
-#define POPNET_AVX2 1
-#elif defined(__AVX__)
-#define POPNET_AVX 1
-#elif defined(__SSE2__)
-#define POPNET_SSE2 1
-#elif defined(__ARM_NEON) || defined(__ARM_NEON__)
-#define POPNET_NEON 1
-#elif defined(__ARM_FEATURE_SVE)
-#define POPNET_ARM_SVE 1
-#elif defined(__riscv_vector) || defined(__riscv_v_intrinsic)
-#define POPNET_RISCV_SVE 1
-#else
-#define POPNET_SCALAR 1
-#endif
-
-enum class simd_category
+enum class execution_model
 {
   scalar,
   fixed,
   variable
 };
-template <popnet_type Type> struct traits;
 
-template <> struct traits<popnet_type_f32>
+template <popnet_dtype Type> struct dtype_traits;
+
+template <> struct dtype_traits<popnet_dtype_f32>
 {
   using scalar_t = float;
 
 #if POPNET_AVX512
-  static inline constexpr simd_category category = simd_category::fixed;
+  static inline constexpr execution_model category = execution_model::fixed;
 
   using vector_t = __m512;
   using mask_t = __mmask16;
@@ -81,7 +44,7 @@ template <> struct traits<popnet_type_f32>
   }
 
 #else
-  static inline constexpr simd_category category = simd_category::scalar;
+  static inline constexpr execution_model category = execution_model::scalar;
 
   using vector_t = scalar_t;
 
@@ -101,37 +64,37 @@ template <> struct traits<popnet_type_f32>
 struct broadcast
 {};
 
-template <popnet_type dtype, typename T> auto maybe_broadcast_loadv(const T* p)
+template <popnet_dtype dtype, typename T> auto maybe_broadcast_loadv(const T* p)
 {
-  using traits = traits<dtype>;
+  using dtype_traits = dtype_traits<dtype>;
 
   if constexpr (std::same_as<T, broadcast>)
   {
-    return traits::broadcast(traits::load(p));
+    return dtype_traits::broadcast(dtype_traits::load(p));
   }
   else
   {
-    return traits::loadv(p);
+    return dtype_traits::loadv(p);
   }
 }
 
-template <popnet_type dtype, typename T> auto maybe_broadcast_loadv(const T* p, typename traits<dtype>::mask_t m)
+template <popnet_dtype dtype, typename T> auto maybe_broadcast_loadv(const T* p, typename dtype_traits<dtype>::mask_t m)
 {
-  using traits = traits<dtype>;
+  using dtype_traits = dtype_traits<dtype>;
 
   if constexpr (std::same_as<T, broadcast>)
   {
-    return traits::broadcast(traits::load(p));
+    return dtype_traits::broadcast(dtype_traits::load(p));
   }
   else
   {
-    return traits::loadv(p, m);
+    return dtype_traits::loadv(p, m);
   }
 }
 
-template <popnet_type dtype, typename T> const T* maybe_broadcast_advance(const T* p, size_t n)
+template <popnet_dtype dtype, typename T> const T* maybe_broadcast_advance(const T* p, size_t n)
 {
-  using traits = traits<dtype>;
+  using dtype_traits = dtype_traits<dtype>;
 
   if constexpr (std::same_as<T, broadcast>)
   {
@@ -139,12 +102,12 @@ template <popnet_type dtype, typename T> const T* maybe_broadcast_advance(const 
   }
   else
   {
-    return static_cast<const T*>(traits::advance(p, n));
+    return static_cast<const T*>(dtype_traits::advance(p, n));
   }
 }
 
-using f32_t = traits<popnet_type_f32>::scalar_t;
-using vf32_t = traits<popnet_type_f32>::vector_t;
+using f32_t = dtype_traits<popnet_dtype_f32>::scalar_t;
+using vf32_t = dtype_traits<popnet_dtype_f32>::vector_t;
 
 template <class T, class... Ts>
 constexpr T&& pack_first_element([[maybe_unused]] T&& t, [[maybe_unused]] Ts&&... ts) noexcept
@@ -159,51 +122,50 @@ constexpr T&& pack_first_element([[maybe_unused]] T&& t, [[maybe_unused]] Ts&&..
   }
 }
 
-template <auto op, popnet_type dtype, typename... T>
-requires(sizeof...(T) >= 1)
+template <auto op, popnet_dtype dtype, typename... T>
 POPNET_INLINE static void simd_map(void* POPNET_RESTRICT output, size_t n, const T* POPNET_RESTRICT... inputs) noexcept
 {
-  using traits = traits<dtype>;
+  using dtype_traits = dtype_traits<dtype>;
 
-  if constexpr (traits::category == simd_category::fixed)
+  if constexpr (dtype_traits::category == execution_model::fixed)
   {
-    constexpr size_t vector_length = traits::vector_length();
+    constexpr size_t vector_length = dtype_traits::vector_length();
 
     const size_t tail = n % vector_length;
     const size_t body = n - tail;
 
-    const void* const output_body_end = traits::advance(output, body);
+    const void* const output_body_end = dtype_traits::advance(output, body);
 
     while (output != output_body_end)
     {
       const auto value = op(maybe_broadcast_loadv<dtype>(inputs)...);
 
-      traits::storev(output, value);
+      dtype_traits::storev(output, value);
 
-      output = traits::advance(output, vector_length);
+      output = dtype_traits::advance(output, vector_length);
       ((inputs = maybe_broadcast_advance<dtype>(inputs, vector_length)), ...);
     }
 
     if (tail)
     {
-      const traits::mask_t m = (1 << tail) - 1;
+      const dtype_traits::mask_t m = (1 << tail) - 1;
 
       const auto v = op(maybe_broadcast_loadv<dtype>(inputs, m)...);
 
-      traits::storev(output, m, v);
+      dtype_traits::storev(output, m, v);
     }
   }
-  else if constexpr (traits::category == simd_category::scalar)
+  else if constexpr (dtype_traits::category == execution_model::scalar)
   {
-    const void* const output_end = traits::advance(output, n);
+    const void* const output_end = dtype_traits::advance(output, n);
 
     while (output != output_end)
     {
-      const auto value = op(traits::load(inputs)...);
+      const auto value = op(dtype_traits::load(inputs)...);
 
-      traits::store(output, value);
+      dtype_traits::store(output, value);
 
-      output = traits::advance(output, 1);
+      output = dtype_traits::advance(output, 1);
       ((inputs = maybe_broadcast_advance<dtype>(inputs, 1)), ...);
     }
   }
@@ -213,22 +175,22 @@ POPNET_INLINE static void simd_map(void* POPNET_RESTRICT output, size_t n, const
   }
 }
 
-template <auto state_init_op, auto merge_op, auto horizontal_op, popnet_type dtype, typename... T>
+template <auto state_init_op, auto merge_op, auto horizontal_op, popnet_dtype dtype, typename... T>
 requires(sizeof...(T) >= 1)
 POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inputs) noexcept
 {
-  using traits = traits<dtype>;
+  using dtype_traits = dtype_traits<dtype>;
 
   auto s = state_init_op();
 
-  if constexpr (traits::category == simd_category::fixed)
+  if constexpr (dtype_traits::category == execution_model::fixed)
   {
-    constexpr size_t vector_length = traits::vector_length();
+    constexpr size_t vector_length = dtype_traits::vector_length();
 
     const size_t tail = n % vector_length;
     const size_t body = n - tail;
 
-    const void* const first_input_end = traits::advance(pack_first_element(inputs...), body);
+    const void* const first_input_end = dtype_traits::advance(pack_first_element(inputs...), body);
 
     while (pack_first_element(inputs...) != first_input_end)
     {
@@ -239,18 +201,18 @@ POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inpu
 
     if (tail)
     {
-      const traits::mask_t m = (1 << tail) - 1;
+      const dtype_traits::mask_t m = (1 << tail) - 1;
 
-      s = traits::blend(s, merge_op(maybe_broadcast_loadv<dtype>(inputs, m)..., s), m);
+      s = dtype_traits::blend(s, merge_op(maybe_broadcast_loadv<dtype>(inputs, m)..., s), m);
     }
   }
-  else if constexpr (traits::category == simd_category::scalar)
+  else if constexpr (dtype_traits::category == execution_model::scalar)
   {
-    const void* const first_input_end = traits::advance(pack_first_element(inputs...), n);
+    const void* const first_input_end = dtype_traits::advance(pack_first_element(inputs...), n);
 
     while (pack_first_element(inputs...) != first_input_end)
     {
-      s = merge_op(traits::load(inputs)..., s);
+      s = merge_op(dtype_traits::load(inputs)..., s);
 
       ((inputs = maybe_broadcast_advance<dtype>(inputs, 1)), ...);
     }
