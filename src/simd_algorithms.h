@@ -86,7 +86,7 @@ POPNET_INLINE static void simd_map(void* POPNET_RESTRICT output, size_t n, const
 
     if (tail)
     {
-      const dtype_traits::mask_t m = (1 << tail) - 1;
+      const typename dtype_traits::mask_t m = (1 << tail) - 1;
 
       const auto v = op(maybe_broadcast_vload<dtype>(inputs, m)...);
 
@@ -139,7 +139,7 @@ POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inpu
 
     if (tail)
     {
-      const dtype_traits::mask_t m = (1 << tail) - 1;
+      const typename dtype_traits::mask_t m = (1 << tail) - 1;
 
       s = dtype_traits::blend(s, merge_op(maybe_broadcast_vload<dtype>(inputs, m)..., s), m);
     }

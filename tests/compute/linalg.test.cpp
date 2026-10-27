@@ -236,7 +236,7 @@ TEST_CASE("matmul")
     popnet_free(a);
   }
 
-  auto run = []<popnet_dtype dtype, auto lower, auto upper>(popnet_shape a_shape, popnet_shape b_shape) {
+  auto run = []<popnet_dtype dtype>(auto lower, auto upper, popnet_shape a_shape, popnet_shape b_shape) {
     using dtype_traits = dtype_traits<dtype>;
     using scalar_t = typename dtype_traits::scalar_t;
 
@@ -287,47 +287,47 @@ TEST_CASE("matmul")
 
   SUBCASE("Gen 1x1x1x1 x 1x1x1x1^T - f32")
   {
-    run.operator()<popnet_dtype_f32, -10.0f, 10.0f>(popnet_shape{{1, 1, 1, 1}}, popnet_shape{{1, 1, 1, 1}});
+    run.operator()<popnet_dtype_f32>(-10.0f, 10.0f, popnet_shape{{1, 1, 1, 1}}, popnet_shape{{1, 1, 1, 1}});
   };
   SUBCASE("Gen 1x1x1x5 x 1x1x2x5^T - f32")
   {
-    run.operator()<popnet_dtype_f32, -10.0f, 10.0f>(popnet_shape{{1, 1, 1, 5}}, popnet_shape{{1, 1, 2, 5}});
+    run.operator()<popnet_dtype_f32>(-10.0f, 10.0f, popnet_shape{{1, 1, 1, 5}}, popnet_shape{{1, 1, 2, 5}});
   };
   SUBCASE("Gen 1x1x2x3 x 1x1x4x3^T - f32")
   {
-    run.operator()<popnet_dtype_f32, -10.0f, 10.0f>(popnet_shape{{1, 1, 2, 3}}, popnet_shape{{1, 1, 4, 3}});
+    run.operator()<popnet_dtype_f32>(-10.0f, 10.0f, popnet_shape{{1, 1, 2, 3}}, popnet_shape{{1, 1, 4, 3}});
   };
   SUBCASE("Gen 1x1x3x2 x 1x1x3x2^T - f32")
   {
-    run.operator()<popnet_dtype_f32, -10.0f, 10.0f>(popnet_shape{{1, 1, 3, 2}}, popnet_shape{{1, 1, 3, 2}});
+    run.operator()<popnet_dtype_f32>(-10.0f, 10.0f, popnet_shape{{1, 1, 3, 2}}, popnet_shape{{1, 1, 3, 2}});
   };
   SUBCASE("Gen 1x1x3x3 x 1x1x3x3^T - f32")
   {
-    run.operator()<popnet_dtype_f32, -10.0f, 10.0f>(popnet_shape{{1, 1, 3, 3}}, popnet_shape{{1, 1, 3, 3}});
+    run.operator()<popnet_dtype_f32>(-10.0f, 10.0f, popnet_shape{{1, 1, 3, 3}}, popnet_shape{{1, 1, 3, 3}});
   };
   SUBCASE("Gen 1x2x2x3 x 1x1x4x3^T - f32")
   {
-    run.operator()<popnet_dtype_f32, -10.0f, 10.0f>(popnet_shape{{1, 2, 2, 3}}, popnet_shape{{1, 1, 4, 3}});
+    run.operator()<popnet_dtype_f32>(-10.0f, 10.0f, popnet_shape{{1, 2, 2, 3}}, popnet_shape{{1, 1, 4, 3}});
   };
   SUBCASE("Gen 2x2x3x3 x 1x1x3x3^T - f32")
   {
-    run.operator()<popnet_dtype_f32, -10.0f, 10.0f>(popnet_shape{{2, 2, 3, 3}}, popnet_shape{{1, 1, 3, 3}});
+    run.operator()<popnet_dtype_f32>(-10.0f, 10.0f, popnet_shape{{2, 2, 3, 3}}, popnet_shape{{1, 1, 3, 3}});
   };
   SUBCASE("Gen 3x1x4x2 x 1x1x4x2^T - f32")
   {
-    run.operator()<popnet_dtype_f32, -10.0f, 10.0f>(popnet_shape{{3, 1, 4, 2}}, popnet_shape{{1, 1, 4, 2}});
+    run.operator()<popnet_dtype_f32>(-10.0f, 10.0f, popnet_shape{{3, 1, 4, 2}}, popnet_shape{{1, 1, 4, 2}});
   };
   SUBCASE("Gen 4x2x16x16 x 1x1x32x16^T - f32")
   {
-    run.operator()<popnet_dtype_f32, -10.0f, 10.0f>(popnet_shape{{4, 2, 16, 16}}, popnet_shape{{1, 1, 32, 16}});
+    run.operator()<popnet_dtype_f32>(-10.0f, 10.0f, popnet_shape{{4, 2, 16, 16}}, popnet_shape{{1, 1, 32, 16}});
   };
   SUBCASE("Gen 4x4x128x64 x 1x1x128x64^T - f32")
   {
-    run.operator()<popnet_dtype_f32, -2.0f, 2.0f>(popnet_shape{{4, 4, 128, 64}}, popnet_shape{{1, 1, 128, 64}});
+    run.operator()<popnet_dtype_f32>(-2.0f, 2.0f, popnet_shape{{4, 4, 128, 64}}, popnet_shape{{1, 1, 128, 64}});
   };
   SUBCASE("Gen 1x1x512x512 x 1x1x512x512^T - f32")
   {
-    run.operator()<popnet_dtype_f32, -1.0f, 1.0f>(popnet_shape{{1, 1, 512, 512}}, popnet_shape{{1, 1, 512, 512}});
+    run.operator()<popnet_dtype_f32>(-1.0f, 1.0f, popnet_shape{{1, 1, 512, 512}}, popnet_shape{{1, 1, 512, 512}});
   };
 }
 
@@ -569,7 +569,7 @@ TEST_CASE("transpose")
     popnet_free(src);
   }
 
-  auto run = []<popnet_dtype dtype, auto lower, auto upper>(popnet_shape src_shape) {
+  auto run = []<popnet_dtype dtype>(auto lower, auto upper, popnet_shape src_shape) {
     const size_t outer_size = src_shape.dim[0] * src_shape.dim[1];
     const popnet_shape dst_shape = popnet_transpose_shape(src_shape);
     REQUIRE(dst_shape == popnet_shape{{src_shape.dim[0], src_shape.dim[1], src_shape.dim[3], src_shape.dim[2]}});
@@ -595,23 +595,23 @@ TEST_CASE("transpose")
     popnet_free(src);
   };
 
-  SUBCASE("Gen 1x1x1x1 - f32") { run.operator()<popnet_dtype_f32, -100.0f, 100.0f>(popnet_shape{{1, 1, 1, 1}}); };
-  SUBCASE("Gen 1x1x1x5 - f32") { run.operator()<popnet_dtype_f32, -100.0f, 100.0f>(popnet_shape{{1, 1, 1, 5}}); };
-  SUBCASE("Gen 1x1x2x3 - f32") { run.operator()<popnet_dtype_f32, -100.0f, 100.0f>(popnet_shape{{1, 1, 2, 3}}); };
-  SUBCASE("Gen 1x1x3x2 - f32") { run.operator()<popnet_dtype_f32, -100.0f, 100.0f>(popnet_shape{{1, 1, 3, 2}}); };
-  SUBCASE("Gen 1x1x3x3 - f32") { run.operator()<popnet_dtype_f32, -100.0f, 100.0f>(popnet_shape{{1, 1, 3, 3}}); };
-  SUBCASE("Gen 1x1x5x3 - f32") { run.operator()<popnet_dtype_f32, -100.0f, 100.0f>(popnet_shape{{1, 1, 5, 3}}); };
-  SUBCASE("Gen 1x2x2x3 - f32") { run.operator()<popnet_dtype_f32, -100.0f, 100.0f>(popnet_shape{{1, 2, 2, 3}}); };
-  SUBCASE("Gen 2x2x3x3 - f32") { run.operator()<popnet_dtype_f32, -100.0f, 100.0f>(popnet_shape{{2, 2, 3, 3}}); };
-  SUBCASE("Gen 3x1x4x2 - f32") { run.operator()<popnet_dtype_f32, -100.0f, 100.0f>(popnet_shape{{3, 1, 4, 2}}); };
-  SUBCASE("Gen 4x2x16x16 - f32") { run.operator()<popnet_dtype_f32, -100.0f, 100.0f>(popnet_shape{{4, 2, 16, 16}}); };
-  SUBCASE("Gen 4x4x128x64 - f32") { run.operator()<popnet_dtype_f32, -100.0f, 100.0f>(popnet_shape{{4, 4, 128, 64}}); };
+  SUBCASE("Gen 1x1x1x1 - f32") { run.operator()<popnet_dtype_f32>(-100.0f, 100.0f, popnet_shape{{1, 1, 1, 1}}); };
+  SUBCASE("Gen 1x1x1x5 - f32") { run.operator()<popnet_dtype_f32>(-100.0f, 100.0f, popnet_shape{{1, 1, 1, 5}}); };
+  SUBCASE("Gen 1x1x2x3 - f32") { run.operator()<popnet_dtype_f32>(-100.0f, 100.0f, popnet_shape{{1, 1, 2, 3}}); };
+  SUBCASE("Gen 1x1x3x2 - f32") { run.operator()<popnet_dtype_f32>(-100.0f, 100.0f, popnet_shape{{1, 1, 3, 2}}); };
+  SUBCASE("Gen 1x1x3x3 - f32") { run.operator()<popnet_dtype_f32>(-100.0f, 100.0f, popnet_shape{{1, 1, 3, 3}}); };
+  SUBCASE("Gen 1x1x5x3 - f32") { run.operator()<popnet_dtype_f32>(-100.0f, 100.0f, popnet_shape{{1, 1, 5, 3}}); };
+  SUBCASE("Gen 1x2x2x3 - f32") { run.operator()<popnet_dtype_f32>(-100.0f, 100.0f, popnet_shape{{1, 2, 2, 3}}); };
+  SUBCASE("Gen 2x2x3x3 - f32") { run.operator()<popnet_dtype_f32>(-100.0f, 100.0f, popnet_shape{{2, 2, 3, 3}}); };
+  SUBCASE("Gen 3x1x4x2 - f32") { run.operator()<popnet_dtype_f32>(-100.0f, 100.0f, popnet_shape{{3, 1, 4, 2}}); };
+  SUBCASE("Gen 4x2x16x16 - f32") { run.operator()<popnet_dtype_f32>(-100.0f, 100.0f, popnet_shape{{4, 2, 16, 16}}); };
+  SUBCASE("Gen 4x4x128x64 - f32") { run.operator()<popnet_dtype_f32>(-100.0f, 100.0f, popnet_shape{{4, 4, 128, 64}}); };
   SUBCASE("Gen 1x1x1000x1000 - f32")
   {
-    run.operator()<popnet_dtype_f32, -100.0f, 100.0f>(popnet_shape{{1, 1, 1000, 1000}});
+    run.operator()<popnet_dtype_f32>(-100.0f, 100.0f, popnet_shape{{1, 1, 1000, 1000}});
   };
   SUBCASE("Gen 1x1x500x1000 - f32")
   {
-    run.operator()<popnet_dtype_f32, -100.0f, 100.0f>(popnet_shape{{1, 1, 500, 1000}});
+    run.operator()<popnet_dtype_f32>(-100.0f, 100.0f, popnet_shape{{1, 1, 500, 1000}});
   };
 }

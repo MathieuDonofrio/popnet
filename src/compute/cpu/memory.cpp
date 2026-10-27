@@ -2,6 +2,7 @@
 
 #include <new>
 #include <stdlib.h>
+#include <string.h>
 
 void* popnet_alloc(popnet_dtype dtype, popnet_shape shape) noexcept
 {

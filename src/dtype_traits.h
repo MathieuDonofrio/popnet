@@ -23,7 +23,7 @@ template <> struct dtype_traits<popnet_dtype_f32>
   using scalar_t = float;
 
 #if POPNET_AVX512
-  static inline constexpr cpu_execution_model cpu_execution_model = cpu_execution_model::fixed;
+  static inline constexpr ::cpu_execution_model cpu_execution_model = ::cpu_execution_model::fixed;
 
   using vector_t = __m512;
   using mask_t = __mmask16;
@@ -44,7 +44,7 @@ template <> struct dtype_traits<popnet_dtype_f32>
   }
 
 #else
-  static inline constexpr cpu_execution_model cpu_execution_model = cpu_execution_model::scalar;
+  static inline constexpr ::cpu_execution_model cpu_execution_model = ::cpu_execution_model::scalar;
 
   using vector_t = scalar_t;
 
@@ -116,22 +116,22 @@ POPNET_INLINE vf32_t vset_one_f32() { return 1; }
 POPNET_INLINE vf32_t vset_neg_inf_f32() { return -std::numeric_limits<f32_t>::infinity(); }
 POPNET_INLINE vf32_t vset_pos_inf_f32() { return std::numeric_limits<f32_t>::infinity(); }
 
-POPNET_INLINE vf32_t vabs_f32(vf32_t a) { return std::fabsf(a); }
+POPNET_INLINE vf32_t vabs_f32(vf32_t a) { return std::fabs(a); }
 POPNET_INLINE vf32_t vneg_f32(vf32_t a) { return -a; }
 
 POPNET_INLINE vf32_t vsqr_f32(vf32_t a) { return a * a; }
-POPNET_INLINE vf32_t vsqrt_f32(vf32_t a) { return std::sqrtf(a); }
+POPNET_INLINE vf32_t vsqrt_f32(vf32_t a) { return std::sqrt(a); }
 
-POPNET_INLINE vf32_t vexp_f32(vf32_t a) { return std::expf(a); }
-POPNET_INLINE vf32_t vlog_f32(vf32_t a) { return std::logf(a); }
+POPNET_INLINE vf32_t vexp_f32(vf32_t a) { return std::exp(a); }
+POPNET_INLINE vf32_t vlog_f32(vf32_t a) { return std::log(a); }
 
-POPNET_INLINE vf32_t vsin_f32(vf32_t a) { return std::sinf(a); }
-POPNET_INLINE vf32_t vcos_f32(vf32_t a) { return std::cosf(a); }
-POPNET_INLINE vf32_t vtanh_f32(vf32_t a) { return std::tanhf(a); }
+POPNET_INLINE vf32_t vsin_f32(vf32_t a) { return std::sin(a); }
+POPNET_INLINE vf32_t vcos_f32(vf32_t a) { return std::cos(a); }
+POPNET_INLINE vf32_t vtanh_f32(vf32_t a) { return std::tanh(a); }
 
 POPNET_INLINE vf32_t vrelu_f32(vf32_t a) { return std::max(a, 0.0f); }
 
-POPNET_INLINE vf32_t vsigmoid_f32(vf32_t a) { return 1 / (1 + std::expf(-a)); }
+POPNET_INLINE vf32_t vsigmoid_f32(vf32_t a) { return 1 / (1 + std::exp(-a)); }
 
 POPNET_INLINE vf32_t vadd_f32(vf32_t a, vf32_t b) { return a + b; }
 POPNET_INLINE vf32_t vsub_f32(vf32_t a, vf32_t b) { return a - b; }
@@ -140,7 +140,7 @@ POPNET_INLINE vf32_t vdiv_f32(vf32_t a, vf32_t b) { return a / b; }
 POPNET_INLINE vf32_t vmin_f32(vf32_t a, vf32_t b) { return std::min(a, b); }
 POPNET_INLINE vf32_t vmax_f32(vf32_t a, vf32_t b) { return std::max(a, b); }
 
-POPNET_INLINE vf32_t vfma_f32(vf32_t a, vf32_t b, vf32_t c) { return std::fmaf(a, b, c); }
+POPNET_INLINE vf32_t vfma_f32(vf32_t a, vf32_t b, vf32_t c) { return std::fma(a, b, c); }
 
 POPNET_INLINE f32_t vreduce_sum_f32(vf32_t a) { return a; }
 POPNET_INLINE f32_t vreduce_mean_f32(vf32_t a, size_t n) { return a / n; }

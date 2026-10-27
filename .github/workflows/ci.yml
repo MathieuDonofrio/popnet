@@ -1,0 +1,144 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      full_matrix:
+        description: Run all platforms, compilers, build types, and native settings
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  matrix:
+    runs-on: ubuntu-24.04
+    outputs:
+      builds: ${{ steps.select.outputs.builds }}
+    steps:
+      - uses: actions/github-script@v7
+        id: select
+        env:
+          FULL_MATRIX: ${{ inputs.full_matrix || false }}
+        with:
+          script: |
+            // Add platforms here; build and native combinations are shared.
+            const platforms = [
+              { runner: 'windows-2022', arch: 'x64', compiler: 'cl' },
+              { runner: 'windows-11-vs2026-arm', arch: 'arm64', compiler: 'cl' },
+              { runner: 'windows-2022', arch: 'x64', compiler: 'clang-cl' },
+              { runner: 'windows-11-vs2026-arm', arch: 'arm64', compiler: 'clang-cl' },
+              { runner: 'ubuntu-24.04', arch: 'x64', compiler: 'g++' },
+              { runner: 'ubuntu-24.04-arm', arch: 'arm64', compiler: 'g++' },
+              { runner: 'ubuntu-24.04', arch: 'x64', compiler: 'clang++' },
+              { runner: 'ubuntu-24.04-arm', arch: 'arm64', compiler: 'clang++' },
+              { runner: 'macos-15-intel', arch: 'x64', compiler: 'clang++' },
+              { runner: 'macos-15', arch: 'arm64', compiler: 'clang++' },
+            ];
+            const builds = platforms.flatMap(platform =>
+              ['Debug', 'RelWithDebInfo'].flatMap(build_type =>
+                ['ON', 'OFF'].map(native => ({ ...platform, build_type, native }))));
+            const defaults = build =>
+              (build.runner === 'windows-2022' && build.compiler === 'cl' &&
+                build.build_type === 'Debug' && build.native === 'OFF') ||
+              (build.runner === 'ubuntu-24.04' && build.compiler === 'g++' &&
+                build.build_type === 'Debug' && build.native === 'OFF') ||
+              (build.runner === 'macos-15' && build.build_type === 'RelWithDebInfo' &&
+                build.native === 'ON');
+            core.setOutput('builds', { include: process.env.FULL_MATRIX === 'true'
+              ? builds : builds.filter(defaults) });
+
+  test:
+    needs: matrix
+    name: ${{ matrix.runner }} / ${{ matrix.compiler }} / ${{ matrix.build_type }} / native=${{ matrix.native }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix.outputs.builds) }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+        with:
+          arch: ${{ matrix.arch == 'arm64' && 'amd64_arm64' || 'amd64' }}
+      - name: Locate Windows LLVM runtime
+        if: runner.os == 'Windows' && matrix.compiler == 'clang-cl'
+        shell: pwsh
+        run: |
+          $resource = (& clang-cl /clang:-print-resource-dir).Trim()
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "LIB=$resource/lib/windows;$env:LIB" >> $env:GITHUB_ENV
+          "$resource/lib/windows" >> $env:GITHUB_PATH
+      - name: Configure
+        env:
+          BUILD_TYPE: ${{ matrix.build_type }}
+          COMPILER: ${{ matrix.compiler }}
+          NATIVE: ${{ matrix.native }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          asan=OFF
+          ubsan=OFF
+          extra=()
+          if [[ "$BUILD_TYPE" == Debug ]]; then
+            asan=ON
+            if [[ "$RUNNER_OS" != Windows ]]; then
+              ubsan=ON
+            elif [[ "$COMPILER" == clang-cl && "$ARCH" == arm64 ]]; then
+              # LLVM's Windows ARM64 ASan runtime is not supplied by these images.
+              asan=OFF
+              echo '::notice::Windows ARM64 clang-cl Debug runs without sanitizers.'
+            fi
+          fi
+          if [[ "$RUNNER_OS" == Windows && "$COMPILER" == clang-cl ]]; then
+            if [[ "$ARCH" == arm64 ]]; then
+              extra+=(-DCMAKE_CXX_COMPILER_TARGET=aarch64-pc-windows-msvc)
+            else
+              extra+=(-DCMAKE_CXX_COMPILER_TARGET=x86_64-pc-windows-msvc)
+            fi
+          fi
+          cmake -S . -B build/ci -G Ninja \
+            -DCMAKE_CXX_COMPILER="$COMPILER" -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+            -DPOPNET_BUILD_TESTS=ON -DPOPNET_BUILD_BENCHMARKS=OFF \
+            -DPOPNET_NATIVE="$NATIVE" -DPOPNET_ASAN="$asan" -DPOPNET_UBSAN="$ubsan" \
+            "${extra[@]}"
+      - name: Build
+        run: cmake --build build/ci --parallel 2
+      - name: Test
+        run: ctest --test-dir build/ci --output-on-failure --no-tests=error
+
+  coverage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install coverage tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 llvm-18 libclang-rt-18-dev ninja-build
+          pipx install gcovr==8.8
+      - name: Configure
+        run: cmake --preset linux-clang-coverage -DCMAKE_CXX_COMPILER=clang++-18
+      - name: Collect coverage
+        run: cmake --build build/linux-clang-coverage --target coverage --parallel 2
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            build/linux-clang-coverage/coverage*.html
+            build/linux-clang-coverage/coverage*.css
+            build/linux-clang-coverage/coverage.xml
+          if-no-files-found: error
