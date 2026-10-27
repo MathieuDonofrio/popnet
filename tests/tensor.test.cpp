@@ -1,92 +1,197 @@
 #include "tensor.h"
 
+#include <algorithm>
 #include <doctest/doctest.h>
 
-#include "dtype_traits.h"
-
+// @verifies REQ-0013: Checks that the element count is the product of the dimensions.
 TEST_CASE("popnet_numel computes number of elements correctly")
 {
   popnet_shape shape{{2, 3, 4, 5}};
+
   REQUIRE(popnet_numel(shape) == 2 * 3 * 4 * 5);
 }
 
-TEST_CASE("popnet_empty and popnet_empty_like")
+// @verifies REQ-0010: Checks allocation metadata and independent storage.
+// @verifies REQ-0013: Checks metadata queries on newly allocated tensors.
+TEST_CASE("popnet_empty")
 {
-  auto run = []<popnet_dtype dtype>() {
-    popnet_shape shape{{2, 2, 2, 2}};
-    popnet_tensor* t = popnet_empty(dtype, shape);
+  const popnet_shape shape{{2, 3, 1, 1}};
+  auto* a = popnet_empty(popnet_dtype_f32, shape);
+  auto* b = popnet_empty(popnet_dtype_f32, shape);
 
-    REQUIRE(t != nullptr);
-    CHECK(popnet_valid_tensor(t));
-    CHECK(popnet_dtypeof(t) == dtype);
-    CHECK(popnet_opof(t) == popnet_op_none);
-    CHECK(popnet_shapeof(t) == shape);
+  REQUIRE(a != nullptr);
+  REQUIRE(b != nullptr);
+  CHECK(popnet_valid_tensor(a));
+  CHECK(popnet_shapeof(a) == shape);
+  CHECK(popnet_dtypeof(a) == popnet_dtype_f32);
+  CHECK(popnet_opof(a) == popnet_op_none);
+  CHECK(a->data != b->data);
 
-    t->op = popnet_op_abs;
-
-    SUBCASE("empty_like preserves shape and dtype but not op")
-    {
-      popnet_tensor* t2 = popnet_empty_like(t);
-
-      REQUIRE(t2 != nullptr);
-      CHECK(popnet_valid_tensor(t2));
-      CHECK(popnet_dtypeof(t2) == dtype);
-      CHECK(popnet_opof(t2) == popnet_op_none);
-      CHECK(popnet_shapeof(t2) == shape);
-      CHECK(t2->data != t->data);
-
-      popnet_free(t2);
-    }
-
-    SUBCASE("empty_like with nullptr should fail gracefully")
-    {
-      popnet_tensor* bad = popnet_empty_like(nullptr);
-
-      REQUIRE(bad == nullptr);
-      CHECK_FALSE(popnet_valid_tensor(bad));
-      CHECK(popnet_dtypeof(bad) == popnet_dtype_none);
-      CHECK(popnet_opof(bad) == popnet_op_none);
-      CHECK(popnet_shapeof(bad) == popnet_shape{{0, 0, 0, 0}});
-    }
-
-    popnet_free(t);
-  };
-
-  SUBCASE("F32") { run.operator()<popnet_dtype_f32>(); }
+  popnet_free(b);
+  popnet_free(a);
 }
 
-TEST_CASE("popnet_set_data and popnet_get_data")
+// @verifies REQ-0011: Checks matching metadata, independent storage, and no copied operation.
+// @verifies REQ-0013: Checks metadata queries on the matching allocation.
+TEST_CASE("popnet_empty_like")
 {
-  auto run = []<popnet_dtype dtype>() {
-    popnet_shape shape{{2, 2, 1, 1}};
-    popnet_tensor* t = popnet_empty(dtype, shape);
-    REQUIRE(t != nullptr);
+  const popnet_shape shape{{2, 3, 1, 1}};
+  auto* input = popnet_empty(popnet_dtype_f32, shape);
 
-    typename dtype_traits<dtype>::scalar_t values[4] = {0, 1, 0, -1};
-    typename dtype_traits<dtype>::scalar_t readback[4] = {};
+  REQUIRE(input != nullptr);
 
-    SUBCASE("Full write and readback")
+  auto* src = popnet_abs(input);
+
+  REQUIRE(src != nullptr);
+
+  SUBCASE("matching allocation")
+  {
+    auto* dst = popnet_empty_like(src);
+
+    REQUIRE(dst != nullptr);
+    CHECK(popnet_valid_tensor(dst));
+    CHECK(popnet_shapeof(dst) == shape);
+    CHECK(popnet_dtypeof(dst) == popnet_dtype_f32);
+    CHECK(popnet_opof(dst) == popnet_op_none);
+    CHECK(dst->data != src->data);
+
+    popnet_free(dst);
+  }
+
+  SUBCASE("nullptr")
+  {
+    auto* bad = popnet_empty_like(nullptr);
+    CHECK(bad == nullptr);
+    CHECK_FALSE(popnet_valid_tensor(bad));
+    CHECK(popnet_dtypeof(bad) == popnet_dtype_none);
+    CHECK(popnet_opof(bad) == popnet_op_none);
+    CHECK(popnet_shapeof(bad) == popnet_shape{{0, 0, 0, 0}});
+
+    popnet_free(bad);
+  }
+
+  popnet_free(src);
+  popnet_free(input);
+}
+
+// @verifies REQ-0015: Checks writes and preservation outside the requested range.
+TEST_CASE("popnet_set_data")
+{
+  auto* tensor = popnet_empty(popnet_dtype_f32, {{1, 1, 1, 4}});
+
+  REQUIRE(tensor != nullptr);
+
+  auto* data = static_cast<float*>(tensor->data);
+  const float initial[] = {11, 22, 33, 44};
+  std::copy_n(initial, 4, data);
+  const float values[] = {7, -3, 9, 5};
+
+  SUBCASE("full write")
+  {
+    popnet_set_data(tensor, values, popnet_dtype_f32, 0, 4);
+
+    for (size_t i = 0; i < 4; ++i)
     {
-      popnet_set_data(t, values, dtype, 0, 4);
-      popnet_get_data(t, readback, dtype, 0, 4);
-
-      for (int i = 0; i < 4; i++)
-      {
-        REQUIRE(readback[i] == values[i]);
-      }
+      CHECK(data[i] == values[i]);
     }
+  }
 
-    SUBCASE("Partial write and readback with offset")
+  SUBCASE("partial write")
+  {
+    popnet_set_data(tensor, values, popnet_dtype_f32, 1, 2);
+    const float expected[] = {11, 7, -3, 44};
+
+    for (size_t i = 0; i < 4; ++i)
     {
-      popnet_set_data(t, values, dtype, 1, 2);
-      popnet_get_data(t, readback, dtype, 1, 2);
-
-      REQUIRE(readback[0] == values[0]);
-      REQUIRE(readback[1] == values[1]);
+      CHECK(data[i] == expected[i]);
     }
+  }
 
-    popnet_free(t);
-  };
+  SUBCASE("zero-length write at end")
+  {
+    popnet_set_data(tensor, values, popnet_dtype_f32, 4, 0);
 
-  SUBCASE("F32") { run.operator()<popnet_dtype_f32>(); }
+    for (size_t i = 0; i < 4; ++i)
+    {
+      CHECK(data[i] == initial[i]);
+    }
+  }
+
+  popnet_free(tensor);
+}
+
+// @verifies REQ-0016: Checks read offsets, count, and preservation of tensor data.
+TEST_CASE("popnet_get_data")
+{
+  auto* tensor = popnet_empty(popnet_dtype_f32, {{1, 1, 1, 4}});
+
+  REQUIRE(tensor != nullptr);
+
+  auto* data = static_cast<float*>(tensor->data);
+  const float values[] = {11, 22, 33, 44};
+  std::copy_n(values, 4, data);
+  float output[] = {-1, -1, -1, -1};
+
+  SUBCASE("full read")
+  {
+    popnet_get_data(tensor, output, popnet_dtype_f32, 0, 4);
+
+    for (size_t i = 0; i < 4; ++i)
+    {
+      CHECK(output[i] == values[i]);
+    }
+  }
+
+  SUBCASE("partial read")
+  {
+    popnet_get_data(tensor, output, popnet_dtype_f32, 1, 2);
+    const float expected[] = {22, 33, -1, -1};
+
+    for (size_t i = 0; i < 4; ++i)
+    {
+      CHECK(output[i] == expected[i]);
+    }
+  }
+
+  SUBCASE("zero-length read at end")
+  {
+    popnet_get_data(tensor, output, popnet_dtype_f32, 4, 0);
+
+    for (float value : output)
+    {
+      CHECK(value == -1);
+    }
+  }
+
+  for (size_t i = 0; i < 4; ++i)
+  {
+    CHECK(data[i] == values[i]);
+  }
+
+  popnet_free(tensor);
+}
+
+// @verifies REQ-0012: Freeing an operation tensor leaves its input alive and usable.
+TEST_CASE("freeing a tensor preserves its inputs")
+{
+  auto* src = popnet_empty(popnet_dtype_f32, {{1, 1, 1, 2}});
+
+  REQUIRE(src != nullptr);
+
+  const float values[] = {3, -7};
+  popnet_set_data(src, values, popnet_dtype_f32, 0, 2);
+  auto* dst = popnet_neg(src);
+
+  REQUIRE(dst != nullptr);
+
+  popnet_free(dst);
+
+  float actual[2]{};
+
+  popnet_get_data(src, actual, popnet_dtype_f32, 0, 2);
+
+  CHECK(actual[0] == values[0]);
+  CHECK(actual[1] == values[1]);
+
+  popnet_free(src);
 }

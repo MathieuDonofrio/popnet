@@ -80,3 +80,5 @@ Retain derived requirements only when managing them separately adds value.
 
 Tests and other checks reference requirement IDs.
 Requirements define compliance; checks assess it; results record evidence.
+
+When changing requirements, review linked tests using the [testing skill](../testing/SKILL.md).

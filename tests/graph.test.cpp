@@ -5,6 +5,32 @@
 #include "ops.h"
 #include "tensor.h"
 
+// @verifies REQ-0018: Graph allocation starts empty and freeing a graph preserves its tensors.
+TEST_CASE("graph lifetime")
+{
+  auto* graph = popnet_graph_alloc();
+  REQUIRE(graph != nullptr);
+  CHECK(graph->nodes.empty());
+
+  auto* src = popnet_empty(popnet_dtype_f32, {{1, 1, 1, 2}});
+  REQUIRE(src != nullptr);
+
+  const float values[] = {3, -7};
+  popnet_set_data(src, values, popnet_dtype_f32, 0, 2);
+
+  REQUIRE(popnet_graph_build_forward(graph, src));
+  popnet_graph_free(graph);
+
+  float actual[2]{};
+  popnet_get_data(src, actual, popnet_dtype_f32, 0, 2);
+
+  CHECK(actual[0] == values[0]);
+  CHECK(actual[1] == values[1]);
+
+  popnet_free(src);
+}
+
+// @verifies REQ-0019: Checks dependency inclusion, ordering, deduplication, and null-output rejection.
 TEST_CASE("popnet_graph build forward")
 {
   popnet_graph* graph = popnet_graph_alloc();
@@ -13,7 +39,6 @@ TEST_CASE("popnet_graph build forward")
   popnet_shape shape{{2, 2, 1, 1}};
   popnet_tensor* a = popnet_empty(popnet_dtype_f32, shape);
   popnet_tensor* b = popnet_empty(popnet_dtype_f32, shape);
-  popnet_tensor* c = popnet_empty(popnet_dtype_f32, shape);
 
   SUBCASE("nullptr")
   {
@@ -139,6 +164,7 @@ TEST_CASE("popnet_graph build forward")
   popnet_graph_free(graph);
 }
 
+// @verifies REQ-0020: Checks forward results for dependent operations and unchanged input-only nodes.
 TEST_CASE("popnet_graph compute forward")
 {
   popnet_graph* graph = popnet_graph_alloc();
@@ -157,6 +183,36 @@ TEST_CASE("popnet_graph compute forward")
   SUBCASE("null graph pointer") { popnet_graph_compute_forward(nullptr); }
 
   SUBCASE("empty graph") { popnet_graph_compute_forward(graph); }
+
+  SUBCASE("recompute after changing inputs")
+  {
+    auto* sum = popnet_add(a, b);
+    REQUIRE(sum != nullptr);
+
+    auto* result = popnet_neg(sum);
+    REQUIRE(result != nullptr);
+
+    REQUIRE(popnet_graph_build_forward(graph, result));
+
+    for (int pass = 0; pass < 2; ++pass)
+    {
+      const float input[4] = {float(pass + 1), -2.0f, float(pass * 10), 4.0f};
+      popnet_set_data(a, input, popnet_dtype_f32, 0, 4);
+
+      popnet_graph_compute_forward(graph);
+
+      float actual[4]{};
+      popnet_get_data(result, actual, popnet_dtype_f32, 0, 4);
+
+      for (size_t i = 0; i < 4; ++i)
+      {
+        CHECK(actual[i] == -(input[i] + b_values[i]));
+      }
+    }
+
+    popnet_free(result);
+    popnet_free(sum);
+  }
 
   SUBCASE("single input node with no op")
   {

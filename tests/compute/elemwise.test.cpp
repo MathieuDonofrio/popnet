@@ -8,6 +8,8 @@
 #include "tensor.h"
 #include "test_utils.h"
 
+// @verifies REQ-0001: Compares unary results with scalar references.
+// @verifies REQ-0007: Exercises float32 unary operations.
 TEST_CASE("elementwise unary compute")
 {
   using namespace std::numbers;
@@ -176,6 +178,8 @@ static auto binary_ref(const auto& lhs, const popnet_shape& lhs_shape, const aut
   return out;
 }
 
+// @verifies REQ-0002: Compares binary results across matching and broadcast shapes.
+// @verifies REQ-0007: Exercises float32 binary operations.
 TEST_CASE("element binary compute")
 {
   auto run =
@@ -185,6 +189,10 @@ TEST_CASE("element binary compute")
 
         auto run_shape = [](const popnet_shape lhs_shape, const popnet_shape rhs_shape) {
           const auto dst_shape = popnet_broadcast_shape(lhs_shape, rhs_shape);
+          const popnet_shape expected_shape{
+              {std::max(lhs_shape.dim[0], rhs_shape.dim[0]), std::max(lhs_shape.dim[1], rhs_shape.dim[1]),
+               std::max(lhs_shape.dim[2], rhs_shape.dim[2]), std::max(lhs_shape.dim[3], rhs_shape.dim[3])}};
+          REQUIRE(dst_shape == expected_shape);
 
           const auto lhs_n = popnet_numel(lhs_shape);
           const auto rhs_n = popnet_numel(rhs_shape);
