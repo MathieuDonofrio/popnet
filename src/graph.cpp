@@ -77,7 +77,7 @@ void popnet_graph_compute_forward(popnet_graph* graph)
     case popnet_op_reduce_max: popnet_compute_reduce_max(node); break;
     case popnet_op_matmul: popnet_compute_matmul(node); break;
     case popnet_op_transpose: popnet_compute_transpose(node); break;
-    default: POPNET_UNREACHABLE(); break;
+    default: POPNET_UNSUPPORTED("Unsupported graph operation"); break;
     }
   }
 }

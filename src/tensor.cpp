@@ -71,7 +71,7 @@ void popnet_set_data(const popnet_tensor* tensor, const void* src, popnet_dtype 
   }
   else
   {
-    POPNET_UNREACHABLE();
+    POPNET_UNSUPPORTED("Setting tensor data requires f32 source and tensor dtypes");
   }
 }
 
@@ -90,6 +90,6 @@ void popnet_get_data(const popnet_tensor* tensor, void* dst, popnet_dtype dst_dt
   }
   else
   {
-    POPNET_UNREACHABLE();
+    POPNET_UNSUPPORTED("Getting tensor data requires f32 tensor and destination dtypes");
   }
 }

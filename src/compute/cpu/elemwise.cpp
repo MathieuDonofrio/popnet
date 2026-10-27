@@ -152,11 +152,11 @@ template <popnet_op op> POPNET_INLINE static void popnet_compute_unary(popnet_te
     else if constexpr (op == popnet_op_sigmoid)
       unary_kernel<vsigmoid_f32, popnet_dtype_f32>(src->data, dst->data, n);
     else
-      static_assert([]() { return false; }, "Not implemented");
+      POPNET_UNSUPPORTED_STATIC("Unsupported elementwise operation");
   }
   else
   {
-    POPNET_UNREACHABLE(); // TODO
+    POPNET_UNSUPPORTED("Elementwise operations require f32 inputs and output");
   }
 }
 
@@ -178,7 +178,7 @@ template <auto op> POPNET_INLINE static void popnet_compute_binary(popnet_tensor
       else if constexpr (op == popnet_op_div)
         binary_kernel_matching<vdiv_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
       else
-        static_assert([]() { return false; }, "Not implemented");
+        POPNET_UNSUPPORTED_STATIC("Unsupported elementwise operation");
     }
     else if (src0->shape == popnet_scalar_shape)
     {
@@ -191,7 +191,7 @@ template <auto op> POPNET_INLINE static void popnet_compute_binary(popnet_tensor
       else if constexpr (op == popnet_op_div)
         binary_kernel_lscalar<vdiv_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
       else
-        static_assert([]() { return false; }, "Not implemented");
+        POPNET_UNSUPPORTED_STATIC("Unsupported elementwise operation");
     }
     else if (src1->shape == popnet_scalar_shape)
     {
@@ -204,7 +204,7 @@ template <auto op> POPNET_INLINE static void popnet_compute_binary(popnet_tensor
       else if constexpr (op == popnet_op_div)
         binary_kernel_rscalar<vdiv_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
       else
-        static_assert([]() { return false; }, "Not implemented");
+        POPNET_UNSUPPORTED_STATIC("Unsupported elementwise operation");
     }
     else
     {
@@ -221,12 +221,12 @@ template <auto op> POPNET_INLINE static void popnet_compute_binary(popnet_tensor
         binary_kernel_broadcast<vdiv_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, dst->shape, src0->shape,
                                                             src1->shape);
       else
-        static_assert([]() { return false; }, "Not implemented");
+        POPNET_UNSUPPORTED_STATIC("Unsupported elementwise operation");
     }
   }
   else
   {
-    POPNET_UNREACHABLE(); // TODO
+    POPNET_UNSUPPORTED("Elementwise operations require f32 inputs and output");
   }
 }
 

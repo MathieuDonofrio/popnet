@@ -12,6 +12,8 @@ All paths and specification references are relative to the repository root.
 - Specifications: `docs/specifications/`
 - Architecture: `docs/architecture`
 
+When changing behavior, review and update the relevant requirements and specifications in the same task.
+
 # Build
 
 - Built with CMake

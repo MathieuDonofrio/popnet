@@ -9,4 +9,4 @@ specifications:
 
 ## Obligation
 
-Popnet shall compute each specified reduction for any nonempty selection of the tensor's axes, preserving unselected dimensions and setting selected dimensions to 1.
+Popnet shall compute each specified reduction for any nonempty selection of axes, including singleton axes, as defined in the linked specification.

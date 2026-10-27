@@ -14,7 +14,7 @@ void* popnet_alloc(popnet_dtype dtype, popnet_shape shape) noexcept
   switch (dtype)
   {
   case popnet_dtype_f32: size = sizeof(float) * nelems; break;
-  default: POPNET_UNREACHABLE(); break;
+  default: POPNET_UNSUPPORTED("CPU allocation requires f32 dtype"); break;
   }
 
   POPNET_EXPECT(size > 0);

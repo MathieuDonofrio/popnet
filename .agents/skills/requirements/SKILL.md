@@ -45,6 +45,8 @@ part of the required behavior. Use `[]` when the obligation is self-contained.
 
 ## Writing
 
+Keep documentation concise. State obligations in requirements and details in specifications; avoid duplication.
+
 Use "shall" for obligations. Prefer EARS-style patterns when useful:
 
 - The component shall ...

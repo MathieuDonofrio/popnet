@@ -28,7 +28,7 @@ Add, subtract, multiply, and divide apply elementwise in operand order. In each 
 
 ## Reductions
 
-Sum, mean, product, minimum, and maximum aggregate elements along any nonempty selection of axes identified by an axis mask. Selected dimensions become 1; other dimensions retain their sizes. Mean divides the sum by the number of aggregated elements.
+Sum, mean, product, minimum, and maximum reduce elements along the axes selected by a nonzero axis mask. Selected dimensions become 1; other dimensions keep their sizes. Mean is the sum divided by the number of reduced elements. Reducing only singleton axes preserves the input shape and values, including NaNs, infinities, and signed zero.
 
 ## Matrix multiplication
 

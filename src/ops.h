@@ -42,7 +42,7 @@ POPNET_INLINE popnet_shape popnet_broadcast_shape(const popnet_shape a, const po
 
     if (ad != bd && ad != 1 && bd != 1) [[unlikely]]
     {
-      POPNET_UNREACHABLE();
+      POPNET_UNSUPPORTED("Broadcasting requires matching dimensions or a dimension of size 1");
     }
 
     shape.dim[i] = (ad > bd ? ad : bd);

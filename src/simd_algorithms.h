@@ -109,7 +109,7 @@ POPNET_INLINE static void simd_map(void* POPNET_RESTRICT output, size_t n, const
   }
   else
   {
-    static_assert([]() { return false; }, "SIMD cpu_execution_model not supported yet");
+    POPNET_UNSUPPORTED_STATIC("SIMD algorithms require a fixed or scalar CPU execution model");
   }
 }
 
@@ -157,7 +157,7 @@ POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inpu
   }
   else
   {
-    static_assert([]() { return false; }, "SIMD cpu_execution_model not supported yet");
+    POPNET_UNSUPPORTED_STATIC("SIMD algorithms require a fixed or scalar CPU execution model");
   }
 
   if constexpr (std::is_invocable_v<decltype(horizontal_op), decltype(s), size_t>)

@@ -1,6 +1,7 @@
 #include "reduce.h"
 
 #include "dtype_traits.h"
+#include "memory.h"
 #include "simd_algorithms.h"
 #include "tensor.h"
 
@@ -77,11 +78,11 @@ template <popnet_op op> POPNET_INLINE static void popnet_compute_reduce(popnet_t
         else if constexpr (op == popnet_op_reduce_max)
           reduce_kernel_scalar<vset_neg_inf_f32, vmax_f32, vreduce_max_f32, popnet_dtype_f32>(src->data, dst->data, n);
         else
-          static_assert([]() { return false; }, "Not implemented");
+          POPNET_UNSUPPORTED_STATIC("Unsupported reduction operation");
       }
       else
       {
-        POPNET_UNREACHABLE(); // TODO noop
+        popnet_memcpy(dst->data, src->data, n * sizeof(float), memcpy_kind::device_to_device);
       }
     }
     else if (is_contiguous_inner_reduction(dst->shape, first_reduce_dim + 1))
@@ -105,16 +106,16 @@ template <popnet_op op> POPNET_INLINE static void popnet_compute_reduce(popnet_t
         reduce_kernel_contiguous<vset_neg_inf_f32, vmax_f32, vreduce_max_f32, popnet_dtype_f32>(
             src->data, dst->data, outer_size, reduce_size);
       else
-        static_assert([]() { return false; }, "Not implemented");
+        POPNET_UNSUPPORTED_STATIC("Unsupported reduction operation");
     }
     else
     {
-      POPNET_UNREACHABLE(); // TODO
+      POPNET_UNSUPPORTED("Reduction over non-contiguous inner dimensions is unsupported");
     }
   }
   else
   {
-    POPNET_UNREACHABLE(); // TODO
+    POPNET_UNSUPPORTED("Reduction requires f32 input and output");
   }
 }
 

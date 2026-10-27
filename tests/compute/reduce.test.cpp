@@ -1,5 +1,6 @@
 #include "reduce.h"
 
+#include <cstring>
 #include <doctest/doctest.h>
 #include <limits>
 #include <vector>
@@ -69,6 +70,45 @@ static auto reduce_ref(const auto& src, popnet_shape src_shape, auto& dst, popne
   return dst;
 }
 
+TEST_CASE("reductions over singleton axes preserve input values")
+{
+  const auto reductions = {popnet_compute_reduce_sum, popnet_compute_reduce_mean, popnet_compute_reduce_product,
+                           popnet_compute_reduce_min, popnet_compute_reduce_max};
+  const popnet_shape shapes[] = {{{2, 3, 1, 1}}, {{1, 3, 1, 2}}};
+  const std::vector<float> input = {-0.0f,
+                                    std::numeric_limits<float>::quiet_NaN(),
+                                    std::numeric_limits<float>::infinity(),
+                                    -std::numeric_limits<float>::infinity(),
+                                    3.0f,
+                                    -2.0f};
+
+  for (auto compute : reductions)
+  {
+    for (const auto shape : shapes)
+    {
+      auto* src = popnet_empty(popnet_dtype_f32, shape);
+      REQUIRE(src != nullptr);
+      popnet_set_data(src, input.data(), popnet_dtype_f32, 0, input.size());
+      auto* dst = popnet_empty(popnet_dtype_f32, shape);
+      REQUIRE(dst != nullptr);
+      CHECK(popnet_shapeof(dst) == shape);
+      CHECK(dst->data != src->data);
+
+      dst->src[0] = src;
+      compute(dst);
+
+      std::vector<float> actual(input.size());
+      popnet_get_data(dst, actual.data(), popnet_dtype_f32, 0, actual.size());
+      CHECK(std::memcmp(actual.data(), input.data(), input.size() * sizeof(float)) == 0);
+      popnet_get_data(src, actual.data(), popnet_dtype_f32, 0, actual.size());
+      CHECK(std::memcmp(actual.data(), input.data(), input.size() * sizeof(float)) == 0);
+
+      popnet_free(dst);
+      popnet_free(src);
+    }
+  }
+}
+
 TEST_CASE("reduce compute")
 {
   auto run =
@@ -116,6 +156,8 @@ TEST_CASE("reduce compute")
         };
 
         SUBCASE("1x1x1x1 -> 1x1x1x1") { run_shape({{1, 1, 1, 1}}, popnet_scalar_shape); }
+        SUBCASE("2x3x1x1 -> 2x3x1x1") { run_shape({{2, 3, 1, 1}}, {{2, 3, 1, 1}}); }
+        SUBCASE("1x3x1x2 -> 1x3x1x2") { run_shape({{1, 3, 1, 2}}, {{1, 3, 1, 2}}); }
         SUBCASE("2x2x2x2 -> 1x1x1x1") { run_shape({{2, 2, 2, 2}}, popnet_scalar_shape); }
         SUBCASE("2x3x4x5 -> 1x1x1x1") { run_shape({{2, 3, 4, 5}}, popnet_scalar_shape); }
         SUBCASE("4x4x4x4 -> 1x1x1x1") { run_shape({{4, 4, 4, 4}}, popnet_scalar_shape); }

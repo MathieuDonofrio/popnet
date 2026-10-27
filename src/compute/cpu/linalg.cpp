@@ -163,7 +163,7 @@ void popnet_compute_matmul(popnet_tensor* dst)
   }
   else
   {
-    POPNET_UNREACHABLE();
+    POPNET_UNSUPPORTED("Matrix multiplication requires f32 inputs and output");
   }
 }
 
@@ -181,6 +181,6 @@ void popnet_compute_transpose(popnet_tensor* dst)
   }
   else
   {
-    POPNET_UNREACHABLE();
+    POPNET_UNSUPPORTED("Transpose requires f32 input and output");
   }
 }

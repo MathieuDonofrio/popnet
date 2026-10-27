@@ -58,6 +58,13 @@
 #endif
 #endif
 
+#ifdef __cplusplus
+#define POPNET_UNSUPPORTED_STATIC(message) []<bool supported = false>() { static_assert(supported, message); }()
+#else
+#define POPNET_UNSUPPORTED_STATIC(message) _Static_assert(0, message)
+#endif
+#define POPNET_UNSUPPORTED(message) POPNET_UNREACHABLE()
+
 #define POPNET_MAX_DIMS 4
 #define POPNET_MAX_SRC 8
 
