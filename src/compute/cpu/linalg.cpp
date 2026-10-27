@@ -7,16 +7,20 @@
 consteval size_t sqrti(size_t x)
 {
   size_t lo = 0;
-  size_t hi = static_cast<size_t>(x);
-  while (lo * lo < hi)
+  size_t hi = x;
+  while (lo < hi)
   {
-    size_t mid = (lo + hi) / 2;
-    if (mid * mid <= x) lo = mid + 1;
+    const size_t mid = lo + (hi - lo) / 2 + 1;
+    if (mid <= x / mid) lo = mid;
     else
-      hi = mid;
+      hi = mid - 1;
   }
-  return lo - 1;
+  return lo;
 }
+
+static_assert(sqrti(0) == 0 && sqrti(1) == 1 && sqrti(2) == 1);
+static_assert(sqrti(15) == 3 && sqrti(16) == 4 && sqrti(17) == 4);
+static_assert(sqrti(2730) == 52 && sqrti(5461) == 73 && sqrti(8192) == 90);
 
 constexpr size_t l1_cache_size() noexcept
 {
@@ -115,8 +119,6 @@ POPNET_NO_INLINE void transpose_kernel(const void* POPNET_RESTRICT a, void* POPN
       {
         const auto i_max = std::min(i0 + tile, n);
         const auto j_max = std::min(j0 + tile, m);
-
-        // TODO there are some simd optimization opportunities here
 
         for (size_t i = i0; i < i_max; ++i)
         {

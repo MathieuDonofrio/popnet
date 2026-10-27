@@ -35,8 +35,6 @@ void* popnet_alloc(popnet_dtype dtype, popnet_shape shape) noexcept
   void* ptr = aligned_alloc(alignment, padded_size);
 #endif
 
-  POPNET_EXPECT(ptr != nullptr);
-
   return ptr;
 }
 

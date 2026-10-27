@@ -67,8 +67,8 @@ TEST_CASE("popnet_set_data and popnet_get_data")
 
     SUBCASE("Full write and readback")
     {
-      REQUIRE(popnet_set_data(t, values, dtype, 0, 4) == true);
-      REQUIRE(popnet_get_data(t, readback, dtype, 0, 4) == true);
+      popnet_set_data(t, values, dtype, 0, 4);
+      popnet_get_data(t, readback, dtype, 0, 4);
 
       for (int i = 0; i < 4; i++)
       {
@@ -78,8 +78,8 @@ TEST_CASE("popnet_set_data and popnet_get_data")
 
     SUBCASE("Partial write and readback with offset")
     {
-      REQUIRE(popnet_set_data(t, values, dtype, 1, 2) == true);
-      REQUIRE(popnet_get_data(t, readback, dtype, 1, 2) == true);
+      popnet_set_data(t, values, dtype, 1, 2);
+      popnet_get_data(t, readback, dtype, 1, 2);
 
       REQUIRE(readback[0] == values[0]);
       REQUIRE(readback[1] == values[1]);

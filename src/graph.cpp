@@ -1,32 +1,49 @@
 #include "graph.h"
 
+#include <new>
+#include <stdexcept>
+
 #include "elemwise.h"
 #include "linalg.h"
 #include "reduce.h"
 #include "tensor.h"
 
-popnet_graph* popnet_graph_alloc() { return new popnet_graph(); }
+popnet_graph* popnet_graph_alloc() { return new (std::nothrow) popnet_graph(); }
 
 void popnet_graph_free(popnet_graph* graph) { delete graph; }
 
-void popnet_graph_build_forward(popnet_graph* graph, popnet_tensor* tensor)
+bool popnet_graph_build_forward(popnet_graph* graph, popnet_tensor* tensor)
 {
-  if (!tensor) return;
+  POPNET_EXPECT(graph != nullptr);
+  if (!tensor) return false;
 
   for (auto node : graph->nodes)
   {
-    if (node == tensor) return;
+    if (node == tensor) return true;
   }
 
   for (auto src : tensor->src)
   {
     if (src)
     {
-      popnet_graph_build_forward(graph, src);
+      if (!popnet_graph_build_forward(graph, src)) return false;
     }
   }
 
-  graph->nodes.push_back(tensor);
+  try
+  {
+    graph->nodes.push_back(tensor);
+  }
+  catch (const std::bad_alloc&)
+  {
+    return false;
+  }
+  catch (const std::length_error&)
+  {
+    return false;
+  }
+
+  return true;
 }
 
 void popnet_graph_compute_forward(popnet_graph* graph)

@@ -89,14 +89,14 @@ TEST_CASE("reduce compute")
           REQUIRE(src != nullptr);
           REQUIRE(dst != nullptr);
 
-          REQUIRE(popnet_set_data(src, input_data.data(), dtype, 0, input_data.size()));
+          popnet_set_data(src, input_data.data(), dtype, 0, input_data.size());
 
           dst->src[0] = src;
 
           compute(dst);
 
           std::vector<scalar_t> actual(popnet_numel(dst_shape));
-          REQUIRE(popnet_get_data(dst, actual.data(), dtype, 0, actual.size()));
+          popnet_get_data(dst, actual.data(), dtype, 0, actual.size());
 
           REQUIRE(actual.size() == expected.size());
           for (size_t i = 0; i < actual.size(); ++i)

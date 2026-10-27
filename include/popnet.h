@@ -133,9 +133,9 @@ POPNET_API popnet_dtype popnet_dtypeof(const popnet_tensor* tensor);
 POPNET_API popnet_shape popnet_shapeof(const popnet_tensor* tensor);
 POPNET_API popnet_op popnet_opof(const popnet_tensor* tensor);
 
-POPNET_API bool popnet_set_data(const popnet_tensor* tensor, const void* src, popnet_dtype src_dtype, size_t offset,
+POPNET_API void popnet_set_data(const popnet_tensor* tensor, const void* src, popnet_dtype src_dtype, size_t offset,
                                 size_t n);
-POPNET_API bool popnet_get_data(const popnet_tensor* tensor, void* dst, popnet_dtype dst_dtype, size_t offset,
+POPNET_API void popnet_get_data(const popnet_tensor* tensor, void* dst, popnet_dtype dst_dtype, size_t offset,
                                 size_t n);
 
 ///
@@ -147,7 +147,7 @@ typedef struct popnet_graph popnet_graph;
 POPNET_API popnet_graph* popnet_graph_alloc();
 POPNET_API void popnet_graph_free(popnet_graph* graph);
 
-POPNET_API void popnet_graph_build_forward(popnet_graph* graph, popnet_tensor* tensor);
+POPNET_API bool popnet_graph_build_forward(popnet_graph* graph, popnet_tensor* tensor);
 POPNET_API void popnet_graph_compute_forward(popnet_graph* graph);
 
 ///
