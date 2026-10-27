@@ -1,9 +1,187 @@
 #include "graph.h"
 
 #include <doctest/doctest.h>
+#include <vector>
 
 #include "ops.h"
 #include "tensor.h"
+
+static void check_graph_result(popnet_tensor* result, const float* expected, size_t count)
+{
+  REQUIRE(result != nullptr);
+  REQUIRE(popnet_numel(popnet_shapeof(result)) == count);
+
+  auto* graph = popnet_graph_alloc();
+
+  REQUIRE(graph != nullptr);
+  REQUIRE(popnet_graph_build_forward(graph, result));
+
+  popnet_graph_compute_forward(graph);
+
+  std::vector<float> actual(count);
+  popnet_get_data(result, actual.data(), popnet_dtype_f32, 0, count);
+
+  for (size_t i = 0; i < count; ++i)
+  {
+    CAPTURE(i);
+    CHECK(actual[i] == doctest::Approx(expected[i]).epsilon(1e-5));
+  }
+
+  popnet_graph_free(graph);
+}
+
+// @verifies REQ-0020: Forward execution dispatches every recorded unary operation.
+TEST_CASE("graph executes each unary operation")
+{
+  const struct
+  {
+    const char* name;
+    decltype(&popnet_abs) create;
+    float input[2];
+    float expected[2];
+  } operations[] = {{"abs", popnet_abs, {-2, 3}, {2, 3}},
+                    {"neg", popnet_neg, {-2, 3}, {2, -3}},
+                    {"sqr", popnet_sqr, {-2, 3}, {4, 9}},
+                    {"sqrt", popnet_sqrt, {1, 4}, {1, 2}},
+                    {"exp", popnet_exp, {0, 1}, {1, 2.71828183f}},
+                    {"log", popnet_log, {1, 4}, {0, 1.38629436f}},
+                    {"sin", popnet_sin, {0, 1}, {0, 0.84147098f}},
+                    {"cos", popnet_cos, {0, 1}, {1, 0.54030231f}},
+                    {"tanh", popnet_tanh, {0, 1}, {0, 0.76159416f}},
+                    {"relu", popnet_relu, {-2, 3}, {0, 3}},
+                    {"sigmoid", popnet_sigmoid, {0, 1}, {0.5f, 0.73105858f}}};
+
+  for (const auto& operation : operations)
+  {
+    CAPTURE(operation.name);
+
+    auto* src = popnet_empty(popnet_dtype_f32, {{1, 1, 1, 2}});
+
+    REQUIRE(src != nullptr);
+    popnet_set_data(src, operation.input, popnet_dtype_f32, 0, 2);
+    auto* result = operation.create(src);
+
+    check_graph_result(result, operation.expected, 2);
+
+    popnet_free(result);
+    popnet_free(src);
+  }
+}
+
+// @verifies REQ-0020: Forward execution dispatches each binary operation in operand order.
+TEST_CASE("graph executes each binary operation")
+{
+  const struct
+  {
+    const char* name;
+    decltype(&popnet_add) create;
+    float expected[2];
+  } operations[] = {{"add", popnet_add, {8, -4}},
+                    {"sub", popnet_sub, {4, -12}},
+                    {"mul", popnet_mul, {12, -32}},
+                    {"div", popnet_div, {3, -2}}};
+
+  auto* a = popnet_empty(popnet_dtype_f32, {{1, 1, 1, 2}});
+  auto* b = popnet_empty(popnet_dtype_f32, {{1, 1, 1, 2}});
+
+  REQUIRE(a != nullptr);
+  REQUIRE(b != nullptr);
+
+  const float a_values[] = {6, -8};
+  const float b_values[] = {2, 4};
+  popnet_set_data(a, a_values, popnet_dtype_f32, 0, 2);
+  popnet_set_data(b, b_values, popnet_dtype_f32, 0, 2);
+
+  for (const auto& operation : operations)
+  {
+    CAPTURE(operation.name);
+
+    auto* result = operation.create(a, b);
+
+    check_graph_result(result, operation.expected, 2);
+
+    popnet_free(result);
+  }
+
+  popnet_free(b);
+  popnet_free(a);
+}
+
+// @verifies REQ-0020: Forward execution dispatches every recorded reduction.
+TEST_CASE("graph executes each reduction")
+{
+  const struct
+  {
+    const char* name;
+    decltype(&popnet_reduce_sum) create;
+    float expected;
+  } reductions[] = {{"sum", popnet_reduce_sum, 9},
+                    {"mean", popnet_reduce_mean, 3},
+                    {"product", popnet_reduce_product, 24},
+                    {"min", popnet_reduce_min, 2},
+                    {"max", popnet_reduce_max, 4}};
+
+  auto* src = popnet_empty(popnet_dtype_f32, {{1, 1, 1, 3}});
+
+  REQUIRE(src != nullptr);
+
+  const float values[] = {2, 3, 4};
+  popnet_set_data(src, values, popnet_dtype_f32, 0, 3);
+
+  for (const auto& reduction : reductions)
+  {
+    CAPTURE(reduction.name);
+
+    auto* result = reduction.create(src, 0b1000);
+
+    check_graph_result(result, &reduction.expected, 1);
+
+    popnet_free(result);
+  }
+
+  popnet_free(src);
+}
+
+// @verifies REQ-0020: Forward execution dispatches matrix multiplication using its recorded inputs.
+TEST_CASE("graph executes matrix multiplication")
+{
+  auto* a = popnet_empty(popnet_dtype_f32, {{1, 1, 2, 3}});
+  auto* b = popnet_empty(popnet_dtype_f32, {{1, 1, 2, 3}});
+
+  REQUIRE(a != nullptr);
+  REQUIRE(b != nullptr);
+
+  const float a_values[] = {1, 2, 3, 4, 5, 6};
+  const float b_values[] = {1, 0, 1, 0, 2, 1};
+  popnet_set_data(a, a_values, popnet_dtype_f32, 0, 6);
+  popnet_set_data(b, b_values, popnet_dtype_f32, 0, 6);
+  auto* result = popnet_matmul(a, b);
+  const float expected[] = {4, 7, 10, 16};
+
+  check_graph_result(result, expected, 4);
+
+  popnet_free(result);
+  popnet_free(b);
+  popnet_free(a);
+}
+
+// @verifies REQ-0020: Forward execution dispatches transpose using its recorded input.
+TEST_CASE("graph executes transpose")
+{
+  auto* src = popnet_empty(popnet_dtype_f32, {{1, 1, 2, 3}});
+
+  REQUIRE(src != nullptr);
+
+  const float values[] = {1, 2, 3, 4, 5, 6};
+  popnet_set_data(src, values, popnet_dtype_f32, 0, 6);
+  auto* result = popnet_transpose(src);
+  const float expected[] = {1, 4, 2, 5, 3, 6};
+
+  check_graph_result(result, expected, 6);
+
+  popnet_free(result);
+  popnet_free(src);
+}
 
 // @verifies REQ-0018: Graph allocation starts empty and freeing a graph preserves its tensors.
 TEST_CASE("graph lifetime")

@@ -18,6 +18,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(POPNET_BUILD_TESTS "Build unit tests" OFF)
 option(POPNET_BUILD_BENCHMARKS "Build performance benchmarks" OFF)
+option(POPNET_ENABLE_COVERAGE "Enable LLVM coverage" OFF)
 
 # Optimization and Compilation
 
@@ -46,6 +47,10 @@ include(cmake/conformance.cmake)
 include(cmake/cpu-native-tuning.cmake)
 include(cmake/interprocedural-optimization.cmake)
 include(cmake/sanitizers.cmake)
+
+if(POPNET_ENABLE_COVERAGE)
+  include(cmake/coverage.cmake)
+endif()
 
 #
 # Popnet Lib
@@ -99,6 +104,10 @@ target_link_libraries(popnet_internal INTERFACE popnet)
 if(POPNET_BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
+endif()
+
+if(POPNET_ENABLE_COVERAGE)
+  enable_coverage_for(popnet)
 endif()
 
 #

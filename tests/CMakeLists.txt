@@ -24,6 +24,11 @@ target_include_directories(popnet_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
 target_link_libraries(popnet_test PRIVATE popnet_internal doctest)
 
+if(POPNET_ENABLE_COVERAGE)
+  enable_coverage_for(popnet_test)
+  add_coverage_target(popnet_test)
+endif()
+
 #
 # Test Discovery
 #

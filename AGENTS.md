@@ -30,7 +30,7 @@ In tests, separate setup, execution, checks, and cleanup.
 # Build
 
 - Built with CMake
-- Local presets in `CMakeUserPresets.json`
+- Configure presets are defined in `CMakePresets.json`
 
 # Tests
 

@@ -1,0 +1,106 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "POPNET_BUILD_TESTS": "ON",
+        "POPNET_BUILD_BENCHMARKS": "ON",
+        "POPNET_NATIVE": "ON",
+        "POPNET_LTO": "OFF",
+        "POPNET_BACKEND": "CPU",
+        "POPNET_ASAN": "OFF",
+        "POPNET_UBSAN": "OFF",
+        "POPNET_TSAN": "OFF",
+        "POPNET_ENABLE_COVERAGE": "OFF"
+      }
+    },
+    {
+      "name": "coverage-base",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "POPNET_ENABLE_COVERAGE": "ON",
+        "POPNET_BUILD_BENCHMARKS": "OFF",
+        "POPNET_NATIVE": "OFF"
+      }
+    },
+    {
+      "name": "windows-msvc",
+      "hidden": true,
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "cl"
+      }
+    },
+    {
+      "name": "windows-msvc-debug",
+      "inherits": "windows-msvc",
+      "cacheVariables": {
+        "POPNET_ASAN": "ON"
+      }
+    },
+    {
+      "name": "windows-msvc-release",
+      "inherits": "windows-msvc",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "POPNET_LTO": "ON"
+      }
+    },
+    {
+      "name": "windows-msvc-relwithdebinfo",
+      "inherits": "windows-msvc",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
+      "name": "linux-gcc-debug",
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "g++",
+        "POPNET_NATIVE": "OFF"
+      }
+    },
+    {
+      "name": "windows-clang-coverage",
+      "inherits": "coverage-base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "clang-cl"
+      }
+    },
+    {
+      "name": "linux-clang-coverage",
+      "inherits": "coverage-base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    }
+  ]
+}
