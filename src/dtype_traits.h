@@ -64,6 +64,10 @@ template <> struct dtype_traits<popnet_dtype_f32>
 using f32_t = dtype_traits<popnet_dtype_f32>::scalar_t;
 using vf32_t = dtype_traits<popnet_dtype_f32>::vector_t;
 
+// Keep these helpers distinct from platform intrinsics such as ARM NEON.
+namespace simd
+{
+
 #if POPNET_AVX512
 
 POPNET_INLINE vf32_t vset_zero_f32() { return _mm512_setzero_ps(); }
@@ -149,3 +153,5 @@ POPNET_INLINE f32_t vreduce_min_f32(vf32_t a) { return a; }
 POPNET_INLINE f32_t vreduce_max_f32(vf32_t a) { return a; }
 
 #endif
+
+} // namespace simd

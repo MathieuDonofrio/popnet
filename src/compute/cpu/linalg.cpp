@@ -158,8 +158,8 @@ void popnet_compute_matmul(popnet_tensor* dst)
 
   if (src0->dtype == popnet_dtype_f32 && src1->dtype == popnet_dtype_f32 && dst->dtype == popnet_dtype_f32)
   {
-    matmul_kernel<vset_zero_f32, vfma_f32, vreduce_sum_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data,
-                                                                              outer_size, n, m, k);
+    matmul_kernel<simd::vset_zero_f32, simd::vfma_f32, simd::vreduce_sum_f32, popnet_dtype_f32>(
+        src0->data, src1->data, dst->data, outer_size, n, m, k);
   }
   else
   {

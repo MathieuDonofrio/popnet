@@ -130,27 +130,27 @@ template <popnet_op op> POPNET_INLINE static void popnet_compute_unary(popnet_te
   if (src->dtype == popnet_dtype_f32 && dst->dtype == popnet_dtype_f32)
   {
     if constexpr (op == popnet_op_abs) //
-      unary_kernel<vabs_f32, popnet_dtype_f32>(src->data, dst->data, n);
+      unary_kernel<simd::vabs_f32, popnet_dtype_f32>(src->data, dst->data, n);
     else if constexpr (op == popnet_op_neg)
-      unary_kernel<vneg_f32, popnet_dtype_f32>(src->data, dst->data, n);
+      unary_kernel<simd::vneg_f32, popnet_dtype_f32>(src->data, dst->data, n);
     else if constexpr (op == popnet_op_sqr)
-      unary_kernel<vsqr_f32, popnet_dtype_f32>(src->data, dst->data, n);
+      unary_kernel<simd::vsqr_f32, popnet_dtype_f32>(src->data, dst->data, n);
     else if constexpr (op == popnet_op_sqrt)
-      unary_kernel<vsqrt_f32, popnet_dtype_f32>(src->data, dst->data, n);
+      unary_kernel<simd::vsqrt_f32, popnet_dtype_f32>(src->data, dst->data, n);
     else if constexpr (op == popnet_op_exp)
-      unary_kernel<vexp_f32, popnet_dtype_f32>(src->data, dst->data, n);
+      unary_kernel<simd::vexp_f32, popnet_dtype_f32>(src->data, dst->data, n);
     else if constexpr (op == popnet_op_log)
-      unary_kernel<vlog_f32, popnet_dtype_f32>(src->data, dst->data, n);
+      unary_kernel<simd::vlog_f32, popnet_dtype_f32>(src->data, dst->data, n);
     else if constexpr (op == popnet_op_sin)
-      unary_kernel<vsin_f32, popnet_dtype_f32>(src->data, dst->data, n);
+      unary_kernel<simd::vsin_f32, popnet_dtype_f32>(src->data, dst->data, n);
     else if constexpr (op == popnet_op_cos)
-      unary_kernel<vcos_f32, popnet_dtype_f32>(src->data, dst->data, n);
+      unary_kernel<simd::vcos_f32, popnet_dtype_f32>(src->data, dst->data, n);
     else if constexpr (op == popnet_op_tanh)
-      unary_kernel<vtanh_f32, popnet_dtype_f32>(src->data, dst->data, n);
+      unary_kernel<simd::vtanh_f32, popnet_dtype_f32>(src->data, dst->data, n);
     else if constexpr (op == popnet_op_relu)
-      unary_kernel<vrelu_f32, popnet_dtype_f32>(src->data, dst->data, n);
+      unary_kernel<simd::vrelu_f32, popnet_dtype_f32>(src->data, dst->data, n);
     else if constexpr (op == popnet_op_sigmoid)
-      unary_kernel<vsigmoid_f32, popnet_dtype_f32>(src->data, dst->data, n);
+      unary_kernel<simd::vsigmoid_f32, popnet_dtype_f32>(src->data, dst->data, n);
     else
       POPNET_UNSUPPORTED_STATIC("Unsupported elementwise operation");
   }
@@ -170,56 +170,68 @@ template <auto op> POPNET_INLINE static void popnet_compute_binary(popnet_tensor
     if (src0->shape == src1->shape)
     {
       if constexpr (op == popnet_op_add)
-        binary_kernel_matching<vadd_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
+        binary_kernel_matching<simd::vadd_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data,
+                                                                 popnet_numel(dst->shape));
       else if constexpr (op == popnet_op_sub)
-        binary_kernel_matching<vsub_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
+        binary_kernel_matching<simd::vsub_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data,
+                                                                 popnet_numel(dst->shape));
       else if constexpr (op == popnet_op_mul)
-        binary_kernel_matching<vmul_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
+        binary_kernel_matching<simd::vmul_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data,
+                                                                 popnet_numel(dst->shape));
       else if constexpr (op == popnet_op_div)
-        binary_kernel_matching<vdiv_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
+        binary_kernel_matching<simd::vdiv_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data,
+                                                                 popnet_numel(dst->shape));
       else
         POPNET_UNSUPPORTED_STATIC("Unsupported elementwise operation");
     }
     else if (src0->shape == popnet_scalar_shape)
     {
       if constexpr (op == popnet_op_add)
-        binary_kernel_lscalar<vadd_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
+        binary_kernel_lscalar<simd::vadd_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data,
+                                                                popnet_numel(dst->shape));
       else if constexpr (op == popnet_op_sub)
-        binary_kernel_lscalar<vsub_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
+        binary_kernel_lscalar<simd::vsub_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data,
+                                                                popnet_numel(dst->shape));
       else if constexpr (op == popnet_op_mul)
-        binary_kernel_lscalar<vmul_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
+        binary_kernel_lscalar<simd::vmul_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data,
+                                                                popnet_numel(dst->shape));
       else if constexpr (op == popnet_op_div)
-        binary_kernel_lscalar<vdiv_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
+        binary_kernel_lscalar<simd::vdiv_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data,
+                                                                popnet_numel(dst->shape));
       else
         POPNET_UNSUPPORTED_STATIC("Unsupported elementwise operation");
     }
     else if (src1->shape == popnet_scalar_shape)
     {
       if constexpr (op == popnet_op_add) //
-        binary_kernel_rscalar<vadd_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
+        binary_kernel_rscalar<simd::vadd_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data,
+                                                                popnet_numel(dst->shape));
       else if constexpr (op == popnet_op_sub)
-        binary_kernel_rscalar<vsub_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
+        binary_kernel_rscalar<simd::vsub_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data,
+                                                                popnet_numel(dst->shape));
       else if constexpr (op == popnet_op_mul)
-        binary_kernel_rscalar<vmul_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
+        binary_kernel_rscalar<simd::vmul_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data,
+                                                                popnet_numel(dst->shape));
       else if constexpr (op == popnet_op_div)
-        binary_kernel_rscalar<vdiv_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, popnet_numel(dst->shape));
+        binary_kernel_rscalar<simd::vdiv_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data,
+                                                                popnet_numel(dst->shape));
       else
         POPNET_UNSUPPORTED_STATIC("Unsupported elementwise operation");
     }
     else
     {
       if constexpr (op == popnet_op_add)
-        binary_kernel_broadcast<vadd_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, dst->shape, src0->shape,
-                                                            src1->shape);
+        binary_kernel_broadcast<simd::vadd_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, dst->shape,
+                                                                  src0->shape, src1->shape);
       else if constexpr (op == popnet_op_sub)
-        binary_kernel_broadcast<vsub_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, dst->shape, src0->shape,
-                                                            src1->shape);
+        binary_kernel_broadcast<simd::vsub_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, dst->shape,
+                                                                  src0->shape, src1->shape);
       else if constexpr (op == popnet_op_mul)
-        binary_kernel_broadcast<vmul_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, dst->shape, src0->shape,
-                                                            src1->shape);
+        binary_kernel_broadcast<simd::vmul_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, dst->shape,
+                                                                  src0->shape, src1->shape);
       else if constexpr (op == popnet_op_div)
-        binary_kernel_broadcast<vdiv_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, dst->shape, src0->shape,
-                                                            src1->shape);
+        binary_kernel_broadcast<simd::vdiv_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data, dst->shape,
+                                                                  src0->shape, src1->shape);
       else
         POPNET_UNSUPPORTED_STATIC("Unsupported elementwise operation");
     }

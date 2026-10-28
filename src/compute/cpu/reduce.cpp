@@ -68,15 +68,20 @@ template <popnet_op op> POPNET_INLINE static void popnet_compute_reduce(popnet_t
       if (dst->shape == popnet_scalar_shape)
       {
         if constexpr (op == popnet_op_reduce_sum)
-          reduce_kernel_scalar<vset_zero_f32, vadd_f32, vreduce_sum_f32, popnet_dtype_f32>(src->data, dst->data, n);
+          reduce_kernel_scalar<simd::vset_zero_f32, simd::vadd_f32, simd::vreduce_sum_f32, popnet_dtype_f32>(
+              src->data, dst->data, n);
         else if constexpr (op == popnet_op_reduce_mean)
-          reduce_kernel_scalar<vset_zero_f32, vadd_f32, vreduce_mean_f32, popnet_dtype_f32>(src->data, dst->data, n);
+          reduce_kernel_scalar<simd::vset_zero_f32, simd::vadd_f32, simd::vreduce_mean_f32, popnet_dtype_f32>(
+              src->data, dst->data, n);
         else if constexpr (op == popnet_op_reduce_product)
-          reduce_kernel_scalar<vset_one_f32, vmul_f32, vreduce_product_f32, popnet_dtype_f32>(src->data, dst->data, n);
+          reduce_kernel_scalar<simd::vset_one_f32, simd::vmul_f32, simd::vreduce_product_f32, popnet_dtype_f32>(
+              src->data, dst->data, n);
         else if constexpr (op == popnet_op_reduce_min)
-          reduce_kernel_scalar<vset_pos_inf_f32, vmin_f32, vreduce_min_f32, popnet_dtype_f32>(src->data, dst->data, n);
+          reduce_kernel_scalar<simd::vset_pos_inf_f32, simd::vmin_f32, simd::vreduce_min_f32, popnet_dtype_f32>(
+              src->data, dst->data, n);
         else if constexpr (op == popnet_op_reduce_max)
-          reduce_kernel_scalar<vset_neg_inf_f32, vmax_f32, vreduce_max_f32, popnet_dtype_f32>(src->data, dst->data, n);
+          reduce_kernel_scalar<simd::vset_neg_inf_f32, simd::vmax_f32, simd::vreduce_max_f32, popnet_dtype_f32>(
+              src->data, dst->data, n);
         else
           POPNET_UNSUPPORTED_STATIC("Unsupported reduction operation");
       }
@@ -91,19 +96,19 @@ template <popnet_op op> POPNET_INLINE static void popnet_compute_reduce(popnet_t
       const size_t outer_size = popnet_numel(dst->shape);
 
       if constexpr (op == popnet_op_reduce_sum)
-        reduce_kernel_contiguous<vset_zero_f32, vadd_f32, vreduce_sum_f32, popnet_dtype_f32>(src->data, dst->data,
-                                                                                             outer_size, reduce_size);
+        reduce_kernel_contiguous<simd::vset_zero_f32, simd::vadd_f32, simd::vreduce_sum_f32, popnet_dtype_f32>(
+            src->data, dst->data, outer_size, reduce_size);
       else if constexpr (op == popnet_op_reduce_mean)
-        reduce_kernel_contiguous<vset_zero_f32, vadd_f32, vreduce_mean_f32, popnet_dtype_f32>(src->data, dst->data,
-                                                                                              outer_size, reduce_size);
+        reduce_kernel_contiguous<simd::vset_zero_f32, simd::vadd_f32, simd::vreduce_mean_f32, popnet_dtype_f32>(
+            src->data, dst->data, outer_size, reduce_size);
       else if constexpr (op == popnet_op_reduce_product)
-        reduce_kernel_contiguous<vset_one_f32, vmul_f32, vreduce_product_f32, popnet_dtype_f32>(
+        reduce_kernel_contiguous<simd::vset_one_f32, simd::vmul_f32, simd::vreduce_product_f32, popnet_dtype_f32>(
             src->data, dst->data, outer_size, reduce_size);
       else if constexpr (op == popnet_op_reduce_min)
-        reduce_kernel_contiguous<vset_pos_inf_f32, vmin_f32, vreduce_min_f32, popnet_dtype_f32>(
+        reduce_kernel_contiguous<simd::vset_pos_inf_f32, simd::vmin_f32, simd::vreduce_min_f32, popnet_dtype_f32>(
             src->data, dst->data, outer_size, reduce_size);
       else if constexpr (op == popnet_op_reduce_max)
-        reduce_kernel_contiguous<vset_neg_inf_f32, vmax_f32, vreduce_max_f32, popnet_dtype_f32>(
+        reduce_kernel_contiguous<simd::vset_neg_inf_f32, simd::vmax_f32, simd::vreduce_max_f32, popnet_dtype_f32>(
             src->data, dst->data, outer_size, reduce_size);
       else
         POPNET_UNSUPPORTED_STATIC("Unsupported reduction operation");

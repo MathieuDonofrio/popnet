@@ -1,5 +1,6 @@
 #include "graph.h"
 
+#include <cmath>
 #include <doctest/doctest.h>
 #include <vector>
 
