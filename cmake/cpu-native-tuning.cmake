@@ -17,26 +17,34 @@ if(POPNET_NATIVE)
     elseif(MSVC)
       include(CheckCXXCompilerFlag)
 
-      # MSVC does not have a 'native' arch, so we need to detect the best available arch
+      include(CheckCXXSourceRuns)
       set(NATIVE_FLAGS "")
 
-      # x86
-      check_cxx_compiler_flag("/arch:AVX512" HAS_ARCH_AVX512)
-      if(HAS_ARCH_AVX512 AND NATIVE_FLAGS STREQUAL "")
-        set(NATIVE_FLAGS "/arch:AVX512")
-      endif()
-      check_cxx_compiler_flag("/arch:AVX2" HAS_ARCH_AVX2)
-      if(HAS_ARCH_AVX2 AND NATIVE_FLAGS STREQUAL "")
-        set(NATIVE_FLAGS "/arch:AVX2")
-      endif()
-      check_cxx_compiler_flag("/arch:AVX" HAS_ARCH_AVX)
-      if(HAS_ARCH_AVX AND NATIVE_FLAGS STREQUAL "")
-        set(NATIVE_FLAGS "/arch:AVX")
-      endif()
-      # MSVC defaults to SSE2
-
-      if(NATIVE_FLAGS STREQUAL "")
-        message(WARNING "No /arch flag detected")
+      # Compiler support alone does not mean the host can execute the ISA.
+      if(CMAKE_CXX_COMPILER_ARCHITECTURE_ID MATCHES "^(x64|X86)$")
+        foreach(isa IN ITEMS AVX512 AVX2 AVX)
+          check_cxx_compiler_flag("/arch:${isa}" HAS_ARCH_${isa})
+          if(HAS_ARCH_${isa})
+            set(feature "PF_${isa}_INSTRUCTIONS_AVAILABLE")
+            set(extra_check "")
+            if(isa STREQUAL "AVX512")
+              set(feature PF_AVX512F_INSTRUCTIONS_AVAILABLE)
+              # /arch:AVX512 also permits DQ, CD, BW and VL instructions.
+              set(extra_check "int cpu[4]; __cpuidex(cpu, 7, 0);
+                if ((static_cast<unsigned>(cpu[1]) & 0xd0030000u) != 0xd0030000u) return 1;")
+            endif()
+            check_cxx_source_runs("#include <windows.h>
+              #include <intrin.h>
+              int main() {
+                ${extra_check}
+                return IsProcessorFeaturePresent(${feature}) ? 0 : 1;
+              }" HOST_SUPPORTS_${isa})
+            if(HOST_SUPPORTS_${isa})
+              set(NATIVE_FLAGS "/arch:${isa}")
+              break()
+            endif()
+          endif()
+        endforeach()
       endif()
 
       message(STATUS "Applying MSVC native flags: ${NATIVE_FLAGS}")

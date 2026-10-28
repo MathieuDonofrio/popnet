@@ -74,6 +74,15 @@ jobs:
         if: runner.os == 'Windows'
         with:
           arch: ${{ matrix.arch == 'arm64' && 'amd64_arm64' || 'amd64' }}
+      - name: Locate ARM64 ASan runtime
+        if: runner.os == 'Windows' && matrix.arch == 'arm64' && matrix.compiler == 'cl' && matrix.build_type == 'Debug'
+        shell: pwsh
+        run: |
+          $runtime = Join-Path $env:VCToolsInstallDir 'bin/Hostarm64/arm64'
+          if (!(Test-Path "$runtime/clang_rt.asan_dynamic-aarch64.dll")) {
+            throw "ARM64 ASan runtime missing from $runtime"
+          }
+          $runtime >> $env:GITHUB_PATH
       - name: Configure
         env:
           BUILD_TYPE: ${{ matrix.build_type }}
