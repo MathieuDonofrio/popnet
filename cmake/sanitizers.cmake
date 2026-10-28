@@ -1,5 +1,7 @@
 if(POPNET_ASAN)
-  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+  if(MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    message(FATAL_ERROR "POPNET_ASAN is not supported with clang-cl; use MSVC on Windows")
+  elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
     add_link_options(-fsanitize=address)
     message(STATUS "ASAN enabled")

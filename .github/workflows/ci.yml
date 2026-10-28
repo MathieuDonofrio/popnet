@@ -74,14 +74,6 @@ jobs:
         if: runner.os == 'Windows'
         with:
           arch: ${{ matrix.arch == 'arm64' && 'amd64_arm64' || 'amd64' }}
-      - name: Locate Windows LLVM runtime
-        if: runner.os == 'Windows' && matrix.compiler == 'clang-cl'
-        shell: pwsh
-        run: |
-          $resource = (& clang-cl /clang:-print-resource-dir).Trim()
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          "LIB=$resource/lib/windows;$env:LIB" >> $env:GITHUB_ENV
-          "$resource/lib/windows" >> $env:GITHUB_PATH
       - name: Configure
         env:
           BUILD_TYPE: ${{ matrix.build_type }}
@@ -92,14 +84,10 @@ jobs:
           asan=OFF
           ubsan=OFF
           extra=()
-          if [[ "$BUILD_TYPE" == Debug ]]; then
+          if [[ "$BUILD_TYPE" == Debug && "$COMPILER" != clang-cl ]]; then
             asan=ON
             if [[ "$RUNNER_OS" != Windows ]]; then
               ubsan=ON
-            elif [[ "$COMPILER" == clang-cl && "$ARCH" == arm64 ]]; then
-              # LLVM's Windows ARM64 ASan runtime is not supplied by these images.
-              asan=OFF
-              echo '::notice::Windows ARM64 clang-cl Debug runs without sanitizers.'
             fi
           fi
           if [[ "$RUNNER_OS" == Windows && "$COMPILER" == clang-cl ]]; then

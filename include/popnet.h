@@ -49,8 +49,11 @@
 #ifdef _MSC_VER
 #define POPNET_EXPECT(cond) __assume(cond)
 #define POPNET_UNREACHABLE() __assume(0)
-#elif defined(__GNUC__) || defined(__clang__)
+#elif defined(__clang__)
 #define POPNET_EXPECT(cond) __builtin_assume(cond)
+#define POPNET_UNREACHABLE() __builtin_unreachable()
+#elif defined(__GNUC__)
+#define POPNET_EXPECT(cond) ((cond) ? (void)0 : __builtin_unreachable())
 #define POPNET_UNREACHABLE() __builtin_unreachable()
 #else
 #define POPNET_EXPECT(cond) ((void)0)
