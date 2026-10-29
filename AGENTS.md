@@ -20,7 +20,15 @@ All paths are relative to the repository root.
 
 # Workflow
 
-When changing behavior, review and update the relevant requirements and specifications in the same task.
+When changing any of the following, review the related artifacts and ensure they remain consistent:
+- Implementation and behavior
+- Intents, requirements, specifications, and architecture
+- Tests
+- In-code documentation
+- Project documentation (README.md, AGENT.md, skills, etc)
+Update affected artifacts as needed.
+
+If requirements or specifications are unclear or conflicting, report the ambiguity rather than making assumptions.
 
 # Coding style
 

@@ -8,7 +8,7 @@ description: Write, update, and review project tests.
 ## Workflow
 
 1. Read relevant requirements, specifications, and existing tests.
-2. Identify the behavior to verify and derive expected results from its contract.
+2. Derive expected behavior from requirements and specifications, never from the implementation. If the contract is unclear, report the ambiguity rather than guessing.
 3. Add or update focused tests, matching nearby test style.
 4. Apply the quality criteria and run the affected tests.
 

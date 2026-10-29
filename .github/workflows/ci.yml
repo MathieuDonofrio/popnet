@@ -119,6 +119,9 @@ jobs:
   coverage:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - name: Install coverage tools
@@ -139,3 +142,11 @@ jobs:
             build/linux-clang-coverage/coverage*.css
             build/linux-clang-coverage/coverage.xml
           if-no-files-found: error
+      - name: Upload to Codecov
+        if: github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: codecov/codecov-action@v5
+        with:
+          use_oidc: true
+          files: build/linux-clang-coverage/coverage.xml
+          disable_search: true
+          fail_ci_if_error: true
