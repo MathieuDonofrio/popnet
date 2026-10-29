@@ -1,6 +1,6 @@
 # Popnet
 
-[![CI (build and tests)](https://github.com/MathieuDonofrio/popnet/actions/workflows/ci.yml/badge.svg)](https://github.com/MathieuDonofrio/popnet/actions/workflows/ci.yml)
+[![Build & Tests](https://github.com/MathieuDonofrio/popnet/actions/workflows/ci.yml/badge.svg)](https://github.com/MathieuDonofrio/popnet/actions/workflows/ci.yml)
 [![Code coverage](https://codecov.io/gh/MathieuDonofrio/popnet/graph/badge.svg)](https://app.codecov.io/gh/MathieuDonofrio/popnet)
 [![Traceability coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Ftraceability.json)](https://github.com/MathieuDonofrio/popnet/actions/workflows/traceability.yml)
 
@@ -84,6 +84,11 @@ cmake --build build/linux-clang-coverage --target coverage
 On Windows, use `windows-clang-coverage` instead.
 
 Reports are generated as `coverage/index.html` and `coverage/coverage.info` (LCOV) in the corresponding build directory.
+
+## Benchmarks
+
+Build with `POPNET_BUILD_BENCHMARKS=ON` in Release mode, with sanitizers and coverage disabled.
+Run `build/bench/popnet_bench --benchmark_repetitions=5` (add `.exe` on Windows).
 
 ## Traceability
 

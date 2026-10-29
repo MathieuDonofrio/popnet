@@ -6,7 +6,7 @@
 struct broadcast
 {};
 
-template <popnet_dtype dtype, typename T> auto maybe_broadcast_vload(const T* p)
+template <popnet_dtype dtype, typename T> POPNET_INLINE auto maybe_broadcast_vload(const T* p)
 {
   using dtype_traits = dtype_traits<dtype>;
 
@@ -20,7 +20,8 @@ template <popnet_dtype dtype, typename T> auto maybe_broadcast_vload(const T* p)
   }
 }
 
-template <popnet_dtype dtype, typename T> auto maybe_broadcast_vload(const T* p, typename dtype_traits<dtype>::mask_t m)
+template <popnet_dtype dtype, typename T>
+POPNET_INLINE auto maybe_broadcast_vload(const T* p, typename dtype_traits<dtype>::mask_t m)
 {
   using dtype_traits = dtype_traits<dtype>;
 
@@ -34,7 +35,7 @@ template <popnet_dtype dtype, typename T> auto maybe_broadcast_vload(const T* p,
   }
 }
 
-template <popnet_dtype dtype, typename T> const T* maybe_broadcast_advance(const T* p, size_t n)
+template <popnet_dtype dtype, typename T> POPNET_INLINE const T* maybe_broadcast_advance(const T* p, size_t n)
 {
   using dtype_traits = dtype_traits<dtype>;
 
@@ -49,7 +50,7 @@ template <popnet_dtype dtype, typename T> const T* maybe_broadcast_advance(const
 }
 
 template <class T, class... Ts>
-constexpr T&& pack_first_element([[maybe_unused]] T&& t, [[maybe_unused]] Ts&&... ts) noexcept
+POPNET_INLINE constexpr T&& pack_first_element([[maybe_unused]] T&& t, [[maybe_unused]] Ts&&... ts) noexcept
 {
   if constexpr (std::same_as<T, broadcast> && sizeof...(ts) > 0)
   {

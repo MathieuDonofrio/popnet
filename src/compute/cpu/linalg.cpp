@@ -121,9 +121,10 @@ POPNET_NO_INLINE void transpose_kernel(const void* POPNET_RESTRICT a, void* POPN
         const auto i_max = std::min(i0 + tile, n);
         const auto j_max = std::min(j0 + tile, m);
 
-        for (size_t i = i0; i < i_max; ++i)
+        // Write each output row contiguously within the tile.
+        for (size_t j = j0; j < j_max; ++j)
         {
-          for (size_t j = j0; j < j_max; ++j)
+          for (size_t i = i0; i < i_max; ++i)
           {
             b_plane[j * n + i] = a_plane[i * m + j];
           }
