@@ -7,7 +7,7 @@ if(POPNET_ASAN)
     message(STATUS "ASAN enabled")
   elseif(MSVC)
     if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.27 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
-      # MSVC ASAN only supports x64 from VS 2019 v16.7 (MSVC version 19.27)
+      # The minimum compiler version supports x64 ASan; ARM64 requires a newer toolchain.
       add_compile_options(/fsanitize=address)
       add_link_options(/fsanitize=address)
       message(STATUS "ASAN enabled")

@@ -10,6 +10,7 @@ struct popnet_tensor
 
   void* data;
 
+  // Borrowed dependencies, fixed at creation; unused entries are null.
   std::array<popnet_tensor*, POPNET_MAX_SRC> src;
 
   popnet_dtype dtype;

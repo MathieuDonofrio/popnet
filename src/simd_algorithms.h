@@ -2,6 +2,7 @@
 
 #include "dtype_traits.h"
 
+// Pointer tag for a scalar reused across lanes and iterations; no broadcast object is stored.
 struct broadcast
 {};
 
@@ -141,6 +142,7 @@ POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inpu
     {
       const typename dtype_traits::mask_t m = (1 << tail) - 1;
 
+      // Preserve inactive accumulator lanes: zero-filled masked loads are not neutral for every reduction.
       s = dtype_traits::blend(s, merge_op(maybe_broadcast_vload<dtype>(inputs, m)..., s), m);
     }
   }

@@ -27,7 +27,8 @@ constexpr size_t l1_cache_size() noexcept
 #ifdef POPNET_L1_CACHE_KB
   return POPNET_L1_CACHE_KB * 1024;
 #else
-  // Approximate: Most x86 CPUs have 32 KB L1D; Apple M-series uses 64 KB.
+  // A 32 KiB budget favors smaller tiles when cache size is unknown, trading reuse
+  // on larger caches for a smaller working set. This is a heuristic, not a cache-size guarantee.
   return 32 * 1024;
 #endif
 }

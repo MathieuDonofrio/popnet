@@ -32,6 +32,7 @@ bool popnet_graph_build_forward(popnet_graph* graph, popnet_tensor* tensor)
 
   try
   {
+    // Dependencies must precede their consumer because computation walks nodes in insertion order.
     graph->nodes.push_back(tensor);
   }
   catch (const std::bad_alloc&)

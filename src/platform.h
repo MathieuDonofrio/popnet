@@ -22,6 +22,7 @@
 #include <riscv_vector.h>
 #endif
 
+// Compile-time target features, not runtime CPU detection.
 #if defined(__AVX512F__) || defined(__AVX512__)
 #define POPNET_AVX512 1
 #elif defined(__AVX2__)

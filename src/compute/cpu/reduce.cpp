@@ -87,6 +87,7 @@ template <popnet_op op> POPNET_INLINE static void popnet_compute_reduce(popnet_t
       }
       else
       {
+        // Singleton-axis reductions preserve values bit-for-bit, including signed zero and NaNs.
         popnet_memcpy(dst->data, src->data, n * sizeof(float), memcpy_kind::device_to_device);
       }
     }

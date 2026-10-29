@@ -14,4 +14,5 @@ void* popnet_alloc(popnet_dtype dtype, popnet_shape shape) noexcept;
 
 void popnet_free(void* ptr) noexcept;
 
+// count is in bytes, unlike the public tensor transfer API. Source and destination must not overlap.
 void popnet_memcpy(void* POPNET_RESTRICT dst, const void* POPNET_RESTRICT src, size_t count, memcpy_kind kind) noexcept;

@@ -129,8 +129,7 @@ template <popnet_op op> POPNET_INLINE static void popnet_compute_unary(popnet_te
 
   if (src->dtype == popnet_dtype_f32 && dst->dtype == popnet_dtype_f32)
   {
-    if constexpr (op == popnet_op_abs) //
-      unary_kernel<simd::abs_f32, popnet_dtype_f32>(src->data, dst->data, n);
+    if constexpr (op == popnet_op_abs) unary_kernel<simd::abs_f32, popnet_dtype_f32>(src->data, dst->data, n);
     else if constexpr (op == popnet_op_neg)
       unary_kernel<simd::neg_f32, popnet_dtype_f32>(src->data, dst->data, n);
     else if constexpr (op == popnet_op_sqr)
@@ -203,7 +202,7 @@ template <auto op> POPNET_INLINE static void popnet_compute_binary(popnet_tensor
     }
     else if (src1->shape == popnet_scalar_shape)
     {
-      if constexpr (op == popnet_op_add) //
+      if constexpr (op == popnet_op_add)
         binary_kernel_rscalar<simd::add_f32, popnet_dtype_f32>(src0->data, src1->data, dst->data,
                                                                popnet_numel(dst->shape));
       else if constexpr (op == popnet_op_sub)
