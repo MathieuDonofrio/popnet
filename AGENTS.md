@@ -16,7 +16,7 @@ All paths are relative to the repository root.
 - `docs/intents/`: Problems and desired outcomes
 - `docs/requirements/`: Required behavior
 - `docs/specifications/`: Detailed behavior
-- `docs/architecture/`: Design and structure
+- `docs/architecture/`: Architectural decision records
 
 # Workflow
 
