@@ -128,7 +128,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y clang-18 llvm-18 libclang-rt-18-dev ninja-build
-          pipx install gcovr==8.8
       - name: Configure
         run: cmake --preset linux-clang-coverage -DCMAKE_CXX_COMPILER=clang++-18
       - name: Collect coverage
@@ -138,15 +137,13 @@ jobs:
         with:
           name: coverage
           path: |
-            build/linux-clang-coverage/coverage*.html
-            build/linux-clang-coverage/coverage*.css
-            build/linux-clang-coverage/coverage.xml
+            build/linux-clang-coverage/coverage/
           if-no-files-found: error
       - name: Upload to Codecov
         if: github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: codecov/codecov-action@v5
         with:
           use_oidc: true
-          files: build/linux-clang-coverage/coverage.xml
+          files: build/linux-clang-coverage/coverage/coverage.info
           disable_search: true
           fail_ci_if_error: true

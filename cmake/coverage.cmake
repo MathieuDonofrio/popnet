@@ -1,4 +1,32 @@
-# Requires Clang, matching LLVM tools, and gcovr 8.5+ on PATH.
+# Requires Clang and matching LLVM coverage tools.
+# The coverage target runs this file in script mode after collecting profiles.
+if(CMAKE_SCRIPT_MODE_FILE)
+  file(GLOB profiles "${PROFILES}/*.profraw")
+  if(NOT profiles)
+    message(FATAL_ERROR "No coverage profiles were produced")
+  endif()
+  file(MAKE_DIRECTORY "${OUTPUT_DIR}")
+  execute_process(COMMAND "${LLVM_PROFDATA}" merge -sparse ${profiles}
+    -o "${OUTPUT_DIR}/coverage.profdata" COMMAND_ERROR_IS_FATAL ANY)
+
+  list(POP_FRONT BINARIES binary)
+  set(objects)
+  foreach(object IN LISTS BINARIES)
+    list(APPEND objects "-object=${object}")
+  endforeach()
+  set(arguments "${binary}" ${objects} "-instr-profile=${OUTPUT_DIR}/coverage.profdata"
+    "${SOURCE_DIR}/src" "${SOURCE_DIR}/include")
+
+  execute_process(COMMAND "${LLVM_COV}" show ${arguments} -format=html
+    "-output-dir=${OUTPUT_DIR}" -show-line-counts-or-regions -show-instantiations -show-branches=count
+    COMMAND_ERROR_IS_FATAL ANY)
+  execute_process(COMMAND "${LLVM_COV}" export ${arguments} -format=lcov
+    OUTPUT_FILE "${OUTPUT_DIR}/coverage.info" COMMAND_ERROR_IS_FATAL ANY)
+  execute_process(COMMAND "${LLVM_COV}" report ${arguments}
+    COMMAND_ERROR_IS_FATAL ANY)
+  return()
+endif()
+
 if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   message(FATAL_ERROR "POPNET_ENABLE_COVERAGE requires Clang or clang-cl")
 endif()
@@ -9,19 +37,11 @@ if(POPNET_LTO OR POPNET_ASAN OR POPNET_UBSAN OR POPNET_TSAN)
   message(FATAL_ERROR "Use a separate coverage build with LTO and sanitizers disabled")
 endif()
 
-find_program(GCOVR gcovr REQUIRED)
-execute_process(COMMAND "${GCOVR}" --version
-  OUTPUT_VARIABLE gcovr_version RESULT_VARIABLE gcovr_result)
-string(REGEX MATCH "gcovr ([0-9.]+)" gcovr_version "${gcovr_version}")
-if(NOT gcovr_result EQUAL 0 OR NOT gcovr_version OR CMAKE_MATCH_1 VERSION_LESS 8.5)
-  message(FATAL_ERROR "Coverage requires gcovr 8.5 or newer")
-endif()
-
 get_filename_component(llvm_bin "${CMAKE_CXX_COMPILER}" DIRECTORY)
 string(REGEX MATCH "^[0-9]+" llvm_major "${CMAKE_CXX_COMPILER_VERSION}")
 find_program(LLVM_PROFDATA NAMES llvm-profdata-${llvm_major} llvm-profdata
   HINTS "${llvm_bin}" REQUIRED)
-# gcovr derives the llvm-cov path from the llvm-profdata path.
+# Use the coverage reader from the same LLVM installation.
 string(REPLACE "llvm-profdata" "llvm-cov" LLVM_COV "${LLVM_PROFDATA}")
 execute_process(COMMAND "${LLVM_COV}" --version
   OUTPUT_VARIABLE llvm_version RESULT_VARIABLE llvm_result)
@@ -54,20 +74,21 @@ endfunction()
 function(add_coverage_target)
   set(binaries)
   foreach(target IN LISTS ARGN)
-    list(APPEND binaries --llvm-cov-binary "$<TARGET_FILE:${target}>")
+    list(APPEND binaries "$<TARGET_FILE:${target}>")
   endforeach()
   set(profiles "${PROJECT_BINARY_DIR}/profiles")
 
   add_custom_target(coverage
     COMMAND "${CMAKE_COMMAND}" -E rm -rf "${profiles}"
+    COMMAND "${CMAKE_COMMAND}" -E rm -rf "${PROJECT_BINARY_DIR}/coverage"
     COMMAND "${CMAKE_COMMAND}" -E rm -f "${PROJECT_BINARY_DIR}/coverage.xml" "${PROJECT_BINARY_DIR}/coverage.html"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${profiles}"
     COMMAND "${CMAKE_COMMAND}" -E env "LLVM_PROFILE_FILE=${profiles}/%m.profraw"
       "${CMAKE_CTEST_COMMAND}" --test-dir "${PROJECT_BINARY_DIR}" -C "$<CONFIG>" --output-on-failure --no-tests=error
-    COMMAND "${GCOVR}" --root "${PROJECT_SOURCE_DIR}" --filter "src/" --filter "include/"
-      --llvm-profdata-executable "${LLVM_PROFDATA}" ${binaries}
-      --cobertura "${PROJECT_BINARY_DIR}/coverage.xml"
-      --html-details "${PROJECT_BINARY_DIR}/coverage.html" --print-summary "${profiles}"
+    COMMAND "${CMAKE_COMMAND}" "-DLLVM_PROFDATA=${LLVM_PROFDATA}" "-DLLVM_COV=${LLVM_COV}"
+      "-DBINARIES=${binaries}" "-DPROFILES=${profiles}"
+      "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}" "-DOUTPUT_DIR=${PROJECT_BINARY_DIR}/coverage"
+      -P "${CMAKE_CURRENT_FUNCTION_LIST_FILE}"
     DEPENDS ${ARGN}
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
     USES_TERMINAL VERBATIM)

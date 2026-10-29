@@ -68,7 +68,6 @@ ctest --test-dir build --output-on-failure
 Additional Dependencies:
 - Clang or clang-cl
 - LLVM coverage tools matching the Clang version
-- gcovr 8.5+
 
 Coverage is supported on Windows and Linux using the provided CMake presets.
 
@@ -79,15 +78,4 @@ cmake --build build/linux-clang-coverage --target coverage
 
 On Windows, use `windows-clang-coverage` instead.
 
-Reports are generated as `coverage.html` and `coverage.xml` in the corresponding build directory.
-
-CI builds and tests share jobs, so they use one combined workflow badge. The coverage badge shows Codecov's measured coverage for the default branch, using the Linux coverage build with native optimization disabled.
-
-#### Codecov setup
-
-1. Sign in to [Codecov](https://app.codecov.io/gh/MathieuDonofrio/popnet) with GitHub and enable this repository, granting the Codecov GitHub App access if prompted.
-2. Push the workflow to the default branch and confirm the **Upload to Codecov** step succeeds. The coverage badge remains unknown until Codecov processes the first report.
-
-Uploads use [GitHub OIDC](https://github.com/codecov/codecov-action#using-oidc); no `CODECOV_TOKEN` secret is required. Upload failures fail the coverage job, but its HTML/XML artifact is uploaded first. Fork and Dependabot pull requests still collect coverage and save artifacts, but skip Codecov uploads.
-
-For a private repository, use the badge URL supplied by Codecov under **Configuration → Badges and Graphs** if it requires a badge access token; never put an upload token in the README.
+Reports are generated as `coverage/index.html` and `coverage/coverage.info` (LCOV) in the corresponding build directory.
