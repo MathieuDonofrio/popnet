@@ -12,6 +12,7 @@ All paths are relative to the repository root.
 - `src/compute/`: Compute interfaces and backend implementations
 - `tests/`: Tests
 - `bench/`: Benchmarks
+- `tools/`: Developer tools and their tests
 - `cmake/`: Build configuration helpers
 - `docs/intents/`: Problems and desired outcomes
 - `docs/requirements/`: Required behavior

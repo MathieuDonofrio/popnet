@@ -3,6 +3,9 @@
 [![CI (build and tests)](https://github.com/MathieuDonofrio/popnet/actions/workflows/ci.yml/badge.svg)](https://github.com/MathieuDonofrio/popnet/actions/workflows/ci.yml)
 [![Code coverage](https://codecov.io/gh/MathieuDonofrio/popnet/graph/badge.svg)](https://app.codecov.io/gh/MathieuDonofrio/popnet)
 
+[![Traceability coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Ftraceability.json)](https://github.com/MathieuDonofrio/popnet/actions/workflows/traceability.yml)
+
+
 A lightweight tensor library for neural networks, with a C API and a C++20 implementation.
 
 ## Project Structure
@@ -14,6 +17,7 @@ A lightweight tensor library for neural networks, with a C API and a C++20 imple
 - `bench/` — Benchmarks
 - `cmake/` — CMake utilities
 - `docs/` — Intents, requirements, specifications and architecture decisions
+- `tools/`— Developer tools and their tests
 
 ## Supported Platforms
 
@@ -55,6 +59,8 @@ cmake --build build
 
 ## Running Tests
 
+### C++ tests
+
 Configure with tests enabled:
 
 ```sh
@@ -79,3 +85,24 @@ cmake --build build/linux-clang-coverage --target coverage
 On Windows, use `windows-clang-coverage` instead.
 
 Reports are generated as `coverage/index.html` and `coverage/coverage.info` (LCOV) in the corresponding build directory.
+
+## Traceability
+
+The traceability tool navigates and validates relationships between intents, requirements, and tests.
+
+Install dependencies:
+
+```sh
+python -m pip install -r tools/trace/requirements.txt
+```
+
+Usage:
+
+```sh
+python tools/trace/trace.py search "tensor lifetime"
+python tools/trace/trace.py show REQ-0012
+python tools/trace/trace.py coverage
+python tools/trace/trace.py validate
+```
+
+All commands support `--json` for structured output. Coverage measures declared requirement-to-test links, not code coverage or verification completeness.

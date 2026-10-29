@@ -21,3 +21,6 @@ CMakeUserPresets.json
 
 /build/
 cmake-build-*
+
+# Python tooling
+__pycache__/
