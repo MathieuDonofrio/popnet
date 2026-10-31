@@ -255,7 +255,6 @@ POPNET_INLINE vf32_t max_f32(vf32_t a, vf32_t b) { return _mm512_max_ps(a, b); }
 POPNET_INLINE vf32_t fma_f32(vf32_t a, vf32_t b, vf32_t c) { return _mm512_fmadd_ps(a, b, c); }
 
 POPNET_INLINE f32_t reduce_sum_f32(vf32_t a) { return _mm512_reduce_add_ps(a); }
-POPNET_INLINE f32_t reduce_mean_f32(vf32_t a, size_t n) { return _mm512_reduce_add_ps(a) / n; }
 POPNET_INLINE f32_t reduce_product_f32(vf32_t a) { return _mm512_reduce_mul_ps(a); }
 POPNET_INLINE f32_t reduce_min_f32(vf32_t a) { return _mm512_reduce_min_ps(a); }
 POPNET_INLINE f32_t reduce_max_f32(vf32_t a) { return _mm512_reduce_max_ps(a); }
@@ -294,7 +293,6 @@ POPNET_INLINE vf32_t max_f32(vf32_t a, vf32_t b) { return std::max(a, b); }
 POPNET_INLINE vf32_t fma_f32(vf32_t a, vf32_t b, vf32_t c) { return std::fma(a, b, c); }
 
 POPNET_INLINE f32_t reduce_sum_f32(vf32_t a) { return a; }
-POPNET_INLINE f32_t reduce_mean_f32(vf32_t a, size_t n) { return a / n; }
 POPNET_INLINE f32_t reduce_product_f32(vf32_t a) { return a; }
 POPNET_INLINE f32_t reduce_min_f32(vf32_t a) { return a; }
 POPNET_INLINE f32_t reduce_max_f32(vf32_t a) { return a; }

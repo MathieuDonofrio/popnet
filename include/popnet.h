@@ -243,6 +243,8 @@ POPNET_API popnet_tensor* popnet_sigmoid(popnet_tensor* a);
 /**
  * @name Reductions
  * Bit i of axis_mask selects dimension i; selected output dimensions become 1.
+ * Execution supports one contiguous group of reduced dimensions, ignoring singleton dimensions.
+ * Compose separate reduction operations for groups separated by retained non-singleton dimensions.
  *
  * @pre axis_mask is nonzero and uses only the lowest POPNET_MAX_DIMS bits.
  * @{

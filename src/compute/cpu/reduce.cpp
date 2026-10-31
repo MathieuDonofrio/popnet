@@ -6,15 +6,6 @@
 #include "tensor.h"
 
 template <auto init_state_op, auto merge_op, auto horizontal_op, popnet_dtype dtype>
-POPNET_NO_INLINE void reduce_kernel_scalar(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t n) noexcept
-{
-  using dtype_traits = dtype_traits<dtype>;
-  using scalar_t = typename dtype_traits::scalar_t;
-
-  *static_cast<scalar_t*>(b) = simd_reduce<init_state_op, merge_op, horizontal_op, popnet_dtype_f32>(n, a);
-}
-
-template <auto init_state_op, auto merge_op, auto horizontal_op, popnet_dtype dtype>
 POPNET_NO_INLINE void reduce_kernel_contiguous(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b,
                                                size_t outer_size, size_t reduce_size) noexcept
 {
@@ -31,92 +22,100 @@ POPNET_NO_INLINE void reduce_kernel_contiguous(const void* POPNET_RESTRICT a, vo
   }
 }
 
-POPNET_INLINE static size_t first_reduction_dim(popnet_shape src_shape, popnet_shape dst_shape)
+template <auto init_state_op, auto merge_op, popnet_dtype dtype>
+POPNET_NO_INLINE void reduce_kernel_rows(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t outer_size,
+                                         size_t reduce_size, size_t inner_size) noexcept
 {
+  using traits = dtype_traits<dtype>;
+  using scalar_t = typename traits::scalar_t;
+  const auto* src = static_cast<const scalar_t*>(a);
+  auto* dst = static_cast<scalar_t*>(b);
+
+  for (size_t outer = 0; outer < outer_size; ++outer)
+    simd_reduce_rows<init_state_op, merge_op, dtype>(dst + outer * inner_size, reduce_size, inner_size,
+                                                     src + outer * reduce_size * inner_size);
+}
+
+struct reduction_group
+{
+  size_t outer_size;
+  size_t reduce_size;
+  size_t inner_size;
+};
+
+POPNET_INLINE static reduction_group find_reduction_group(const popnet_shape src, const popnet_shape dst)
+{
+  POPNET_EXPECT(popnet_valid_shape(src) && popnet_valid_shape(dst));
   for (size_t i = 0; i < POPNET_MAX_DIMS; ++i)
-  {
-    if (src_shape.dim[i] == dst_shape.dim[i]) continue;
-    if (dst_shape.dim[i] != 1) break;
-    return i;
-  }
+    POPNET_EXPECT(dst.dim[i] == src.dim[i] || dst.dim[i] == 1);
 
-  return POPNET_MAX_DIMS;
+  size_t begin = 0;
+  while (begin < POPNET_MAX_DIMS && src.dim[begin] == dst.dim[begin])
+    ++begin;
+  POPNET_EXPECT(begin < POPNET_MAX_DIMS);
+
+  size_t end = POPNET_MAX_DIMS;
+  while (src.dim[end - 1] == dst.dim[end - 1])
+    --end;
+
+  reduction_group group{1, 1, popnet_inner_numel(src, end)};
+  for (size_t i = 0; i < begin; ++i)
+    group.outer_size *= src.dim[i];
+  for (size_t i = begin; i < end; ++i)
+  {
+    if (dst.dim[i] != 1) POPNET_UNSUPPORTED("Separated reduction groups must be composed as separate operations");
+    group.reduce_size *= src.dim[i];
+  }
+  return group;
 }
 
-POPNET_INLINE static bool is_contiguous_inner_reduction(const popnet_shape dst_shape, size_t reduce_start)
+template <auto init_state_op, auto merge_op, auto horizontal_op, popnet_dtype dtype>
+POPNET_INLINE static void execute_reduction(const void* src, void* dst, const reduction_group& group)
 {
-  for (size_t i = reduce_start; i < POPNET_MAX_DIMS; ++i)
-  {
-    if (dst_shape.dim[i] != 1) return false;
-  }
-
-  return true;
+  if (group.inner_size == 1)
+    reduce_kernel_contiguous<init_state_op, merge_op, horizontal_op, dtype>(src, dst, group.outer_size,
+                                                                            group.reduce_size);
+  else
+    reduce_kernel_rows<init_state_op, merge_op, dtype>(src, dst, group.outer_size, group.reduce_size, group.inner_size);
 }
-
 template <popnet_op op> POPNET_INLINE static void popnet_compute_reduce(popnet_tensor* dst)
 {
   const popnet_tensor* src = dst->src[0];
 
-  const size_t first_reduce_dim = first_reduction_dim(src->shape, dst->shape);
-
   if (src->dtype == popnet_dtype_f32 && dst->dtype == popnet_dtype_f32)
   {
-    if (first_reduce_dim == POPNET_MAX_DIMS)
+    if (src->shape == dst->shape)
     {
       const size_t n = popnet_numel(src->shape);
 
-      if (dst->shape == popnet_scalar_shape)
-      {
-        if constexpr (op == popnet_op_reduce_sum)
-          reduce_kernel_scalar<simd::set_zero_f32, simd::add_f32, simd::reduce_sum_f32, popnet_dtype_f32>(src->data,
-                                                                                                          dst->data, n);
-        else if constexpr (op == popnet_op_reduce_mean)
-          reduce_kernel_scalar<simd::set_zero_f32, simd::add_f32, simd::reduce_mean_f32, popnet_dtype_f32>(
-              src->data, dst->data, n);
-        else if constexpr (op == popnet_op_reduce_product)
-          reduce_kernel_scalar<simd::set_one_f32, simd::mul_f32, simd::reduce_product_f32, popnet_dtype_f32>(
-              src->data, dst->data, n);
-        else if constexpr (op == popnet_op_reduce_min)
-          reduce_kernel_scalar<simd::set_pos_inf_f32, simd::min_f32, simd::reduce_min_f32, popnet_dtype_f32>(
-              src->data, dst->data, n);
-        else if constexpr (op == popnet_op_reduce_max)
-          reduce_kernel_scalar<simd::set_neg_inf_f32, simd::max_f32, simd::reduce_max_f32, popnet_dtype_f32>(
-              src->data, dst->data, n);
-        else
-          POPNET_UNSUPPORTED_STATIC("Unsupported reduction operation");
-      }
-      else
-      {
-        // Singleton-axis reductions preserve values bit-for-bit, including signed zero and NaNs.
-        popnet_memcpy(dst->data, src->data, n * sizeof(float), memcpy_kind::device_to_device);
-      }
+      // Singleton-axis reductions preserve values bit-for-bit, including signed zero and NaNs.
+      popnet_memcpy(dst->data, src->data, n * sizeof(float), memcpy_kind::device_to_device);
+      return;
     }
-    else if (is_contiguous_inner_reduction(dst->shape, first_reduce_dim + 1))
-    {
-      const size_t reduce_size = popnet_inner_numel(src->shape, first_reduce_dim);
-      const size_t outer_size = popnet_numel(dst->shape);
+    const auto group = find_reduction_group(src->shape, dst->shape);
 
-      if constexpr (op == popnet_op_reduce_sum)
-        reduce_kernel_contiguous<simd::set_zero_f32, simd::add_f32, simd::reduce_sum_f32, popnet_dtype_f32>(
-            src->data, dst->data, outer_size, reduce_size);
-      else if constexpr (op == popnet_op_reduce_mean)
-        reduce_kernel_contiguous<simd::set_zero_f32, simd::add_f32, simd::reduce_mean_f32, popnet_dtype_f32>(
-            src->data, dst->data, outer_size, reduce_size);
-      else if constexpr (op == popnet_op_reduce_product)
-        reduce_kernel_contiguous<simd::set_one_f32, simd::mul_f32, simd::reduce_product_f32, popnet_dtype_f32>(
-            src->data, dst->data, outer_size, reduce_size);
-      else if constexpr (op == popnet_op_reduce_min)
-        reduce_kernel_contiguous<simd::set_pos_inf_f32, simd::min_f32, simd::reduce_min_f32, popnet_dtype_f32>(
-            src->data, dst->data, outer_size, reduce_size);
-      else if constexpr (op == popnet_op_reduce_max)
-        reduce_kernel_contiguous<simd::set_neg_inf_f32, simd::max_f32, simd::reduce_max_f32, popnet_dtype_f32>(
-            src->data, dst->data, outer_size, reduce_size);
-      else
-        POPNET_UNSUPPORTED_STATIC("Unsupported reduction operation");
-    }
+    if constexpr (op == popnet_op_reduce_sum || op == popnet_op_reduce_mean)
+      execute_reduction<simd::set_zero_f32, simd::add_f32, simd::reduce_sum_f32, popnet_dtype_f32>(src->data, dst->data,
+                                                                                                   group);
+    else if constexpr (op == popnet_op_reduce_product)
+      execute_reduction<simd::set_one_f32, simd::mul_f32, simd::reduce_product_f32, popnet_dtype_f32>(src->data,
+                                                                                                      dst->data, group);
+    else if constexpr (op == popnet_op_reduce_min)
+      execute_reduction<simd::set_pos_inf_f32, simd::min_f32, simd::reduce_min_f32, popnet_dtype_f32>(src->data,
+                                                                                                      dst->data, group);
+    else if constexpr (op == popnet_op_reduce_max)
+      execute_reduction<simd::set_neg_inf_f32, simd::max_f32, simd::reduce_max_f32, popnet_dtype_f32>(src->data,
+                                                                                                      dst->data, group);
     else
+      POPNET_UNSUPPORTED_STATIC("Unsupported reduction operation");
+
+    if constexpr (op == popnet_op_reduce_mean)
     {
-      POPNET_UNSUPPORTED("Reduction over non-contiguous inner dimensions is unsupported");
+      const size_t output_size = popnet_numel(dst->shape);
+      const size_t reduction_count = popnet_numel(src->shape) / output_size;
+      const float divisor = static_cast<float>(reduction_count);
+      simd_map_inplace<simd::div_f32, popnet_dtype_f32>(
+          dst->data, output_size, static_cast<const broadcast*>(static_cast<const void*>(&divisor)));
     }
   }
   else
