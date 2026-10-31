@@ -1,8 +1,14 @@
 #ifndef POPNET_H
 #define POPNET_H
 
+#ifdef __cplusplus
+#include <cstddef>
+#include <cstdint>
+#else
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#endif
 
 #ifdef POPNET_SHARED
 #ifdef _MSC_VER
@@ -121,12 +127,22 @@ typedef struct popnet_shape
   size_t dim[POPNET_MAX_DIMS];
 } popnet_shape;
 
-const popnet_shape popnet_scalar_shape = {.dim = {1, 1, 1, 1}};
+static const popnet_shape popnet_scalar_shape = {.dim = {1, 1, 1, 1}};
 
 POPNET_INLINE size_t popnet_numel(popnet_shape shape)
 {
+#ifdef __cplusplus
   static_assert(POPNET_MAX_DIMS == 4);
-  const size_t size = shape.dim[0] * shape.dim[1] * shape.dim[2] * shape.dim[3];
+#else
+  _Static_assert(POPNET_MAX_DIMS == 4, "Expected four dimensions");
+#endif
+  size_t size = shape.dim[0];
+  POPNET_EXPECT(shape.dim[1] <= SIZE_MAX / size);
+  size *= shape.dim[1];
+  POPNET_EXPECT(shape.dim[2] <= SIZE_MAX / size);
+  size *= shape.dim[2];
+  POPNET_EXPECT(shape.dim[3] <= SIZE_MAX / size);
+  size *= shape.dim[3];
   POPNET_EXPECT(size > 0);
   return size;
 }

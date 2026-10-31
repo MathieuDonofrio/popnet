@@ -14,7 +14,12 @@ void* popnet_alloc(popnet_dtype dtype, popnet_shape shape) noexcept
 
   switch (dtype)
   {
-  case popnet_dtype_f32: size = sizeof(float) * nelems; break;
+  case popnet_dtype_f32:
+  {
+    if (nelems > SIZE_MAX / sizeof(float)) return nullptr;
+    size = sizeof(float) * nelems;
+    break;
+  }
   default: POPNET_UNSUPPORTED("CPU allocation requires f32 dtype"); break;
   }
 
@@ -31,7 +36,12 @@ void* popnet_alloc(popnet_dtype dtype, popnet_shape shape) noexcept
   void* ptr = _aligned_malloc(size, alignment);
 #else
   // aligned_alloc requires the allocation size to be a multiple of its alignment.
-  const size_t padded_size = ((size + alignment - 1) / alignment) * alignment;
+  const size_t remainder = size % alignment;
+  const size_t padding = remainder ? alignment - remainder : 0;
+
+  if (size > SIZE_MAX - padding) return nullptr;
+
+  const size_t padded_size = size + padding;
 
   void* ptr = aligned_alloc(alignment, padded_size);
 #endif
