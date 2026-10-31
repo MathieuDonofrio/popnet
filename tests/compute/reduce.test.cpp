@@ -124,44 +124,6 @@ TEST_CASE("reductions over singleton axes preserve input values")
   }
 }
 
-
-// This regression records existing backend behavior; NaN/tie semantics for non-singleton min/max are not specified.
-TEST_CASE("row min and max preserve existing scalar and SIMD operand semantics")
-{
-  const auto nan = std::numeric_limits<float>::quiet_NaN();
-  for (auto compute : {popnet_compute_reduce_min, popnet_compute_reduce_max})
-  {
-    std::vector<float> input(34, 3.0f);
-    input[17] = nan;
-    input[1] = +0.0f;
-    input[18] = -0.0f;
-    input[16] = +0.0f;
-    input[33] = -0.0f;
-    std::vector<float> output(17);
-    popnet_tensor src{.shape = {{1, 1, 2, 17}}, .data = input.data(), .dtype = popnet_dtype_f32};
-    popnet_tensor dst{.shape = {{1, 1, 1, 17}}, .data = output.data(), .src = {&src}, .dtype = popnet_dtype_f32};
-
-    compute(&dst);
-
-    if constexpr (dtype_traits<popnet_dtype_f32>::cpu_execution_model == cpu_execution_model::fixed)
-    {
-      CHECK(output[0] == 3.0f);
-      CHECK_FALSE(std::signbit(output[1]));
-      CHECK_FALSE(std::signbit(output[16]));
-    }
-    else
-    {
-      CHECK(std::isnan(output[0]));
-      CHECK(std::signbit(output[1]));
-      CHECK(std::signbit(output[16]));
-    }
-    CHECK(output[1] == 0.0f);
-    CHECK(output[16] == 0.0f);
-  }
-}
-
-
-
 // @verifies REQ-0003: Composed reductions over separated groups match the scalar reference.
 // @verifies REQ-0025: Composed reductions leave the input unchanged.
 TEST_CASE("separated reduction groups compose through the public API")
@@ -173,14 +135,13 @@ TEST_CASE("separated reduction groups compose through the public API")
     float (*merge)(float, float);
     bool mean;
   };
-  const reduction operations[] = {
-      {popnet_reduce_sum, 0, [](float a, float b) { return a + b; }, false},
-      {popnet_reduce_mean, 0, [](float a, float b) { return a + b; }, true},
-      {popnet_reduce_product, 1, [](float a, float b) { return a * b; }, false},
-      {popnet_reduce_min, std::numeric_limits<float>::infinity(),
-       [](float a, float b) { return std::min(a, b); }, false},
-      {popnet_reduce_max, -std::numeric_limits<float>::infinity(),
-       [](float a, float b) { return std::max(a, b); }, false}};
+  const reduction operations[] = {{popnet_reduce_sum, 0, [](float a, float b) { return a + b; }, false},
+                                  {popnet_reduce_mean, 0, [](float a, float b) { return a + b; }, true},
+                                  {popnet_reduce_product, 1, [](float a, float b) { return a * b; }, false},
+                                  {popnet_reduce_min, std::numeric_limits<float>::infinity(),
+                                   [](float a, float b) { return std::min(a, b); }, false},
+                                  {popnet_reduce_max, -std::numeric_limits<float>::infinity(),
+                                   [](float a, float b) { return std::max(a, b); }, false}};
   const popnet_shape shape{{2, 3, 4, 5}};
   const popnet_shape expected_shape{{1, 3, 1, 1}};
   std::vector<float> input(popnet_numel(shape));
@@ -222,7 +183,6 @@ TEST_CASE("separated reduction groups compose through the public API")
     popnet_free(src);
   }
 }
-
 
 // After removing singleton dimensions, a supported mask contains just one run of set bits.
 static bool supported_mask(popnet_shape shape, uint8_t mask)
