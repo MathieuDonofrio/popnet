@@ -325,6 +325,20 @@ TEST_CASE("matmul")
   {
     run.operator()<popnet_dtype_f32>(-2.0f, 2.0f, popnet_shape{{4, 4, 128, 64}}, popnet_shape{{1, 1, 128, 64}});
   };
+  SUBCASE("1x4 microkernel: column tails, vector tails, and shared B across batches - f32")
+  {
+    // Exercise the four-column microkernel alongside its 1-3-column fallback,
+    // including K below the SIMD width and K with an AVX-512 masked tail.
+    for (size_t n : {size_t{4}, size_t{5}, size_t{6}, size_t{7}, size_t{8}, size_t{9}})
+      for (size_t k : {size_t{1}, size_t{3}, size_t{15}, size_t{16}, size_t{17}, size_t{31}, size_t{33}})
+      {
+        CAPTURE(n);
+        CAPTURE(k);
+        run.operator()<popnet_dtype_f32>(-2.0f, 2.0f, popnet_shape{{2, 2, 3, k}},
+                                          popnet_shape{{1, 1, n, k}});
+      }
+  }
+
   SUBCASE("Gen 1x1x512x512 x 1x1x512x512^T - f32")
   {
     run.operator()<popnet_dtype_f32>(-1.0f, 1.0f, popnet_shape{{1, 1, 512, 512}}, popnet_shape{{1, 1, 512, 512}});
