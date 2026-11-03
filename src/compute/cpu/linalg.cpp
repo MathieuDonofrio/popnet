@@ -40,6 +40,69 @@ consteval size_t compute_transpose_tile_size(size_t element_size)
   return sqrti(l1_cache_size() / (element_size * 2));
 }
 
+// Compute four output columns for one A row, sharing each loaded A vector across four dot products.
+// The existing 1x1 reduction remains the fallback for trailing columns.
+template <auto init_state_op, auto merge_op, auto horizontal_op, popnet_dtype dtype>
+POPNET_INLINE static void matmul_microkernel_1x4(const typename dtype_traits<dtype>::scalar_t* POPNET_RESTRICT a,
+                                                 const typename dtype_traits<dtype>::scalar_t* POPNET_RESTRICT b,
+                                                 typename dtype_traits<dtype>::scalar_t* POPNET_RESTRICT c,
+                                                 size_t count, size_t b_stride) noexcept
+{
+  using traits = dtype_traits<dtype>;
+  static_assert(dtype == popnet_dtype_f32);
+
+  auto s0 = init_state_op();
+  auto s1 = init_state_op();
+  auto s2 = init_state_op();
+  auto s3 = init_state_op();
+
+  if constexpr (traits::cpu_execution_model == cpu_execution_model::fixed)
+  {
+    constexpr size_t width = traits::vector_length();
+    const size_t body = count - count % width;
+
+    for (size_t t = 0; t < body; t += width)
+    {
+      const auto av = traits::vload(a + t);
+      s0 = merge_op(av, traits::vload(b + t), s0);
+      s1 = merge_op(av, traits::vload(b + b_stride + t), s1);
+      s2 = merge_op(av, traits::vload(b + 2 * b_stride + t), s2);
+      s3 = merge_op(av, traits::vload(b + 3 * b_stride + t), s3);
+    }
+
+    if (const size_t tail = count - body)
+    {
+      const auto mask = static_cast<typename traits::mask_t>((uint64_t{1} << tail) - 1);
+      const auto av = traits::vload(a + body, mask);
+
+      s0 = traits::blend(s0, merge_op(av, traits::vload(b + body, mask), s0), mask);
+      s1 = traits::blend(s1, merge_op(av, traits::vload(b + b_stride + body, mask), s1), mask);
+      s2 = traits::blend(s2, merge_op(av, traits::vload(b + 2 * b_stride + body, mask), s2), mask);
+      s3 = traits::blend(s3, merge_op(av, traits::vload(b + 3 * b_stride + body, mask), s3), mask);
+    }
+  }
+  else if constexpr (traits::cpu_execution_model == cpu_execution_model::scalar)
+  {
+    for (size_t t = 0; t < count; ++t)
+    {
+      const auto av = traits::load(a + t);
+      s0 = merge_op(av, traits::load(b + t), s0);
+      s1 = merge_op(av, traits::load(b + b_stride + t), s1);
+      s2 = merge_op(av, traits::load(b + 2 * b_stride + t), s2);
+      s3 = merge_op(av, traits::load(b + 3 * b_stride + t), s3);
+    }
+  }
+  else
+  {
+    POPNET_UNSUPPORTED_STATIC("Matmul microkernel requires a fixed or scalar CPU execution model");
+  }
+
+  c[0] += horizontal_op(s0);
+  c[1] += horizontal_op(s1);
+  c[2] += horizontal_op(s2);
+  c[3] += horizontal_op(s3);
+}
+
 template <auto init_state_op, auto merge_op, auto horizontal_op, popnet_dtype dtype>
 POPNET_NO_INLINE void matmul_kernel(const void* POPNET_RESTRICT a, const void* POPNET_RESTRICT b,
                                     void* POPNET_RESTRICT c, size_t outer_size, size_t n, size_t m, size_t k)
@@ -80,7 +143,15 @@ POPNET_NO_INLINE void matmul_kernel(const void* POPNET_RESTRICT a, const void* P
           {
             const auto* a_block = a_plane + i * k + k0;
 
-            for (size_t j = j0; j < j_max; ++j)
+            size_t j = j0;
+            for (; j_max - j >= 4; j += 4)
+            {
+              matmul_microkernel_1x4<init_state_op, merge_op, horizontal_op, dtype>(
+                  a_block, bb + j * k + k0, c_plane + i * n + j, k_max - k0, k);
+            }
+
+            // Use the original dot-product kernel for the remaining 1-3 columns.
+            for (; j < j_max; ++j)
             {
               const auto* b_block = bb + j * k + k0;
               auto* c_val = c_plane + i * n + j;
