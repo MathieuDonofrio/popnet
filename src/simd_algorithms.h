@@ -10,6 +10,8 @@ struct row_broadcast
 struct column_broadcast
 {};
 
+inline constexpr auto identity_finalize = [](auto value, size_t) { return value; };
+
 template <popnet_dtype dtype, typename T> POPNET_INLINE auto maybe_broadcast_vload(const T* p)
 {
   using dtype_traits = dtype_traits<dtype>;
@@ -124,8 +126,7 @@ POPNET_INLINE static void simd_map_impl(void* output, size_t n, const T*... inpu
 
     while (output != output_end)
     {
-      if constexpr (inplace)
-        dtype_traits::store(output, op(dtype_traits::load(output), dtype_traits::load(inputs)...));
+      if constexpr (inplace) dtype_traits::store(output, op(dtype_traits::load(output), dtype_traits::load(inputs)...));
       else
         dtype_traits::store(output, op(dtype_traits::load(inputs)...));
 
@@ -148,12 +149,12 @@ POPNET_INLINE static void simd_map(void* POPNET_RESTRICT output, size_t n, const
 // The output supplies the first operand. Additional inputs must not overlap the output.
 template <auto op, popnet_dtype dtype, typename... T>
 POPNET_INLINE static void simd_map_inplace(void* POPNET_RESTRICT output, size_t n,
-                                         const T* POPNET_RESTRICT... inputs) noexcept
+                                           const T* POPNET_RESTRICT... inputs) noexcept
 {
   simd_map_impl<true, op, dtype>(output, n, inputs...);
 }
 
-template <auto state_init_op, auto merge_op, auto horizontal_op, popnet_dtype dtype, typename... T>
+template <auto state_init_op, auto merge_op, auto horizontal_op, popnet_dtype dtype, auto finalize_op, typename... T>
 requires(sizeof...(T) >= 1)
 POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inputs) noexcept
 {
@@ -203,15 +204,15 @@ POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inpu
 
   if constexpr (std::is_invocable_v<decltype(horizontal_op), decltype(s), size_t>)
   {
-    return horizontal_op(s, n);
+    return finalize_op(horizontal_op(s, n), n);
   }
   else
   {
-    return horizontal_op(s);
+    return finalize_op(horizontal_op(s), n);
   }
 }
 
-template <auto state_init_op, auto merge_op, popnet_dtype dtype, typename... T>
+template <auto state_init_op, auto merge_op, popnet_dtype dtype, auto finalize_op = identity_finalize, typename... T>
 requires(sizeof...(T) >= 1)
 POPNET_INLINE static void simd_reduce_rows(void* POPNET_RESTRICT output, size_t rows, size_t cols,
                                            const T* POPNET_RESTRICT... inputs) noexcept
@@ -234,7 +235,7 @@ POPNET_INLINE static void simd_reduce_rows(void* POPNET_RESTRICT output, size_t 
         s = merge_op(maybe_broadcast_vload<dtype>(maybe_broadcast_advance_2d<dtype>(inputs, row, col, cols))..., s);
       }
 
-      traits::vstore(traits::advance(output, col), s);
+      traits::vstore(traits::advance(output, col), finalize_op(s, rows));
     }
 
     if (tail)
@@ -251,7 +252,7 @@ POPNET_INLINE static void simd_reduce_rows(void* POPNET_RESTRICT output, size_t 
             m);
       }
 
-      traits::vstore(traits::advance(output, body), m, s);
+      traits::vstore(traits::advance(output, body), m, finalize_op(s, rows));
     }
   }
   else if constexpr (traits::cpu_execution_model == cpu_execution_model::scalar)
@@ -265,7 +266,7 @@ POPNET_INLINE static void simd_reduce_rows(void* POPNET_RESTRICT output, size_t 
         s = merge_op(traits::load(maybe_broadcast_advance_2d<dtype>(inputs, row, col, cols))..., s);
       }
 
-      traits::store(traits::advance(output, col), s);
+      traits::store(traits::advance(output, col), finalize_op(s, rows));
     }
   }
   else

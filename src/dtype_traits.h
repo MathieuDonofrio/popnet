@@ -49,6 +49,8 @@ template <> struct dtype_traits<popnet_dtype_f32>
   using vector_t = scalar_t;
 
   POPNET_INLINE static consteval size_t vector_length() { return 1; }
+
+  POPNET_INLINE static scalar_t broadcast(scalar_t a) { return a; }
 #endif
 
   POPNET_INLINE static consteval size_t element_size() { return sizeof(scalar_t); }
@@ -298,5 +300,4 @@ POPNET_INLINE f32_t reduce_min_f32(vf32_t a) { return a; }
 POPNET_INLINE f32_t reduce_max_f32(vf32_t a) { return a; }
 
 #endif
-
 } // namespace simd

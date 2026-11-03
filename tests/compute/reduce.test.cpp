@@ -270,6 +270,24 @@ TEST_CASE("reduce compute")
         run_shape({{1, rows, 3, 5}}, {{1, rows, 1, 1}});
       }
     }
+    SUBCASE("contiguous reduction widths with multiple output groups")
+    {
+      for (const size_t count : {3, 15, 16, 17, 31, 33})
+      {
+        CAPTURE(count);
+        run_shape({{2, 3, 1, count}}, {{2, 3, 1, 1}});
+      }
+    }
+    SUBCASE("row reduction counts with multiple output groups")
+    {
+      for (const size_t count : {3, 16, 17, 33})
+        for (const size_t inner : {3, 16, 17, 33})
+        {
+          CAPTURE(count);
+          CAPTURE(inner);
+          run_shape({{2, 1, count, inner}}, {{2, 1, 1, inner}});
+        }
+    }
     SUBCASE("all supported axis masks")
     {
       const popnet_shape shapes[] = {{{2, 3, 4, 5}}, {{1, 3, 4, 5}}, {{2, 1, 4, 5}},

@@ -85,7 +85,7 @@ POPNET_NO_INLINE void matmul_kernel(const void* POPNET_RESTRICT a, const void* P
               const auto* b_block = bb + j * k + k0;
               auto* c_val = c_plane + i * n + j;
 
-              *c_val += simd_reduce<init_state_op, merge_op, horizontal_op, dtype>(
+              *c_val += simd_reduce<init_state_op, merge_op, horizontal_op, dtype, identity_finalize>(
                   k_max - k0, static_cast<const void*>(a_block), static_cast<const void*>(b_block));
             }
           }

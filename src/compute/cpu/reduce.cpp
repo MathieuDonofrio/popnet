@@ -5,7 +5,15 @@
 #include "simd_algorithms.h"
 #include "tensor.h"
 
-template <auto init_state_op, auto merge_op, auto horizontal_op, popnet_dtype dtype>
+static constexpr auto mean_finalize = [](auto value, size_t n) {
+  const auto divisor = static_cast<f32_t>(n);
+
+  if constexpr (std::same_as<decltype(value), f32_t>) return value / divisor;
+  else
+    return simd::div_f32(value, dtype_traits<popnet_dtype_f32>::broadcast(divisor));
+};
+
+template <auto init_state_op, auto merge_op, auto horizontal_op, auto finalize_op, popnet_dtype dtype>
 POPNET_NO_INLINE void reduce_kernel_contiguous(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b,
                                                size_t outer_size, size_t reduce_size) noexcept
 {
@@ -18,11 +26,11 @@ POPNET_NO_INLINE void reduce_kernel_contiguous(const void* POPNET_RESTRICT a, vo
   for (size_t outer = 0; outer < outer_size; ++outer)
   {
     dst[outer] =
-        simd_reduce<init_state_op, merge_op, horizontal_op, popnet_dtype_f32>(reduce_size, src + outer * reduce_size);
+        simd_reduce<init_state_op, merge_op, horizontal_op, dtype, finalize_op>(reduce_size, src + outer * reduce_size);
   }
 }
 
-template <auto init_state_op, auto merge_op, popnet_dtype dtype>
+template <auto init_state_op, auto merge_op, auto finalize_op, popnet_dtype dtype>
 POPNET_NO_INLINE void reduce_kernel_rows(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t outer_size,
                                          size_t reduce_size, size_t inner_size) noexcept
 {
@@ -32,8 +40,8 @@ POPNET_NO_INLINE void reduce_kernel_rows(const void* POPNET_RESTRICT a, void* PO
   auto* dst = static_cast<scalar_t*>(b);
 
   for (size_t outer = 0; outer < outer_size; ++outer)
-    simd_reduce_rows<init_state_op, merge_op, dtype>(dst + outer * inner_size, reduce_size, inner_size,
-                                                     src + outer * reduce_size * inner_size);
+    simd_reduce_rows<init_state_op, merge_op, dtype, finalize_op>(dst + outer * inner_size, reduce_size, inner_size,
+                                                                  src + outer * reduce_size * inner_size);
 }
 
 struct reduction_group
@@ -69,14 +77,15 @@ POPNET_INLINE static reduction_group find_reduction_group(const popnet_shape src
   return group;
 }
 
-template <auto init_state_op, auto merge_op, auto horizontal_op, popnet_dtype dtype>
+template <auto init_state_op, auto merge_op, auto horizontal_op, auto finalize_op, popnet_dtype dtype>
 POPNET_INLINE static void execute_reduction(const void* src, void* dst, const reduction_group& group)
 {
   if (group.inner_size == 1)
-    reduce_kernel_contiguous<init_state_op, merge_op, horizontal_op, dtype>(src, dst, group.outer_size,
-                                                                            group.reduce_size);
+    reduce_kernel_contiguous<init_state_op, merge_op, horizontal_op, finalize_op, dtype>(src, dst, group.outer_size,
+                                                                                         group.reduce_size);
   else
-    reduce_kernel_rows<init_state_op, merge_op, dtype>(src, dst, group.outer_size, group.reduce_size, group.inner_size);
+    reduce_kernel_rows<init_state_op, merge_op, finalize_op, dtype>(src, dst, group.outer_size, group.reduce_size,
+                                                                    group.inner_size);
 }
 template <popnet_op op> POPNET_INLINE static void popnet_compute_reduce(popnet_tensor* dst)
 {
@@ -94,29 +103,23 @@ template <popnet_op op> POPNET_INLINE static void popnet_compute_reduce(popnet_t
     }
     const auto group = find_reduction_group(src->shape, dst->shape);
 
-    if constexpr (op == popnet_op_reduce_sum || op == popnet_op_reduce_mean)
-      execute_reduction<simd::set_zero_f32, simd::add_f32, simd::reduce_sum_f32, popnet_dtype_f32>(src->data, dst->data,
-                                                                                                   group);
+    if constexpr (op == popnet_op_reduce_sum)
+      execute_reduction<simd::set_zero_f32, simd::add_f32, simd::reduce_sum_f32, identity_finalize, popnet_dtype_f32>(
+          src->data, dst->data, group);
+    else if constexpr (op == popnet_op_reduce_mean)
+      execute_reduction<simd::set_zero_f32, simd::add_f32, simd::reduce_sum_f32, mean_finalize, popnet_dtype_f32>(
+          src->data, dst->data, group);
     else if constexpr (op == popnet_op_reduce_product)
-      execute_reduction<simd::set_one_f32, simd::mul_f32, simd::reduce_product_f32, popnet_dtype_f32>(src->data,
-                                                                                                      dst->data, group);
+      execute_reduction<simd::set_one_f32, simd::mul_f32, simd::reduce_product_f32, identity_finalize,
+                        popnet_dtype_f32>(src->data, dst->data, group);
     else if constexpr (op == popnet_op_reduce_min)
-      execute_reduction<simd::set_pos_inf_f32, simd::min_f32, simd::reduce_min_f32, popnet_dtype_f32>(src->data,
-                                                                                                      dst->data, group);
+      execute_reduction<simd::set_pos_inf_f32, simd::min_f32, simd::reduce_min_f32, identity_finalize,
+                        popnet_dtype_f32>(src->data, dst->data, group);
     else if constexpr (op == popnet_op_reduce_max)
-      execute_reduction<simd::set_neg_inf_f32, simd::max_f32, simd::reduce_max_f32, popnet_dtype_f32>(src->data,
-                                                                                                      dst->data, group);
+      execute_reduction<simd::set_neg_inf_f32, simd::max_f32, simd::reduce_max_f32, identity_finalize,
+                        popnet_dtype_f32>(src->data, dst->data, group);
     else
       POPNET_UNSUPPORTED_STATIC("Unsupported reduction operation");
-
-    if constexpr (op == popnet_op_reduce_mean)
-    {
-      const size_t output_size = popnet_numel(dst->shape);
-      const size_t reduction_count = popnet_numel(src->shape) / output_size;
-      const float divisor = static_cast<float>(reduction_count);
-      simd_map_inplace<simd::div_f32, popnet_dtype_f32>(
-          dst->data, output_size, static_cast<const broadcast*>(static_cast<const void*>(&divisor)));
-    }
   }
   else
   {
