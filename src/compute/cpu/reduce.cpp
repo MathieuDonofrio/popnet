@@ -3,6 +3,7 @@
 #include "dtype_traits.h"
 #include "memory.h"
 #include "simd_algorithms.h"
+#include "simd_ops_f32.h"
 #include "tensor.h"
 
 static constexpr auto mean_finalize = [](auto value, size_t n) {

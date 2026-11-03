@@ -202,17 +202,10 @@ POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inpu
     POPNET_UNSUPPORTED_STATIC("SIMD algorithms require a fixed or scalar CPU execution model");
   }
 
-  if constexpr (std::is_invocable_v<decltype(horizontal_op), decltype(s), size_t>)
-  {
-    return finalize_op(horizontal_op(s, n), n);
-  }
-  else
-  {
-    return finalize_op(horizontal_op(s), n);
-  }
+  return finalize_op(horizontal_op(s), n);
 }
 
-template <auto state_init_op, auto merge_op, popnet_dtype dtype, auto finalize_op = identity_finalize, typename... T>
+template <auto state_init_op, auto merge_op, popnet_dtype dtype, auto finalize_op, typename... T>
 requires(sizeof...(T) >= 1)
 POPNET_INLINE static void simd_reduce_rows(void* POPNET_RESTRICT output, size_t rows, size_t cols,
                                            const T* POPNET_RESTRICT... inputs) noexcept
