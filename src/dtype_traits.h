@@ -1,8 +1,5 @@
 #pragma once
 
-#include <concepts>
-#include <utility>
-
 #include "platform.h"
 
 enum class cpu_execution_model
@@ -45,6 +42,10 @@ template <> struct dtype_traits<popnet_dtype_f32>
   using vector_t = scalar_t;
 
   POPNET_INLINE static consteval size_t vector_length() { return 1; }
+
+  POPNET_INLINE static vector_t vload(const void* p) { return load(p); }
+
+  POPNET_INLINE static void vstore(void* p, vector_t v) { store(p, v); }
 
   POPNET_INLINE static scalar_t broadcast(scalar_t a) { return a; }
 #endif

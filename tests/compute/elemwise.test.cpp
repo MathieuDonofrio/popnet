@@ -69,6 +69,12 @@ TEST_CASE("elementwise unary compute")
     SUBCASE("3") { run_n(3); }
     SUBCASE("4") { run_n(4); }
     SUBCASE("5") { run_n(5); }
+    SUBCASE("15") { run_n(15); }
+    SUBCASE("16") { run_n(16); }
+    SUBCASE("17") { run_n(17); }
+    SUBCASE("31") { run_n(31); }
+    SUBCASE("32") { run_n(32); }
+    SUBCASE("33") { run_n(33); }
     SUBCASE("1000") { run_n(1000); }
   };
 
@@ -240,6 +246,20 @@ TEST_CASE("element binary compute")
       popnet_free(rhs);
       popnet_free(dst);
     };
+
+    SUBCASE("SIMD boundaries")
+    {
+      for (size_t n : {1, 3, 15, 16, 17, 31, 32, 33})
+      {
+        CAPTURE(n);
+
+        run_shape(popnet_shape{{1, 1, 1, n}}, popnet_shape{{1, 1, 1, n}});
+        run_shape(popnet_shape{{1, 1, 1, 1}}, popnet_shape{{1, 1, 1, n}});
+        run_shape(popnet_shape{{1, 1, 1, n}}, popnet_shape{{1, 1, 1, 1}});
+        run_shape(popnet_shape{{1, 1, 3, n}}, popnet_shape{{1, 1, 1, n}});
+        run_shape(popnet_shape{{1, 1, 3, n}}, popnet_shape{{1, 1, 3, 1}});
+      }
+    }
 
     SUBCASE("1x1x1x1 1x1x1x1") { run_shape(popnet_shape{{1, 1, 1, 1}}, popnet_shape{{1, 1, 1, 1}}); }
     SUBCASE("1x1x1x2 1x1x1x2") { run_shape(popnet_shape{{1, 1, 1, 2}}, popnet_shape{{1, 1, 1, 2}}); }

@@ -1,5 +1,11 @@
 #pragma once
 
+#include <concepts>
+#include <cstddef>
+#include <cstdint>
+#include <type_traits>
+#include <utility>
+
 #include "dtype_traits.h"
 
 // Pointer tag for a scalar reused across lanes and iterations; no broadcast object is stored.
@@ -90,7 +96,8 @@ POPNET_INLINE static void simd_map_impl(void* output, size_t n, const T*... inpu
 {
   using dtype_traits = dtype_traits<dtype>;
 
-  if constexpr (dtype_traits::cpu_execution_model == cpu_execution_model::fixed)
+  if constexpr (dtype_traits::cpu_execution_model == cpu_execution_model::fixed ||
+                dtype_traits::cpu_execution_model == cpu_execution_model::scalar)
   {
     constexpr size_t vector_length = dtype_traits::vector_length();
 
@@ -110,28 +117,17 @@ POPNET_INLINE static void simd_map_impl(void* output, size_t n, const T*... inpu
       ((inputs = maybe_broadcast_advance<dtype>(inputs, vector_length)), ...);
     }
 
-    if (tail)
+    if constexpr (dtype_traits::cpu_execution_model == cpu_execution_model::fixed)
     {
-      const typename dtype_traits::mask_t m = (1 << tail) - 1;
+      if (tail)
+      {
+        const typename dtype_traits::mask_t m = (1 << tail) - 1;
 
-      if constexpr (inplace)
-        dtype_traits::vstore(output, m, op(dtype_traits::vload(output, m), maybe_broadcast_vload<dtype>(inputs, m)...));
-      else
-        dtype_traits::vstore(output, m, op(maybe_broadcast_vload<dtype>(inputs, m)...));
-    }
-  }
-  else if constexpr (dtype_traits::cpu_execution_model == cpu_execution_model::scalar)
-  {
-    const void* const output_end = dtype_traits::advance(output, n);
-
-    while (output != output_end)
-    {
-      if constexpr (inplace) dtype_traits::store(output, op(dtype_traits::load(output), dtype_traits::load(inputs)...));
-      else
-        dtype_traits::store(output, op(dtype_traits::load(inputs)...));
-
-      output = dtype_traits::advance(output, 1);
-      ((inputs = maybe_broadcast_advance<dtype>(inputs, 1)), ...);
+        if constexpr (inplace)
+          dtype_traits::vstore(output, m, op(dtype_traits::vload(output, m), maybe_broadcast_vload<dtype>(inputs, m)...));
+        else
+          dtype_traits::vstore(output, m, op(maybe_broadcast_vload<dtype>(inputs, m)...));
+      }
     }
   }
   else
