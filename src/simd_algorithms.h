@@ -158,7 +158,8 @@ POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inpu
 
   auto s = state_init_op();
 
-  if constexpr (dtype_traits::cpu_execution_model == cpu_execution_model::fixed)
+  if constexpr (dtype_traits::cpu_execution_model == cpu_execution_model::fixed ||
+                dtype_traits::cpu_execution_model == cpu_execution_model::scalar)
   {
     constexpr size_t vector_length = dtype_traits::vector_length();
 
@@ -174,23 +175,15 @@ POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inpu
       ((inputs = maybe_broadcast_advance<dtype>(inputs, vector_length)), ...);
     }
 
-    if (tail)
+    if constexpr (dtype_traits::cpu_execution_model == cpu_execution_model::fixed)
     {
-      const typename dtype_traits::mask_t m = dtype_traits::tail_mask(tail);
+      if (tail)
+      {
+        const typename dtype_traits::mask_t m = dtype_traits::tail_mask(tail);
 
-      // Preserve inactive accumulator lanes: zero-filled masked loads are not neutral for every reduction.
-      s = dtype_traits::blend(s, merge_op(maybe_broadcast_vload<dtype>(inputs, m)..., s), m);
-    }
-  }
-  else if constexpr (dtype_traits::cpu_execution_model == cpu_execution_model::scalar)
-  {
-    const void* const first_input_end = dtype_traits::advance(pack_first_element(inputs...), n);
-
-    while (pack_first_element(inputs...) != first_input_end)
-    {
-      s = merge_op(dtype_traits::load(inputs)..., s);
-
-      ((inputs = maybe_broadcast_advance<dtype>(inputs, 1)), ...);
+        // Preserve inactive accumulator lanes: zero-filled masked loads are not neutral for every reduction.
+        s = dtype_traits::blend(s, merge_op(maybe_broadcast_vload<dtype>(inputs, m)..., s), m);
+      }
     }
   }
   else
@@ -208,7 +201,8 @@ POPNET_INLINE static void simd_reduce_rows(void* POPNET_RESTRICT output, size_t 
 {
   using traits = dtype_traits<dtype>;
 
-  if constexpr (traits::cpu_execution_model == cpu_execution_model::fixed)
+  if constexpr (traits::cpu_execution_model == cpu_execution_model::fixed ||
+                traits::cpu_execution_model == cpu_execution_model::scalar)
   {
     constexpr size_t vector_length = traits::vector_length();
 
@@ -227,35 +221,24 @@ POPNET_INLINE static void simd_reduce_rows(void* POPNET_RESTRICT output, size_t 
       traits::vstore(traits::advance(output, col), finalize_op(s, rows));
     }
 
-    if (tail)
+    if constexpr (traits::cpu_execution_model == cpu_execution_model::fixed)
     {
-      const typename traits::mask_t m = traits::tail_mask(tail);
-
-      auto s = state_init_op();
-
-      for (size_t row = 0; row < rows; ++row)
+      if (tail)
       {
-        s = traits::blend(
-            s,
-            merge_op(maybe_broadcast_vload<dtype>(maybe_broadcast_advance_2d<dtype>(inputs, row, body, cols), m)..., s),
-            m);
+        const typename traits::mask_t m = traits::tail_mask(tail);
+
+        auto s = state_init_op();
+
+        for (size_t row = 0; row < rows; ++row)
+        {
+          s = traits::blend(
+              s,
+              merge_op(maybe_broadcast_vload<dtype>(maybe_broadcast_advance_2d<dtype>(inputs, row, body, cols), m)..., s),
+              m);
+        }
+
+        traits::vstore(traits::advance(output, body), m, finalize_op(s, rows));
       }
-
-      traits::vstore(traits::advance(output, body), m, finalize_op(s, rows));
-    }
-  }
-  else if constexpr (traits::cpu_execution_model == cpu_execution_model::scalar)
-  {
-    for (size_t col = 0; col < cols; ++col)
-    {
-      auto s = state_init_op();
-
-      for (size_t row = 0; row < rows; ++row)
-      {
-        s = merge_op(traits::load(maybe_broadcast_advance_2d<dtype>(inputs, row, col, cols))..., s);
-      }
-
-      traits::store(traits::advance(output, col), finalize_op(s, rows));
     }
   }
   else
