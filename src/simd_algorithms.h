@@ -121,7 +121,7 @@ POPNET_INLINE static void simd_map_impl(void* output, size_t n, const T*... inpu
     {
       if (tail)
       {
-        const typename dtype_traits::mask_t m = (1 << tail) - 1;
+        const typename dtype_traits::mask_t m = dtype_traits::tail_mask(tail);
 
         if constexpr (inplace)
           dtype_traits::vstore(output, m, op(dtype_traits::vload(output, m), maybe_broadcast_vload<dtype>(inputs, m)...));
@@ -176,7 +176,7 @@ POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inpu
 
     if (tail)
     {
-      const typename dtype_traits::mask_t m = (1 << tail) - 1;
+      const typename dtype_traits::mask_t m = dtype_traits::tail_mask(tail);
 
       // Preserve inactive accumulator lanes: zero-filled masked loads are not neutral for every reduction.
       s = dtype_traits::blend(s, merge_op(maybe_broadcast_vload<dtype>(inputs, m)..., s), m);
@@ -229,7 +229,7 @@ POPNET_INLINE static void simd_reduce_rows(void* POPNET_RESTRICT output, size_t 
 
     if (tail)
     {
-      const typename traits::mask_t m = (uint64_t{1} << tail) - 1;
+      const typename traits::mask_t m = traits::tail_mask(tail);
 
       auto s = state_init_op();
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include "platform.h"
 
 enum class cpu_execution_model
@@ -22,6 +24,9 @@ template <> struct dtype_traits<popnet_dtype_f32>
   using mask_t = __mmask16;
 
   POPNET_INLINE static consteval size_t vector_length() { return sizeof(vector_t) / element_size(); }
+
+  // Enable the first count lanes, where 0 <= count <= vector_length() (16).
+  POPNET_INLINE static mask_t tail_mask(size_t count) { return static_cast<mask_t>((uint32_t{1} << count) - 1); }
 
   POPNET_INLINE static vector_t vload(const void* p) { return _mm512_loadu_ps(p); }
   POPNET_INLINE static vector_t vload(const void* p, const mask_t m) { return _mm512_maskz_loadu_ps(m, p); }
