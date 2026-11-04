@@ -1,12 +1,17 @@
 #include "elemwise.h"
 
+#include <algorithm>
+#include <cmath>
 #include <doctest/doctest.h>
+#include <numbers>
+#include <type_traits>
 #include <vector>
 
 #include "dtype_traits.h"
 #include "ops.h"
 #include "tensor.h"
-#include "test_utils.h"
+#include "test_assertions.h"
+#include "test_data.h"
 
 // @verifies REQ-0001: Compares unary results with scalar references.
 // @verifies REQ-0007: Exercises float32 unary operations.
@@ -52,7 +57,7 @@ TEST_CASE("elementwise unary compute")
 
         if constexpr (std::is_floating_point_v<decltype(expected)>)
         {
-          CHECK(actual == doctest::Approx(expected).epsilon(1e-4));
+          CHECK_F32_CLOSE(actual, expected, 1e-4, 1e-4);
         }
         else
         {
@@ -234,7 +239,7 @@ TEST_CASE("element binary compute")
 
         if constexpr (std::is_floating_point_v<decltype(expected)>)
         {
-          CHECK(actual == doctest::Approx(expected));
+          CHECK_F32_CLOSE(actual, expected, 1.1920928955078125e-5, 1.1920928955078125e-5);
         }
         else
         {

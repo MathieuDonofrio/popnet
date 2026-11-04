@@ -2,12 +2,14 @@
 
 #include <doctest/doctest.h>
 #include <numeric>
+#include <type_traits>
 #include <vector>
 
 #include "dtype_traits.h"
 #include "ops.h"
 #include "tensor.h"
-#include "test_utils.h"
+#include "test_assertions.h"
+#include "test_data.h"
 
 template <popnet_dtype dtype> static auto transpose_ref(const auto& src, size_t outer_size, size_t n, size_t m)
 {
@@ -109,7 +111,7 @@ TEST_CASE("matmul")
     popnet_get_data(c, output_data.data(), popnet_dtype_f32, 0, popnet_numel(c_shape));
     for (size_t i = 0; i < output_data.size(); ++i)
     {
-      CHECK(output_data[i] == doctest::Approx(expected_data[i]).epsilon(1e-5f).scale(1.0f));
+      CHECK_F32_CLOSE(output_data[i], expected_data[i], 1e-5f, 1e-5f);
     }
 
     popnet_free(c);
@@ -149,7 +151,7 @@ TEST_CASE("matmul")
     popnet_get_data(c, output_data.data(), popnet_dtype_f32, 0, popnet_numel(c_shape));
     for (size_t i = 0; i < output_data.size(); ++i)
     {
-      CHECK(output_data[i] == doctest::Approx(expected_data[i]).epsilon(1e-5f).scale(1.0f));
+      CHECK_F32_CLOSE(output_data[i], expected_data[i], 1e-5f, 1e-5f);
     }
 
     popnet_free(c);
@@ -188,7 +190,7 @@ TEST_CASE("matmul")
     popnet_get_data(c, output_data.data(), popnet_dtype_f32, 0, popnet_numel(c_shape));
     for (size_t i = 0; i < output_data.size(); ++i)
     {
-      CHECK(output_data[i] == doctest::Approx(expected_data[i]).epsilon(1e-5f).scale(1.0f));
+      CHECK_F32_CLOSE(output_data[i], expected_data[i], 1e-5f, 1e-5f);
     }
 
     popnet_free(c);
@@ -228,7 +230,7 @@ TEST_CASE("matmul")
     popnet_get_data(c, output_data.data(), popnet_dtype_f32, 0, popnet_numel(c_shape));
     for (size_t i = 0; i < output_data.size(); ++i)
     {
-      CHECK(output_data[i] == doctest::Approx(expected_data[i]).epsilon(1e-5f).scale(1.0f));
+      CHECK_F32_CLOSE(output_data[i], expected_data[i], 1e-5f, 1e-5f);
     }
 
     popnet_free(c);
@@ -272,7 +274,7 @@ TEST_CASE("matmul")
     {
       if constexpr (std::is_floating_point_v<scalar_t>)
       {
-        CHECK(output_data[i] == doctest::Approx(expected_data[i]).epsilon(1e-4f).scale(1.0f));
+        CHECK_F32_CLOSE(output_data[i], expected_data[i], 1e-4f, 1e-4f);
       }
       else
       {

@@ -6,6 +6,7 @@
 
 #include "ops.h"
 #include "tensor.h"
+#include "test_assertions.h"
 
 static void check_graph_result(popnet_tensor* result, const float* expected, size_t count)
 {
@@ -25,7 +26,7 @@ static void check_graph_result(popnet_tensor* result, const float* expected, siz
   for (size_t i = 0; i < count; ++i)
   {
     CAPTURE(i);
-    CHECK(actual[i] == doctest::Approx(expected[i]).epsilon(1e-5));
+    CHECK_F32_CLOSE(actual[i], expected[i], 1e-5, 1e-5);
   }
 
   popnet_graph_free(graph);
@@ -403,7 +404,7 @@ TEST_CASE("popnet_graph compute forward")
 
     for (int i = 0; i < 4; ++i)
     {
-      CHECK(out[i] == doctest::Approx(a_values[i]).epsilon(1e-4));
+      CHECK_F32_CLOSE(out[i], a_values[i], 1e-4, 1e-4);
     }
   }
 
@@ -423,8 +424,8 @@ TEST_CASE("popnet_graph compute forward")
 
     for (int i = 0; i < 4; ++i)
     {
-      CHECK(c1_out[i] == doctest::Approx(std::abs(a_values[i])).epsilon(1e-4));
-      CHECK(c2_out[i] == doctest::Approx(-b_values[i]).epsilon(1e-4));
+      CHECK_F32_CLOSE(c1_out[i], std::abs(a_values[i]), 1e-4, 1e-4);
+      CHECK_F32_CLOSE(c2_out[i], -b_values[i], 1e-4, 1e-4);
     }
 
     popnet_free(c1);
@@ -445,8 +446,8 @@ TEST_CASE("popnet_graph compute forward")
 
     for (int i = 0; i < 4; ++i)
     {
-      CHECK(c_out[i] == doctest::Approx(std::abs(a_values[i])).epsilon(1e-4));
-      CHECK(d_out[i] == doctest::Approx(c_out[i] + b_values[i]).epsilon(1e-4));
+      CHECK_F32_CLOSE(c_out[i], std::abs(a_values[i]), 1e-4, 1e-4);
+      CHECK_F32_CLOSE(d_out[i], c_out[i] + b_values[i], 1e-4, 1e-4);
     }
 
     popnet_free(c);
@@ -467,8 +468,8 @@ TEST_CASE("popnet_graph compute forward")
 
     for (int i = 0; i < 4; ++i)
     {
-      CHECK(c_out[i] == doctest::Approx(a_values[i] + b_values[i]).epsilon(1e-4));
-      CHECK(d_out[i] == doctest::Approx(std::abs(c_out[i])).epsilon(1e-4));
+      CHECK_F32_CLOSE(c_out[i], a_values[i] + b_values[i], 1e-4, 1e-4);
+      CHECK_F32_CLOSE(d_out[i], std::abs(c_out[i]), 1e-4, 1e-4);
     }
 
     popnet_free(c);
@@ -491,9 +492,9 @@ TEST_CASE("popnet_graph compute forward")
 
     for (int i = 0; i < 4; ++i)
     {
-      CHECK(c_out[i] == doctest::Approx(a_values[i] + b_values[i]).epsilon(1e-4));
-      CHECK(d_out[i] == doctest::Approx(std::abs(a_values[i])).epsilon(1e-4));
-      CHECK(e_out[i] == doctest::Approx(c_out[i] + d_out[i]).epsilon(1e-4));
+      CHECK_F32_CLOSE(c_out[i], a_values[i] + b_values[i], 1e-4, 1e-4);
+      CHECK_F32_CLOSE(d_out[i], std::abs(a_values[i]), 1e-4, 1e-4);
+      CHECK_F32_CLOSE(e_out[i], c_out[i] + d_out[i], 1e-4, 1e-4);
     }
 
     popnet_free(c);
@@ -517,9 +518,9 @@ TEST_CASE("popnet_graph compute forward")
 
     for (int i = 0; i < 4; ++i)
     {
-      CHECK(c1_out[i] == doctest::Approx(std::abs(a_values[i])).epsilon(1e-4));
-      CHECK(c2_out[i] == doctest::Approx(-a_values[i]).epsilon(1e-4));
-      CHECK(d_out[i] == doctest::Approx(c1_out[i] + c2_out[i]).epsilon(1e-4));
+      CHECK_F32_CLOSE(c1_out[i], std::abs(a_values[i]), 1e-4, 1e-4);
+      CHECK_F32_CLOSE(c2_out[i], -a_values[i], 1e-4, 1e-4);
+      CHECK_F32_CLOSE(d_out[i], c1_out[i] + c2_out[i], 1e-4, 1e-4);
     }
 
     popnet_free(c1);
@@ -592,7 +593,7 @@ TEST_CASE("popnet_graph compute forward")
 
     for (int j = 0; j < TENSOR_SIZE; ++j)
     {
-      CHECK(last_out[j] == doctest::Approx(expected[j]).epsilon(1e-4));
+      CHECK_F32_CLOSE(last_out[j], expected[j], 1e-4, 1e-4);
     }
 
     for (size_t i = 2; i < nodes.size(); ++i)

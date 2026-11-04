@@ -1,14 +1,17 @@
 #include "reduce.h"
 
+#include <algorithm>
 #include <cstring>
 #include <doctest/doctest.h>
 #include <limits>
+#include <type_traits>
 #include <vector>
 
 #include "dtype_traits.h"
 #include "ops.h"
 #include "tensor.h"
-#include "test_utils.h"
+#include "test_assertions.h"
+#include "test_data.h"
 
 template <popnet_dtype dtype, class InitFn, class MergeFn, class FinalizeFn>
 static auto reduce_ref(const auto& src, popnet_shape src_shape, auto& dst, popnet_shape dst_shape, InitFn init_fn,
@@ -172,7 +175,7 @@ TEST_CASE("separated reduction groups compose through the public API")
     std::vector<float> actual(expected.size());
     popnet_get_data(result, actual.data(), popnet_dtype_f32, 0, actual.size());
     for (size_t i = 0; i < actual.size(); ++i)
-      CHECK(actual[i] == doctest::Approx(expected[i]));
+      CHECK_F32_CLOSE(actual[i], expected[i], 1.1920928955078125e-5, 1.1920928955078125e-5);
     std::vector<float> preserved(input.size());
     popnet_get_data(src, preserved.data(), popnet_dtype_f32, 0, preserved.size());
     CHECK(std::memcmp(preserved.data(), input.data(), input.size() * sizeof(float)) == 0);
@@ -237,7 +240,7 @@ TEST_CASE("reduce compute")
       {
         if constexpr (std::is_floating_point_v<scalar_t>)
         {
-          CHECK(actual[i] == doctest::Approx(expected[i]));
+          CHECK_F32_CLOSE(actual[i], expected[i], 1.1920928955078125e-5, 1.1920928955078125e-5);
         }
         else
         {

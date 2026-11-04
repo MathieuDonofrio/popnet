@@ -1,10 +1,8 @@
 #pragma once
 
-#include <algorithm>
-#include <numbers>
-#include <numeric>
+#include <cstddef>
+#include <doctest/doctest.h>
 #include <random>
-#include <ranges>
 #include <vector>
 
 #include "dtype_traits.h"
