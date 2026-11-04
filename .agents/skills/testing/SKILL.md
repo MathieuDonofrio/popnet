@@ -1,6 +1,6 @@
 ---
 name: testing
-description: Write, update, and review project tests.
+description: Write, update, and review doctest tests when verifying required behavior, boundary cases, and failure conditions.
 ---
 
 # Testing

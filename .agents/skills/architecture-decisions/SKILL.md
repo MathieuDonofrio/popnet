@@ -20,8 +20,7 @@ Existing code is evidence of the chosen architecture, not necessarily its origin
 - Use sequential IDs: `ADR-0001`.
 - Filename: `ADR-0001-short-title.md`.
 - Keep IDs stable and never reuse retired IDs.
-- Use YAML front matter with required `id`, `title`, and `status`.
-- Allowed statuses: `proposed`, `accepted`, `superseded`.
+- Use YAML front matter with required `id` and `title`.
 
 ## Template
 

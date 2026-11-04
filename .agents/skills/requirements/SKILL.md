@@ -1,6 +1,6 @@
 ---
 name: requirements
-description: Create, update, and review requirements linked to project intents.
+description: Create, update, and review requirements when defining verifiable behavior or constraints linked to project intents.
 ---
 
 # Requirements
