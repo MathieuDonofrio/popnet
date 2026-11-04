@@ -14,16 +14,19 @@ description: Write, update, and review doctest tests when verifying required beh
 
 ## Annotation
 
-Annotate each TEST_CASE as shown below, one line per requirement. The rationale
-is optional, and annotations include the test's subcases.
+Every `TEST_CASE` must have at least one valid `// @verifies REQ-NNNN` annotation
+immediately preceding it, one line per requirement. The rationale is optional.
+`SUBCASE`s inherit their parent `TEST_CASE` annotations.
 
 ```cpp
 // @verifies REQ-NNNN: <optional rationale>
 TEST_CASE("<behavior being tested>")
 ```
 
-Link only existing requirements the test actually checks. Report gaps rather
-than invent links. A link does not imply complete coverage.
+Link only existing requirement IDs selected by the behavior the test actually
+verifies. If no existing requirement meaningfully applies, report the gap rather
+than leaving the test unannotated or inventing an association. A link does not
+imply complete coverage.
 
 ## Quality
 
@@ -33,6 +36,12 @@ than invent links. A link does not imply complete coverage.
 - Representative: Cases include relevant boundaries and failure conditions without redundant variations.
 - Repeatable: Tests produce reproducible results and do not depend on execution order.
 - Maintainable: Setup is minimal and failures identify the behavior that broke.
+
+## Architecture independence
+
+Verify observable behavior with the same architecture-independent inputs and
+expected results across scalar and SIMD implementations. Do not conditionally
+compile test cases or assertions using macros. Rely on the build configuration and CI matrix to select the implementation.
 
 ## Verification
 
