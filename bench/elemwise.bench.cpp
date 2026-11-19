@@ -129,3 +129,34 @@ template <bool naive> static void square_root(benchmark::State& state)
 
 BENCHMARK_TEMPLATE(square_root, false)->Name("f32/square_root/popnet")->Arg(31)->Arg(1048576);
 BENCHMARK_TEMPLATE(square_root, true)->Name("f32/square_root/naive")->Arg(31)->Arg(1048576);
+
+template <bool naive> static void sigmoid(benchmark::State& state)
+{
+  const size_t n = state.range(0);
+  const float extent = static_cast<float>(state.range(1));
+  std::vector<float> input(n), output(n);
+  for (size_t i = 0; i < n; ++i)
+    input[i] = extent * (2.0f * static_cast<float>((i * 7919) % 65521) / 65520.0f - 1.0f);
+  popnet_tensor src{.shape = {{1, 1, 1, n}}, .data = input.data(), .dtype = popnet_dtype_f32};
+  popnet_tensor dst{.shape = src.shape, .data = output.data(), .src = {&src}, .dtype = popnet_dtype_f32};
+  benchmark::DoNotOptimize(input.data());
+  benchmark::DoNotOptimize(output.data());
+
+  for (auto _ : state)
+  {
+    if constexpr (naive)
+    {
+      for (size_t i = 0; i < n; ++i)
+      {
+        const float e = std::exp(-std::abs(input[i]));
+        output[i] = (input[i] < 0 ? e : 1.0f) / (1.0f + e);
+      }
+    }
+    else
+      popnet_compute_sigmoid(&dst);
+    benchmark::ClobberMemory();
+  }
+}
+
+BENCHMARK_TEMPLATE(sigmoid, false)->Name("f32/sigmoid/popnet")->ArgsProduct({{31, 4096, 1048576}, {10, 100}});
+BENCHMARK_TEMPLATE(sigmoid, true)->Name("f32/sigmoid/naive")->ArgsProduct({{31, 4096, 1048576}, {10, 100}});

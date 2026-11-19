@@ -17,9 +17,6 @@ template <popnet_dtype dtype, class InitFn, class MergeFn, class FinalizeFn>
 static auto reduce_ref(const auto& src, popnet_shape src_shape, auto& dst, popnet_shape dst_shape, InitFn init_fn,
                        MergeFn merge_fn, FinalizeFn finalize_fn)
 {
-  using dtype_traits = dtype_traits<dtype>;
-  using scalar_t = typename dtype_traits::scalar_t;
-
   const size_t src_numel = popnet_numel(src_shape);
   const size_t dst_numel = popnet_numel(dst_shape);
 
@@ -62,7 +59,7 @@ static auto reduce_ref(const auto& src, popnet_shape src_shape, auto& dst, popne
       dst_idx += dst_coord[d] * dst_strides[d];
     }
 
-    merge_fn(dst[dst_idx], static_cast<scalar_t>(src[src_idx]));
+    merge_fn(dst[dst_idx], src[src_idx]);
     ++counts[dst_idx];
   }
 
@@ -74,8 +71,69 @@ static auto reduce_ref(const auto& src, popnet_shape src_shape, auto& dst, popne
   return dst;
 }
 
+// Check each operation against the exact mathematical reference, reserving part
+// of the F32 bound for binary64 reference rounding rather than loosening the bound.
+static void check_reduction_accuracy(decltype(&popnet_compute_reduce_sum) compute, const std::vector<float>& input,
+                                     popnet_shape shape, popnet_shape output_shape, const std::vector<float>& actual)
+{
+  const size_t count = input.size() / actual.size();
+  if (count == 1)
+  {
+    CHECK(std::memcmp(actual.data(), input.data(), input.size() * sizeof(float)) == 0);
+    return;
+  }
+  const bool product = compute == popnet_compute_reduce_product;
+  const bool mean = compute == popnet_compute_reduce_mean;
+  const bool minimum = compute == popnet_compute_reduce_min;
+  const bool maximum = compute == popnet_compute_reduce_max;
+  std::vector<double> expected, magnitudes;
+  reduce_ref<popnet_dtype_f32>(
+      input, shape, expected, output_shape,
+      [&] {
+        return product   ? 1.0
+               : minimum ? std::numeric_limits<double>::infinity()
+               : maximum ? -std::numeric_limits<double>::infinity()
+                         : 0.0;
+      },
+      [&](double& acc, float value) {
+        if (product) acc *= value;
+        else if (minimum)
+          acc = std::min(acc, double(value));
+        else if (maximum)
+          acc = std::max(acc, double(value));
+        else
+          acc += value;
+      },
+      [&](double acc, size_t n) { return mean ? acc / double(n) : acc; });
+  reduce_ref<popnet_dtype_f32>(
+      input, shape, magnitudes, output_shape, [] { return 0.0; },
+      [](double& acc, float value) { acc += std::abs(double(value)); },
+      [&](double acc, size_t n) { return mean ? acc / double(n) : acc; });
+
+  for (size_t i = 0; i < actual.size(); ++i)
+  {
+    CAPTURE(i);
+    CAPTURE(count);
+    CAPTURE(actual[i]);
+    CAPTURE(expected[i]);
+    if (minimum || maximum)
+    {
+      CHECK(actual[i] == expected[i]);
+      continue;
+    }
+    const size_t steps = mean ? count : count - 1;
+    const double reference_gamma = rounding_gamma(steps, 0x1p-53);
+    const double scale = product ? std::abs(expected[i]) : magnitudes[i];
+    const double reference_error = reference_gamma * scale / (1 - reference_gamma);
+    const double bound = rounding_gamma(steps) * scale / (1 + reference_gamma);
+    REQUIRE(std::isfinite(expected[i]));
+    CHECK_F32_CLOSE(actual[i], expected[i], bound - reference_error, 0);
+  }
+}
+
 // @verifies REQ-0003: Checks singleton-axis reduction values, including special floating-point values.
 // @verifies REQ-0007: Exercises float32 singleton-axis reductions.
+// @verifies REQ-0026: Singleton reductions preserve every representation bit.
 TEST_CASE("reductions over singleton axes preserve input values")
 {
   const auto reductions = {popnet_compute_reduce_sum, popnet_compute_reduce_mean, popnet_compute_reduce_product,
@@ -129,22 +187,19 @@ TEST_CASE("reductions over singleton axes preserve input values")
 
 // @verifies REQ-0003: Composed reductions over separated groups match the scalar reference.
 // @verifies REQ-0025: Composed reductions leave the input unchanged.
+// @verifies REQ-0026: Each operation in the composition satisfies its own accuracy bound.
 TEST_CASE("separated reduction groups compose through the public API")
 {
   struct reduction
   {
     decltype(&popnet_reduce_sum) create;
-    float initial;
-    float (*merge)(float, float);
-    bool mean;
+    decltype(&popnet_compute_reduce_sum) compute;
   };
-  const reduction operations[] = {{popnet_reduce_sum, 0, [](float a, float b) { return a + b; }, false},
-                                  {popnet_reduce_mean, 0, [](float a, float b) { return a + b; }, true},
-                                  {popnet_reduce_product, 1, [](float a, float b) { return a * b; }, false},
-                                  {popnet_reduce_min, std::numeric_limits<float>::infinity(),
-                                   [](float a, float b) { return std::min(a, b); }, false},
-                                  {popnet_reduce_max, -std::numeric_limits<float>::infinity(),
-                                   [](float a, float b) { return std::max(a, b); }, false}};
+  const reduction operations[] = {{popnet_reduce_sum, popnet_compute_reduce_sum},
+                                  {popnet_reduce_mean, popnet_compute_reduce_mean},
+                                  {popnet_reduce_product, popnet_compute_reduce_product},
+                                  {popnet_reduce_min, popnet_compute_reduce_min},
+                                  {popnet_reduce_max, popnet_compute_reduce_max}};
   const popnet_shape shape{{2, 3, 4, 5}};
   const popnet_shape expected_shape{{1, 3, 1, 1}};
   std::vector<float> input(popnet_numel(shape));
@@ -153,11 +208,6 @@ TEST_CASE("separated reduction groups compose through the public API")
 
   for (const auto& operation : operations)
   {
-    std::vector<float> expected;
-    reduce_ref<popnet_dtype_f32>(
-        input, shape, expected, expected_shape, [&] { return operation.initial; },
-        [&](float& acc, float value) { acc = operation.merge(acc, value); },
-        [&](float acc, size_t count) { return operation.mean ? acc / static_cast<float>(count) : acc; });
     auto* src = popnet_empty(popnet_dtype_f32, shape);
     REQUIRE(src != nullptr);
     popnet_set_data(src, input.data(), popnet_dtype_f32, 0, input.size());
@@ -172,10 +222,12 @@ TEST_CASE("separated reduction groups compose through the public API")
     popnet_graph_compute_forward(graph);
 
     CHECK(popnet_shapeof(result) == expected_shape);
-    std::vector<float> actual(expected.size());
+    std::vector<float> intermediate(popnet_numel(popnet_shapeof(spatial)));
+    popnet_get_data(spatial, intermediate.data(), popnet_dtype_f32, 0, intermediate.size());
+    check_reduction_accuracy(operation.compute, input, shape, popnet_shapeof(spatial), intermediate);
+    std::vector<float> actual(popnet_numel(expected_shape));
     popnet_get_data(result, actual.data(), popnet_dtype_f32, 0, actual.size());
-    for (size_t i = 0; i < actual.size(); ++i)
-      CHECK_F32_CLOSE(actual[i], expected[i], 1.1920928955078125e-5, 1.1920928955078125e-5);
+    check_reduction_accuracy(operation.compute, intermediate, popnet_shapeof(spatial), expected_shape, actual);
     std::vector<float> preserved(input.size());
     popnet_get_data(src, preserved.data(), popnet_dtype_f32, 0, preserved.size());
     CHECK(std::memcmp(preserved.data(), input.data(), input.size() * sizeof(float)) == 0);
@@ -202,9 +254,10 @@ static bool supported_mask(popnet_shape shape, uint8_t mask)
 // @verifies REQ-0003: Compares reduction results with scalar references for supported axis groups.
 // @verifies REQ-0007: Exercises all five float32 reduction operations.
 // @verifies REQ-0025: Checks input preservation for supported reduction-axis masks.
+// @verifies REQ-0026: Reduction errors scale with count and input magnitudes.
 TEST_CASE("reduce compute")
 {
-  auto run = []<auto compute, auto compute_ref, popnet_dtype dtype>(auto lower, auto upper, bool exclude_zero = false) {
+  auto run = []<auto compute, popnet_dtype dtype>(auto lower, auto upper, bool exclude_zero = false) {
     auto run_shape = [&](popnet_shape src_shape, popnet_shape dst_shape) {
       using dtype_dtype_traits = dtype_traits<dtype>;
       using scalar_t = typename dtype_dtype_traits::scalar_t;
@@ -212,8 +265,6 @@ TEST_CASE("reduce compute")
       const size_t n = popnet_numel(src_shape);
 
       auto input_data = generate_scalar_data<dtype>(n, lower, upper, exclude_zero);
-
-      auto expected = compute_ref(input_data, src_shape, dst_shape);
 
       popnet_tensor* src = popnet_empty(dtype, src_shape);
       popnet_tensor* dst = popnet_empty(dtype, dst_shape);
@@ -235,18 +286,7 @@ TEST_CASE("reduce compute")
       std::vector<scalar_t> actual(popnet_numel(dst_shape));
       popnet_get_data(dst, actual.data(), dtype, 0, actual.size());
 
-      REQUIRE(actual.size() == expected.size());
-      for (size_t i = 0; i < actual.size(); ++i)
-      {
-        if constexpr (std::is_floating_point_v<scalar_t>)
-        {
-          CHECK_F32_CLOSE(actual[i], expected[i], 1.1920928955078125e-5, 1.1920928955078125e-5);
-        }
-        else
-        {
-          CHECK(actual[i] == expected[i]);
-        }
-      }
+      check_reduction_accuracy(compute, input_data, src_shape, dst_shape, actual);
 
       popnet_free(src);
       popnet_free(dst);
@@ -317,63 +357,62 @@ TEST_CASE("reduce compute")
     }
   };
 
-  SUBCASE("sum - F32")
-  {
-    run.operator()<popnet_compute_reduce_sum,
-                   [](const std::vector<float>& src, popnet_shape src_shape, popnet_shape dst_shape) {
-                     std::vector<float> dst;
-                     return reduce_ref<popnet_dtype_f32>(
-                         src, src_shape, dst, dst_shape, [] { return 0.0f; }, [](float& acc, float v) { acc += v; },
-                         [](float acc, size_t) { return acc; });
-                   },
-                   popnet_dtype_f32>(-10.0f, 10.0f);
-  }
-
-  SUBCASE("mean - F32")
-  {
-    run.operator()<popnet_compute_reduce_mean,
-                   [](const std::vector<float>& src, popnet_shape src_shape, popnet_shape dst_shape) {
-                     std::vector<float> dst;
-                     return reduce_ref<popnet_dtype_f32>(
-                         src, src_shape, dst, dst_shape, [] { return 0.0f; }, [](float& acc, float v) { acc += v; },
-                         [](float acc, size_t count) { return acc / count; });
-                   },
-                   popnet_dtype_f32>(-10.0f, 10.0f);
-  }
-
+  SUBCASE("sum - F32") { run.operator()<popnet_compute_reduce_sum, popnet_dtype_f32>(-10.0f, 10.0f); }
+  SUBCASE("mean - F32") { run.operator()<popnet_compute_reduce_mean, popnet_dtype_f32>(-10.0f, 10.0f); }
   SUBCASE("product - F32")
   {
-    run.operator()<popnet_compute_reduce_product,
-                   [](const std::vector<float>& src, popnet_shape src_shape, popnet_shape dst_shape) {
-                     std::vector<float> dst;
-                     return reduce_ref<popnet_dtype_f32>(
-                         src, src_shape, dst, dst_shape, [] { return 1.0f; }, [](float& acc, float v) { acc *= v; },
-                         [](float acc, size_t) { return acc; });
-                   },
-                   popnet_dtype_f32>(0.5f, 2.0f); // avoids zero underflow
+    // Keep every possible partial product normal for all tested shapes/orders.
+    run.operator()<popnet_compute_reduce_product, popnet_dtype_f32>(0.9f, 1.1f);
   }
+  SUBCASE("min - F32") { run.operator()<popnet_compute_reduce_min, popnet_dtype_f32>(-100.0f, 100.0f); }
+  SUBCASE("max - F32") { run.operator()<popnet_compute_reduce_max, popnet_dtype_f32>(-100.0f, 100.0f); }
+}
 
-  SUBCASE("min - F32")
+// @verifies REQ-0003: Contiguous and strided reductions use the same numerical contract.
+// @verifies REQ-0026: Cancellation, magnitude differences, product signs, and zeros.
+TEST_CASE("reduction F32 numerical boundaries")
+{
+  const struct
   {
-    run.operator()<popnet_compute_reduce_min,
-                   [](const std::vector<float>& src, popnet_shape src_shape, popnet_shape dst_shape) {
-                     std::vector<float> dst;
-                     return reduce_ref<popnet_dtype_f32>(
-                         src, src_shape, dst, dst_shape, [] { return std::numeric_limits<float>::infinity(); },
-                         [](float& acc, float v) { acc = std::min(acc, v); }, [](float acc, size_t) { return acc; });
-                   },
-                   popnet_dtype_f32>(-100.0f, 100.0f);
-  }
+    const char* name;
+    decltype(&popnet_compute_reduce_sum) compute;
+  } operations[] = {{"sum", popnet_compute_reduce_sum},
+                    {"mean", popnet_compute_reduce_mean},
+                    {"prod", popnet_compute_reduce_product},
+                    {"min", popnet_compute_reduce_min},
+                    {"max", popnet_compute_reduce_max}};
+  for (const auto& operation : operations)
+    for (size_t count : {2, 3, 15, 16, 17, 31, 32, 33, 65})
+      for (size_t inner : {1, 17})
+      {
+        INFO("operation: " << doctest::String(operation.name));
+        CAPTURE(count);
+        CAPTURE(inner);
+        const auto compute = operation.compute;
+        const popnet_shape shape{{1, 1, count, inner}}, result_shape{{1, 1, 1, inner}};
+        std::vector<float> input(count * inner), output(inner);
+        const float sum_pattern[] = {0x1p20f, 0x1p-10f, -0x1p20f, -0x1p-10f, 0x1p-12f};
+        const float product_pattern[] = {-2, 0.5f, -1, 1};
+        for (size_t row = 0; row < count; ++row)
+          for (size_t col = 0; col < inner; ++col)
+            input[row * inner + col] = compute == popnet_compute_reduce_product ? product_pattern[(row + col) % 4]
+                                                                                : sum_pattern[(row + col) % 5];
+        popnet_tensor src{.shape = shape, .data = input.data(), .dtype = popnet_dtype_f32};
+        popnet_tensor dst{.shape = result_shape, .data = output.data(), .src = {&src}, .dtype = popnet_dtype_f32};
 
-  SUBCASE("max - F32")
-  {
-    run.operator()<popnet_compute_reduce_max,
-                   [](const std::vector<float>& src, popnet_shape src_shape, popnet_shape dst_shape) {
-                     std::vector<float> dst;
-                     return reduce_ref<popnet_dtype_f32>(
-                         src, src_shape, dst, dst_shape, [] { return -std::numeric_limits<float>::infinity(); },
-                         [](float& acc, float v) { acc = std::max(acc, v); }, [](float acc, size_t) { return acc; });
-                   },
-                   popnet_dtype_f32>(-100.0f, 100.0f);
-  }
+        compute(&dst);
+
+        check_reduction_accuracy(compute, input, shape, result_shape, output);
+
+        // These values have an order-independent result for every operation.
+        for (float value : {0.0f, -0.0f})
+        {
+          std::fill(input.begin(), input.end(), value);
+
+          compute(&dst);
+
+          for (float actual : output)
+            CHECK(actual == value);
+        }
+      }
 }

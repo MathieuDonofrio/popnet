@@ -1,6 +1,9 @@
 #include "linalg.h"
 
+#include <bit>
+#include <cstring>
 #include <doctest/doctest.h>
+#include <limits>
 #include <numeric>
 #include <type_traits>
 #include <vector>
@@ -39,16 +42,15 @@ template <popnet_dtype dtype> static auto transpose_ref(const auto& src, size_t 
 }
 
 template <popnet_dtype dtype>
-static auto matmul_ref(const auto& a, const auto& b, size_t outer_size, size_t m, size_t n, size_t k)
+static auto matmul_ref(const auto& a, const auto& b, size_t outer_size, size_t m, size_t n, size_t k,
+                       std::vector<double>* magnitudes = nullptr)
 {
-  using dtype_traits = dtype_traits<dtype>;
-  using scalar_t = typename dtype_traits::scalar_t;
-
   const size_t a_plane_size = m * k;
   const size_t c_plane_size = m * n;
 
-  std::vector<scalar_t> c;
+  std::vector<double> c;
   c.resize(outer_size * c_plane_size);
+  if (magnitudes) magnitudes->resize(c.size());
 
   for (size_t outer = 0; outer < outer_size; ++outer)
   {
@@ -59,14 +61,18 @@ static auto matmul_ref(const auto& a, const auto& b, size_t outer_size, size_t m
     {
       for (size_t j = 0; j < n; ++j)
       {
-        scalar_t sum{};
+        double sum{}, magnitude{};
 
         for (size_t kk = 0; kk < k; ++kk)
         {
-          sum += a[a_offset + i * k + kk] * b[j * k + kk];
+          // A product of two F32 values is exact in binary64 on this domain.
+          const double term = double(a[a_offset + i * k + kk]) * double(b[j * k + kk]);
+          sum += term;
+          magnitude += std::abs(term);
         }
 
         c[c_offset + i * n + j] = sum;
+        if (magnitudes) (*magnitudes)[c_offset + i * n + j] = magnitude;
       }
     }
   }
@@ -76,6 +82,7 @@ static auto matmul_ref(const auto& a, const auto& b, size_t outer_size, size_t m
 
 // @verifies REQ-0004: Checks A-times-transpose-B results with a shared right operand.
 // @verifies REQ-0007: Exercises float32 matrix multiplication.
+// @verifies REQ-0026: Dot-product error is bounded by gamma_2k times the sum of product magnitudes.
 TEST_CASE("matmul")
 {
   SUBCASE("[[1,2,3; 4,5,6]] x [[7,8,9; 10,11,12]]^T - f32")
@@ -87,8 +94,8 @@ TEST_CASE("matmul")
     std::vector<float> a_data = {1, 2, 3, 4, 5, 6};
     std::vector<float> b_data = {7, 8, 9, 10, 11, 12};
 
-    std::vector<float> expected_data = {1 * 7 + 2 * 8 + 3 * 9, 1 * 10 + 2 * 11 + 3 * 12, 4 * 7 + 5 * 8 + 6 * 9,
-                                        4 * 10 + 5 * 11 + 6 * 12};
+    std::vector<double> expected_data = {1 * 7 + 2 * 8 + 3 * 9, 1 * 10 + 2 * 11 + 3 * 12, 4 * 7 + 5 * 8 + 6 * 9,
+                                         4 * 10 + 5 * 11 + 6 * 12};
 
     auto ref_data = matmul_ref<popnet_dtype_f32>(a_data, b_data, 1, 2, 2, 3);
     REQUIRE(ref_data == expected_data);
@@ -111,7 +118,8 @@ TEST_CASE("matmul")
     popnet_get_data(c, output_data.data(), popnet_dtype_f32, 0, popnet_numel(c_shape));
     for (size_t i = 0; i < output_data.size(); ++i)
     {
-      CHECK_F32_CLOSE(output_data[i], expected_data[i], 1e-5f, 1e-5f);
+      // These fixtures contain only nonnegative, exactly representable products.
+      CHECK_F32_CLOSE(output_data[i], expected_data[i], rounding_gamma(2 * a_shape.dim[3]) * expected_data[i], 0);
     }
 
     popnet_free(c);
@@ -128,7 +136,7 @@ TEST_CASE("matmul")
     std::vector<float> a_data = {1, 2, 3, 4, 5, 6};
     std::vector<float> b_data = {1, 1, 1, 1, 1, 1};
 
-    std::vector<float> expected_data = {3, 3, 3, 7, 7, 7, 11, 11, 11};
+    std::vector<double> expected_data = {3, 3, 3, 7, 7, 7, 11, 11, 11};
 
     auto ref_data = matmul_ref<popnet_dtype_f32>(a_data, b_data, 1, 3, 3, 2);
     REQUIRE(ref_data == expected_data);
@@ -151,7 +159,8 @@ TEST_CASE("matmul")
     popnet_get_data(c, output_data.data(), popnet_dtype_f32, 0, popnet_numel(c_shape));
     for (size_t i = 0; i < output_data.size(); ++i)
     {
-      CHECK_F32_CLOSE(output_data[i], expected_data[i], 1e-5f, 1e-5f);
+      // These fixtures contain only nonnegative, exactly representable products.
+      CHECK_F32_CLOSE(output_data[i], expected_data[i], rounding_gamma(2 * a_shape.dim[3]) * expected_data[i], 0);
     }
 
     popnet_free(c);
@@ -167,7 +176,7 @@ TEST_CASE("matmul")
 
     std::vector<float> a_data = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
     std::vector<float> b_data = {1, 0, 0, 0, 1, 0, 0, 0, 1};
-    std::vector<float> expected_data = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    std::vector<double> expected_data = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 
     auto ref_data = matmul_ref<popnet_dtype_f32>(a_data, b_data, 2, 2, 3, 3);
     REQUIRE(ref_data == expected_data);
@@ -190,7 +199,8 @@ TEST_CASE("matmul")
     popnet_get_data(c, output_data.data(), popnet_dtype_f32, 0, popnet_numel(c_shape));
     for (size_t i = 0; i < output_data.size(); ++i)
     {
-      CHECK_F32_CLOSE(output_data[i], expected_data[i], 1e-5f, 1e-5f);
+      // These fixtures contain only nonnegative, exactly representable products.
+      CHECK_F32_CLOSE(output_data[i], expected_data[i], rounding_gamma(2 * a_shape.dim[3]) * expected_data[i], 0);
     }
 
     popnet_free(c);
@@ -206,8 +216,8 @@ TEST_CASE("matmul")
 
     std::vector<float> a_data = {1, 2, 3, 4};
     std::vector<float> b_data = {5, 6, 7, 8, 9, 10};
-    std::vector<float> expected_data = {1 * 5 + 2 * 6, 1 * 7 + 2 * 8, 1 * 9 + 2 * 10,
-                                        3 * 5 + 4 * 6, 3 * 7 + 4 * 8, 3 * 9 + 4 * 10};
+    std::vector<double> expected_data = {1 * 5 + 2 * 6, 1 * 7 + 2 * 8, 1 * 9 + 2 * 10,
+                                         3 * 5 + 4 * 6, 3 * 7 + 4 * 8, 3 * 9 + 4 * 10};
 
     auto ref_data = matmul_ref<popnet_dtype_f32>(a_data, b_data, 1, 2, 3, 2);
     REQUIRE(ref_data == expected_data);
@@ -230,7 +240,8 @@ TEST_CASE("matmul")
     popnet_get_data(c, output_data.data(), popnet_dtype_f32, 0, popnet_numel(c_shape));
     for (size_t i = 0; i < output_data.size(); ++i)
     {
-      CHECK_F32_CLOSE(output_data[i], expected_data[i], 1e-5f, 1e-5f);
+      // These fixtures contain only nonnegative, exactly representable products.
+      CHECK_F32_CLOSE(output_data[i], expected_data[i], rounding_gamma(2 * a_shape.dim[3]) * expected_data[i], 0);
     }
 
     popnet_free(c);
@@ -251,7 +262,8 @@ TEST_CASE("matmul")
     const auto a_data = generate_scalar_data<dtype>(popnet_numel(a_shape), lower, upper, false);
     const auto b_data = generate_scalar_data<dtype>(popnet_numel(b_shape), lower, upper, false);
 
-    const auto expected_data = matmul_ref<dtype>(a_data, b_data, outer_size, m, n, k);
+    std::vector<double> magnitudes;
+    const auto expected_data = matmul_ref<dtype>(a_data, b_data, outer_size, m, n, k, &magnitudes);
 
     popnet_tensor* A = popnet_empty(dtype, a_shape);
     REQUIRE(A != nullptr);
@@ -274,7 +286,14 @@ TEST_CASE("matmul")
     {
       if constexpr (std::is_floating_point_v<scalar_t>)
       {
-        CHECK_F32_CLOSE(output_data[i], expected_data[i], 1e-4f, 1e-4f);
+        const double reference_gamma = rounding_gamma(k - 1, 0x1p-53);
+        const double reference_error = reference_gamma * magnitudes[i] / (1 - reference_gamma);
+        const double bound = rounding_gamma(2 * k) * magnitudes[i] / (1 + reference_gamma);
+        CAPTURE(i);
+        CAPTURE(k);
+        CAPTURE(bound);
+        CAPTURE(reference_error);
+        CHECK_F32_CLOSE(output_data[i], expected_data[i], bound - reference_error, 0);
       }
       else
       {
@@ -335,6 +354,7 @@ TEST_CASE("matmul")
 
 // @verifies REQ-0005: Checks the element mapping when transposing the final two dimensions.
 // @verifies REQ-0007: Exercises float32 transpose.
+// @verifies REQ-0026: Transpose preserves input representations.
 TEST_CASE("transpose")
 {
   SUBCASE("[1,2,3; 4,5,6] - f32")
@@ -360,7 +380,7 @@ TEST_CASE("transpose")
 
     std::vector<float> output_data(popnet_numel(dst_shape));
     popnet_get_data(dst, output_data.data(), popnet_dtype_f32, 0, popnet_numel(dst_shape));
-    CHECK(output_data == expected_data);
+    CHECK(std::memcmp(output_data.data(), expected_data.data(), output_data.size() * sizeof(float)) == 0);
 
     popnet_free(dst);
     popnet_free(src);
@@ -389,7 +409,7 @@ TEST_CASE("transpose")
 
     std::vector<float> output_data(popnet_numel(dst_shape));
     popnet_get_data(dst, output_data.data(), popnet_dtype_f32, 0, popnet_numel(dst_shape));
-    CHECK(output_data == expected_data);
+    CHECK(std::memcmp(output_data.data(), expected_data.data(), output_data.size() * sizeof(float)) == 0);
 
     popnet_free(dst);
     popnet_free(src);
@@ -418,7 +438,7 @@ TEST_CASE("transpose")
 
     std::vector<float> output_data(popnet_numel(dst_shape));
     popnet_get_data(dst, output_data.data(), popnet_dtype_f32, 0, popnet_numel(dst_shape));
-    CHECK(output_data == expected_data);
+    CHECK(std::memcmp(output_data.data(), expected_data.data(), output_data.size() * sizeof(float)) == 0);
 
     popnet_free(dst);
     popnet_free(src);
@@ -447,7 +467,7 @@ TEST_CASE("transpose")
 
     std::vector<float> output_data(popnet_numel(dst_shape));
     popnet_get_data(dst, output_data.data(), popnet_dtype_f32, 0, popnet_numel(dst_shape));
-    CHECK(output_data == expected_data);
+    CHECK(std::memcmp(output_data.data(), expected_data.data(), output_data.size() * sizeof(float)) == 0);
 
     popnet_free(dst);
     popnet_free(src);
@@ -476,7 +496,7 @@ TEST_CASE("transpose")
 
     std::vector<float> output_data(popnet_numel(dst_shape));
     popnet_get_data(dst, output_data.data(), popnet_dtype_f32, 0, popnet_numel(dst_shape));
-    CHECK(output_data == expected_data);
+    CHECK(std::memcmp(output_data.data(), expected_data.data(), output_data.size() * sizeof(float)) == 0);
 
     popnet_free(dst);
     popnet_free(src);
@@ -505,7 +525,7 @@ TEST_CASE("transpose")
 
     std::vector<float> output_data(popnet_numel(dst_shape));
     popnet_get_data(dst, output_data.data(), popnet_dtype_f32, 0, popnet_numel(dst_shape));
-    CHECK(output_data == expected_data);
+    CHECK(std::memcmp(output_data.data(), expected_data.data(), output_data.size() * sizeof(float)) == 0);
 
     popnet_free(dst);
     popnet_free(src);
@@ -534,7 +554,7 @@ TEST_CASE("transpose")
 
     std::vector<float> output_data(popnet_numel(dst_shape));
     popnet_get_data(dst, output_data.data(), popnet_dtype_f32, 0, popnet_numel(dst_shape));
-    CHECK(output_data == expected_data);
+    CHECK(std::memcmp(output_data.data(), expected_data.data(), output_data.size() * sizeof(float)) == 0);
 
     popnet_free(dst);
     popnet_free(src);
@@ -565,7 +585,7 @@ TEST_CASE("transpose")
 
     std::vector<float> output_data(popnet_numel(dst_shape));
     popnet_get_data(dst, output_data.data(), popnet_dtype_f32, 0, popnet_numel(dst_shape));
-    CHECK(output_data == expected_data);
+    CHECK(std::memcmp(output_data.data(), expected_data.data(), output_data.size() * sizeof(float)) == 0);
 
     popnet_free(dst);
     popnet_free(src);
@@ -591,7 +611,7 @@ TEST_CASE("transpose")
 
     std::vector<float> output_data(popnet_numel(dst_shape));
     popnet_get_data(dst, output_data.data(), popnet_dtype_f32, 0, popnet_numel(dst_shape));
-    CHECK(output_data == expected_data);
+    CHECK(std::memcmp(output_data.data(), expected_data.data(), output_data.size() * sizeof(float)) == 0);
 
     popnet_free(dst);
     popnet_free(src);
@@ -616,4 +636,50 @@ TEST_CASE("transpose")
   {
     run.operator()<popnet_dtype_f32>(-100.0f, 100.0f, popnet_shape{{1, 1, 500, 1000}});
   };
+}
+
+// @verifies REQ-0004: Dot products across short, vector-tail, and blocked lengths.
+// @verifies REQ-0026: Cancellation and magnitude differences use accumulation-dependent bounds.
+TEST_CASE("matmul F32 numerical boundaries")
+{
+  for (size_t k : {1, 3, 15, 16, 17, 31, 32, 33, 65, 129})
+  {
+    CAPTURE(k);
+    std::vector<float> left(k), right(k, 1.0f);
+    const float pattern[] = {0x1p20f, 0x1p-10f, -0x1p20f, -0x1p-10f, 0x1p-12f};
+    for (size_t t = 0; t < k; ++t)
+      left[t] = pattern[t % 5];
+    std::vector<double> magnitudes;
+    const auto expected = matmul_ref<popnet_dtype_f32>(left, right, 1, 1, 1, k, &magnitudes);
+    float output = 0;
+    const popnet_shape shape{{1, 1, 1, k}};
+    popnet_tensor a{.shape = shape, .data = left.data(), .dtype = popnet_dtype_f32};
+    popnet_tensor b{.shape = shape, .data = right.data(), .dtype = popnet_dtype_f32};
+    popnet_tensor c{.shape = popnet_scalar_shape, .data = &output, .src = {&a, &b}, .dtype = popnet_dtype_f32};
+
+    popnet_compute_matmul(&c);
+
+    // Dyadic terms and their sums fit exactly in binary64 for these lengths.
+    CHECK_F32_CLOSE(output, expected[0], rounding_gamma(2 * k) * magnitudes[0], 0);
+  }
+}
+
+// @verifies REQ-0005: Transpose maps every input representation to its destination.
+// @verifies REQ-0026: Preserve NaN payloads, signed zeros, infinities, and subnormals bit-for-bit.
+TEST_CASE("transpose F32 special representations")
+{
+  const uint32_t bits[] = {0x00000000, 0x80000000, 0x7f800000, 0xff800000, 0x7fc01234,
+                           0xffc05678, 0x7f801234, 0x00000001, 0x80000001};
+  const popnet_shape shape{{2, 1, 17, 33}};
+  const auto result_shape = popnet_transpose_shape(shape);
+  std::vector<float> input(popnet_numel(shape)), output(input.size());
+  for (size_t i = 0; i < input.size(); ++i)
+    input[i] = std::bit_cast<float>(bits[i % std::size(bits)]);
+  const auto expected = transpose_ref<popnet_dtype_f32>(input, 2, 17, 33);
+  popnet_tensor src{.shape = shape, .data = input.data(), .dtype = popnet_dtype_f32};
+  popnet_tensor dst{.shape = result_shape, .data = output.data(), .src = {&src}, .dtype = popnet_dtype_f32};
+
+  popnet_compute_transpose(&dst);
+
+  CHECK(std::memcmp(output.data(), expected.data(), output.size() * sizeof(float)) == 0);
 }

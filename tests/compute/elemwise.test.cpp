@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <doctest/doctest.h>
+#include <limits>
 #include <numbers>
 #include <type_traits>
 #include <vector>
@@ -13,8 +14,20 @@
 #include "test_assertions.h"
 #include "test_data.h"
 
+// Standard double libm references provide ample precision for these F32 tolerances;
+// these sampled checks are not an exhaustive certification of libm or the domain.
+template <auto compute> static void check_unary_accuracy(float actual, double expected)
+{
+  if constexpr (compute == popnet_compute_exp || compute == popnet_compute_log || compute == popnet_compute_sin ||
+                compute == popnet_compute_cos || compute == popnet_compute_tanh || compute == popnet_compute_sigmoid)
+    CHECK_F32_CLOSE(actual, expected, f32_math_atol, f32_math_rtol);
+  else
+    CHECK(actual == static_cast<float>(expected));
+}
+
 // @verifies REQ-0001: Compares unary results with scalar references.
 // @verifies REQ-0007: Exercises float32 unary operations.
+// @verifies REQ-0026: Correct rounding and specified mathematical-function tolerances.
 TEST_CASE("elementwise unary compute")
 {
   using namespace std::numbers;
@@ -25,7 +38,7 @@ TEST_CASE("elementwise unary compute")
 
       auto input_data = generate_scalar_data<dtype>(n, lower, upper, exclude_zero);
 
-      decltype(input_data) expected_data;
+      std::vector<double> expected_data;
       expected_data.reserve(n);
 
       for (auto v : input_data)
@@ -45,7 +58,7 @@ TEST_CASE("elementwise unary compute")
 
       compute(dst);
 
-      decltype(expected_data) output_data;
+      decltype(input_data) output_data;
       output_data.resize(n);
 
       popnet_get_data(dst, output_data.data(), dtype, 0, n);
@@ -55,14 +68,11 @@ TEST_CASE("elementwise unary compute")
         const auto actual = output_data[i];
         const auto expected = expected_data[i];
 
-        if constexpr (std::is_floating_point_v<decltype(expected)>)
-        {
-          CHECK_F32_CLOSE(actual, expected, 1e-4, 1e-4);
-        }
-        else
-        {
-          CHECK(actual == expected);
-        }
+        CAPTURE(i);
+        CAPTURE(input_data[i]);
+        CAPTURE(actual);
+        CAPTURE(expected);
+        check_unary_accuracy<compute>(actual, expected);
       }
 
       popnet_free(src);
@@ -85,60 +95,60 @@ TEST_CASE("elementwise unary compute")
 
   SUBCASE("abs - F32")
   {
-    run.operator()<popnet_compute_abs, [](float v) { return std::abs(v); }, popnet_dtype_f32>(-10.0f, 10.0f);
+    run.operator()<popnet_compute_abs, [](double v) { return std::abs(v); }, popnet_dtype_f32>(-10.0f, 10.0f);
   }
 
   SUBCASE("neg - F32")
   {
-    run.operator()<popnet_compute_neg, [](float v) { return -v; }, popnet_dtype_f32>(-10.0f, 10.0f);
+    run.operator()<popnet_compute_neg, [](double v) { return -v; }, popnet_dtype_f32>(-10.0f, 10.0f);
   }
 
   SUBCASE("sqr - F32")
   {
-    run.operator()<popnet_compute_sqr, [](float v) { return v * v; }, popnet_dtype_f32>(-10.0f, 10.0f);
+    run.operator()<popnet_compute_sqr, [](double v) { return v * v; }, popnet_dtype_f32>(-10.0f, 10.0f);
   }
 
   SUBCASE("sqrt - F32")
   {
-    run.operator()<popnet_compute_sqrt, [](float v) { return std::sqrt(v); }, popnet_dtype_f32>(0.0f, 100.0f);
+    run.operator()<popnet_compute_sqrt, [](double v) { return std::sqrt(v); }, popnet_dtype_f32>(0.0f, 100.0f);
   }
 
   SUBCASE("exp - F32")
   {
-    run.operator()<popnet_compute_exp, [](float v) { return std::exp(v); }, popnet_dtype_f32>(-10.0f, 10.0f);
+    run.operator()<popnet_compute_exp, [](double v) { return std::exp(v); }, popnet_dtype_f32>(-10.0f, 10.0f);
   }
 
   SUBCASE("log - F32")
   {
-    run.operator()<popnet_compute_log, [](float v) { return std::log(v); }, popnet_dtype_f32>(0.001f, 100.0f);
+    run.operator()<popnet_compute_log, [](double v) { return std::log(v); }, popnet_dtype_f32>(0.001f, 100.0f);
   }
 
   SUBCASE("sin - F32")
   {
-    run.operator()<popnet_compute_sin, [](float v) { return std::sin(v); }, popnet_dtype_f32>(-2.0f * pi_v<float>,
-                                                                                              2.0f * pi_v<float>);
+    run.operator()<popnet_compute_sin, [](double v) { return std::sin(v); }, popnet_dtype_f32>(-2.0f * pi_v<float>,
+                                                                                               2.0f * pi_v<float>);
   }
 
   SUBCASE("cos - F32")
   {
-    run.operator()<popnet_compute_cos, [](float v) { return std::cos(v); }, popnet_dtype_f32>(-2.0f * pi_v<float>,
-                                                                                              2.0f * pi_v<float>);
+    run.operator()<popnet_compute_cos, [](double v) { return std::cos(v); }, popnet_dtype_f32>(-2.0f * pi_v<float>,
+                                                                                               2.0f * pi_v<float>);
   }
 
   SUBCASE("tanh - F32")
   {
-    run.operator()<popnet_compute_tanh, [](float v) { return std::tanh(v); }, popnet_dtype_f32>(-10.0f, 10.0f);
+    run.operator()<popnet_compute_tanh, [](double v) { return std::tanh(v); }, popnet_dtype_f32>(-10.0f, 10.0f);
   }
 
   SUBCASE("relu - F32")
   {
-    run.operator()<popnet_compute_relu, [](float v) { return (v > 0.f) ? v : 0.f; }, popnet_dtype_f32>(-10.0f, 10.0f);
+    run.operator()<popnet_compute_relu, [](double v) { return (v > 0.f) ? v : 0.f; }, popnet_dtype_f32>(-10.0f, 10.0f);
   }
 
   SUBCASE("sigmoid - F32")
   {
-    run.operator()<popnet_compute_sigmoid, [](float v) { return 1.f / (1.f + std::exp(-v)); }, popnet_dtype_f32>(-10.0f,
-                                                                                                                 10.0f);
+    run.operator()<popnet_compute_sigmoid, [](double v) { return 1.f / (1.f + std::exp(-v)); }, popnet_dtype_f32>(
+        -10.0f, 10.0f);
   }
 }
 
@@ -190,6 +200,7 @@ static auto binary_ref(const auto& lhs, const popnet_shape& lhs_shape, const aut
 
 // @verifies REQ-0002: Compares binary results across matching and broadcast shapes.
 // @verifies REQ-0007: Exercises float32 binary operations.
+// @verifies REQ-0026: Basic arithmetic rounds once to F32.
 TEST_CASE("element binary compute")
 {
   auto run = []<auto compute, auto compute_ref, popnet_dtype dtype>(auto lower, auto upper, bool exclude_zero = false) {
@@ -237,14 +248,7 @@ TEST_CASE("element binary compute")
         const auto actual = output_data[i];
         const auto expected = expected_data[i];
 
-        if constexpr (std::is_floating_point_v<decltype(expected)>)
-        {
-          CHECK_F32_CLOSE(actual, expected, 1.1920928955078125e-5, 1.1920928955078125e-5);
-        }
-        else
-        {
-          CHECK(actual == expected);
-        }
+        CHECK(actual == expected);
       }
 
       popnet_free(lhs);
@@ -286,21 +290,232 @@ TEST_CASE("element binary compute")
 
   SUBCASE("add - F32")
   {
-    run.operator()<popnet_compute_add, [](float a, float b) { return a + b; }, popnet_dtype_f32>(-100.0f, 100.0f);
+    run.operator()<popnet_compute_add, [](double a, double b) { return a + b; }, popnet_dtype_f32>(-100.0f, 100.0f);
   }
 
   SUBCASE("sub - F32")
   {
-    run.operator()<popnet_compute_sub, [](float a, float b) { return a - b; }, popnet_dtype_f32>(-100.0f, 100.0f);
+    run.operator()<popnet_compute_sub, [](double a, double b) { return a - b; }, popnet_dtype_f32>(-100.0f, 100.0f);
   }
 
   SUBCASE("mul - F32")
   {
-    run.operator()<popnet_compute_mul, [](float a, float b) { return a * b; }, popnet_dtype_f32>(-10.0f, 10.0f);
+    run.operator()<popnet_compute_mul, [](double a, double b) { return a * b; }, popnet_dtype_f32>(-10.0f, 10.0f);
   }
 
   SUBCASE("div - F32")
   {
-    run.operator()<popnet_compute_div, [](float a, float b) { return a / b; }, popnet_dtype_f32>(-10.0f, 10.0f, true);
+    run.operator()<popnet_compute_div, [](double a, double b) { return a / b; }, popnet_dtype_f32>(-10.0f, 10.0f, true);
+  }
+}
+
+// @verifies REQ-0001: Unary finite-domain boundaries.
+// @verifies REQ-0007: Uses the same F32 cases for every backend.
+// @verifies REQ-0026: Correct rounding and finite mathematical-function tolerances.
+TEST_CASE("unary F32 numerical boundaries")
+{
+  const float inf = std::numeric_limits<float>::infinity();
+  const float tiny = std::numeric_limits<float>::denorm_min();
+  const float normal = std::numeric_limits<float>::min();
+  const float largest = std::numeric_limits<float>::max();
+  const std::vector<float> inputs = {0.0f,
+                                     -0.0f,
+                                     tiny,
+                                     -tiny,
+                                     normal,
+                                     -normal,
+                                     0x1p-12f,
+                                     -0x1p-12f,
+                                     std::nextafter(1.0f, 0.0f),
+                                     1.0f,
+                                     std::nextafter(1.0f, inf),
+                                     -1.0f,
+                                     0.056f,
+                                     2.5f,
+                                     std::nextafter(2.5f, inf),
+                                     -2.5f,
+                                     std::numbers::pi_v<float>,
+                                     std::nextafter(std::numbers::pi_v<float>, inf),
+                                     -104.0f,
+                                     -103.972084f,
+                                     -88.0f,
+                                     88.0f,
+                                     std::nextafter(88.722839f, 0.0f),
+                                     88.722839f,
+                                     1e20f,
+                                     -1e20f,
+                                     largest,
+                                     -largest};
+
+  auto run = [&]<auto compute>(auto reference) {
+    for (float value : inputs)
+      for (const size_t n : {1, 15, 16, 17})
+      {
+        CAPTURE(value);
+        CAPTURE(n);
+        const double expected = reference(double(value));
+        // The accuracy contract covers real-domain inputs with finite F32 results.
+        if (!std::isfinite(static_cast<float>(expected))) continue;
+        std::vector<float> input(n, value), output(n);
+        const popnet_shape shape{{1, 1, 1, n}};
+        popnet_tensor src{.shape = shape, .data = input.data(), .dtype = popnet_dtype_f32};
+        popnet_tensor dst{.shape = shape, .data = output.data(), .src = {&src}, .dtype = popnet_dtype_f32};
+
+        compute(&dst);
+
+        for (float actual : output)
+        {
+          CAPTURE(actual);
+          CAPTURE(expected);
+          check_unary_accuracy<compute>(actual, expected);
+        }
+      }
+  };
+
+  SUBCASE("abs")
+  {
+    run.operator()<popnet_compute_abs>([](double x) { return std::abs(x); });
+  }
+  SUBCASE("neg")
+  {
+    run.operator()<popnet_compute_neg>([](double x) { return -x; });
+  }
+  SUBCASE("sqr")
+  {
+    run.operator()<popnet_compute_sqr>([](double x) { return x * x; });
+  }
+  SUBCASE("sqrt")
+  {
+    run.operator()<popnet_compute_sqrt>([](double x) { return std::sqrt(x); });
+  }
+  SUBCASE("exp")
+  {
+    run.operator()<popnet_compute_exp>([](double x) { return std::exp(x); });
+  }
+  SUBCASE("log")
+  {
+    run.operator()<popnet_compute_log>([](double x) { return std::log(x); });
+  }
+  SUBCASE("sin")
+  {
+    run.operator()<popnet_compute_sin>([](double x) { return std::sin(x); });
+  }
+  SUBCASE("cos")
+  {
+    run.operator()<popnet_compute_cos>([](double x) { return std::cos(x); });
+  }
+  SUBCASE("tanh")
+  {
+    run.operator()<popnet_compute_tanh>([](double x) { return std::tanh(x); });
+  }
+  SUBCASE("relu")
+  {
+    run.operator()<popnet_compute_relu>([](double x) { return std::max(x, 0.0); });
+  }
+  SUBCASE("sigmoid")
+  {
+    // Equivalent mathematical definition, without overflowing exp(-x) in the reference.
+    run.operator()<popnet_compute_sigmoid>([](double x) {
+      const double e = std::exp(-std::abs(x));
+      return x >= 0 ? 1 / (1 + e) : e / (1 + e);
+    });
+  }
+}
+
+// @verifies REQ-0002: Basic arithmetic at rounding and domain boundaries.
+// @verifies REQ-0026: Correct rounding for finite results, including ties and subnormals.
+TEST_CASE("binary F32 numerical boundaries")
+{
+  const float inf = std::numeric_limits<float>::infinity();
+  const float tiny = std::numeric_limits<float>::denorm_min();
+  const float normal = std::numeric_limits<float>::min();
+  const float largest = std::numeric_limits<float>::max();
+  const std::pair<float, float> pairs[] = {{0.0f, -0.0f},    {-0.0f, -0.0f},
+                                           {-0.0f, 2.0f},    {1.0f, 0.0f},
+                                           {-1.0f, 0.0f},    {0.0f, 0.0f},
+                                           {1.0f, 0x1p-24f}, {std::nextafter(1.0f, inf), 0x1p-24f},
+                                           {1.0f, -1.0f},    {tiny, 0.5f},
+                                           {3 * tiny, 0.5f}, {normal, 0.5f},
+                                           {-normal, 0.5f},  {normal, std::nextafter(normal, 0.0f)},
+                                           {largest, 2.0f},  {largest, largest},
+                                           {1.0f, 3.0f}};
+
+  auto run = [&]<auto compute>(auto reference) {
+    for (const auto [a, b] : pairs)
+    {
+      CAPTURE(a);
+      CAPTURE(b);
+      // F32 products are exact in double; these sum/division fixtures avoid
+      // double-rounding ambiguities and exercise ties with explicit dyadic inputs.
+      const float expected = static_cast<float>(reference(double(a), double(b)));
+      if (!std::isfinite(expected)) continue;
+      std::vector<float> left(17, a), right(17, b), output(17);
+      const popnet_shape shape{{1, 1, 1, 17}};
+      popnet_tensor lhs{.shape = shape, .data = left.data(), .dtype = popnet_dtype_f32};
+      popnet_tensor rhs{.shape = shape, .data = right.data(), .dtype = popnet_dtype_f32};
+      popnet_tensor dst{.shape = shape, .data = output.data(), .src = {&lhs, &rhs}, .dtype = popnet_dtype_f32};
+
+      compute(&dst);
+
+      for (float actual : output)
+      {
+        CAPTURE(actual);
+        CAPTURE(expected);
+        CHECK(actual == expected);
+      }
+    }
+  };
+
+  SUBCASE("add")
+  {
+    run.operator()<popnet_compute_add>([](double a, double b) { return a + b; });
+  }
+  SUBCASE("sub")
+  {
+    run.operator()<popnet_compute_sub>([](double a, double b) { return a - b; });
+  }
+  SUBCASE("mul")
+  {
+    run.operator()<popnet_compute_mul>([](double a, double b) { return a * b; });
+  }
+  SUBCASE("div")
+  {
+    run.operator()<popnet_compute_div>([](double a, double b) { return a / b; });
+  }
+}
+
+// @verifies REQ-0026: Numerical comparisons retain reference precision and reject nonfinite mismatches.
+TEST_CASE("F32 comparisons retain double reference precision")
+{
+  const double reference = 1.0 + 0x1p-30;
+
+  CHECK_FALSE(f32_close(1.0f, reference, 0, 0));
+  CHECK(f32_close(1.0f, reference, 0x1p-30, 0));
+  CHECK_F32_CLOSE(1.0f, reference, 0x1p-30, 0);
+  CHECK_FALSE(f32_close(std::numeric_limits<float>::infinity(), reference, f32_math_atol, f32_math_rtol));
+  CHECK_FALSE(f32_close(1.0f, std::numeric_limits<double>::quiet_NaN(), f32_math_atol, f32_math_rtol));
+}
+
+// @verifies REQ-0026: Sigmoid accuracy across its transition and exponential thresholds.
+TEST_CASE("sigmoid F32 accuracy sweep")
+{
+  constexpr size_t n = 4097;
+  std::vector<float> input(n), output(n);
+  for (size_t i = 0; i < n; ++i)
+    input[i] = static_cast<float>(-100.0 + 200.0 * double(i) / double(n - 1));
+
+  const popnet_shape shape{{1, 1, 1, n}};
+  popnet_tensor src{.shape = shape, .data = input.data(), .dtype = popnet_dtype_f32};
+  popnet_tensor dst{.shape = shape, .data = output.data(), .src = {&src}, .dtype = popnet_dtype_f32};
+
+  popnet_compute_sigmoid(&dst);
+
+  for (size_t i = 0; i < n; ++i)
+  {
+    const double e = std::exp(-std::abs(double(input[i])));
+    const double expected = input[i] < 0 ? e / (1 + e) : 1 / (1 + e);
+    CAPTURE(i);
+    CAPTURE(input[i]);
+    CHECK_F32_CLOSE(output[i], expected, f32_math_atol, f32_math_rtol);
   }
 }

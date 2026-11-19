@@ -19,7 +19,11 @@ POPNET_INLINE vf32_t set_neg_inf_f32() { return _mm512_set1_ps(-std::numeric_lim
 POPNET_INLINE vf32_t set_pos_inf_f32() { return _mm512_set1_ps(std::numeric_limits<f32_t>::infinity()); }
 
 POPNET_INLINE vf32_t abs_f32(vf32_t a) { return _mm512_abs_ps(a); }
-POPNET_INLINE vf32_t neg_f32(vf32_t a) { return _mm512_sub_ps(_mm512_setzero_ps(), a); }
+POPNET_INLINE vf32_t neg_f32(vf32_t a)
+{
+  return _mm512_castsi512_ps(
+      _mm512_xor_si512(_mm512_castps_si512(a), _mm512_set1_epi32(std::numeric_limits<int32_t>::min())));
+}
 
 POPNET_INLINE vf32_t sqr_f32(vf32_t a) { return _mm512_mul_ps(a, a); }
 POPNET_INLINE vf32_t sqrt_f32(vf32_t a) { return _mm512_sqrt_ps(a); }
@@ -182,10 +186,15 @@ POPNET_INLINE vf32_t relu_f32(vf32_t a) { return _mm512_max_ps(a, _mm512_setzero
 
 POPNET_INLINE vf32_t sigmoid_f32(vf32_t a)
 {
-  const auto vneg = _mm512_sub_ps(_mm512_setzero_ps(), a);
-  const auto vnegexp = exp_f32(vneg);
-  const auto vdenom = _mm512_add_ps(_mm512_set1_ps(1.0f), vnegexp);
-  return _mm512_rcp14_ps(vdenom);
+  const auto denominator = _mm512_add_ps(_mm512_set1_ps(1.0f), exp_f32(neg_f32(a)));
+  // One Newton step reduces the estimate's relative error from about 2^-14
+  // to F32 rounding error, well below the sigmoid tolerance.
+  const auto estimate = _mm512_rcp14_ps(denominator);
+  const auto correction = _mm512_fnmadd_ps(denominator, estimate, _mm512_set1_ps(2.0f));
+  // Overflow of exp(-x) means sigmoid(x) is far below the absolute tolerance.
+  // Mask that result to zero; leave NaNs active so they propagate.
+  const auto not_overflow = _mm512_cmp_ps_mask(denominator, set_pos_inf_f32(), _CMP_NEQ_UQ);
+  return _mm512_maskz_mul_ps(not_overflow, estimate, correction);
 }
 
 POPNET_INLINE vf32_t add_f32(vf32_t a, vf32_t b) { return _mm512_add_ps(a, b); }
@@ -224,7 +233,11 @@ POPNET_INLINE vf32_t tanh_f32(vf32_t a) { return std::tanh(a); }
 
 POPNET_INLINE vf32_t relu_f32(vf32_t a) { return std::max(a, 0.0f); }
 
-POPNET_INLINE vf32_t sigmoid_f32(vf32_t a) { return 1 / (1 + std::exp(-a)); }
+POPNET_INLINE vf32_t sigmoid_f32(vf32_t a)
+{
+  const auto e = std::exp(-std::abs(a));
+  return (a < 0 ? e : 1.0f) / (1.0f + e);
+}
 
 POPNET_INLINE vf32_t add_f32(vf32_t a, vf32_t b) { return a + b; }
 POPNET_INLINE vf32_t sub_f32(vf32_t a, vf32_t b) { return a - b; }

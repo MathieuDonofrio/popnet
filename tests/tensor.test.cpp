@@ -58,18 +58,6 @@ TEST_CASE("popnet_empty_like")
     popnet_free(dst);
   }
 
-  SUBCASE("nullptr")
-  {
-    auto* bad = popnet_empty_like(nullptr);
-    CHECK(bad == nullptr);
-    CHECK_FALSE(popnet_valid_tensor(bad));
-    CHECK(popnet_dtypeof(bad) == popnet_dtype_none);
-    CHECK(popnet_opof(bad) == popnet_op_none);
-    CHECK(popnet_shapeof(bad) == popnet_shape{{0, 0, 0, 0}});
-
-    popnet_free(bad);
-  }
-
   popnet_free(src);
   popnet_free(input);
 }

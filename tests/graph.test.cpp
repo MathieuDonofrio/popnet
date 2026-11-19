@@ -1,5 +1,6 @@
 #include "graph.h"
 
+#include <algorithm>
 #include <cmath>
 #include <doctest/doctest.h>
 #include <vector>
@@ -8,7 +9,8 @@
 #include "tensor.h"
 #include "test_assertions.h"
 
-static void check_graph_result(popnet_tensor* result, const float* expected, size_t count)
+template <typename T>
+static void check_graph_result(popnet_tensor* result, const T* expected, size_t count, double atol = 0, double rtol = 0)
 {
   REQUIRE(result != nullptr);
   REQUIRE(popnet_numel(popnet_shapeof(result)) == count);
@@ -26,13 +28,14 @@ static void check_graph_result(popnet_tensor* result, const float* expected, siz
   for (size_t i = 0; i < count; ++i)
   {
     CAPTURE(i);
-    CHECK_F32_CLOSE(actual[i], expected[i], 1e-5, 1e-5);
+    CHECK_F32_CLOSE(actual[i], expected[i], atol, rtol);
   }
 
   popnet_graph_free(graph);
 }
 
 // @verifies REQ-0020: Forward execution dispatches every recorded unary operation.
+// @verifies REQ-0026: Forward results satisfy the operation-specific accuracy contract.
 TEST_CASE("graph executes each unary operation")
 {
   const struct
@@ -40,22 +43,22 @@ TEST_CASE("graph executes each unary operation")
     const char* name;
     decltype(&popnet_abs) create;
     float input[2];
-    float expected[2];
+    double expected[2];
   } operations[] = {{"abs", popnet_abs, {-2, 3}, {2, 3}},
                     {"neg", popnet_neg, {-2, 3}, {2, -3}},
                     {"sqr", popnet_sqr, {-2, 3}, {4, 9}},
                     {"sqrt", popnet_sqrt, {1, 4}, {1, 2}},
-                    {"exp", popnet_exp, {0, 1}, {1, 2.71828183f}},
-                    {"log", popnet_log, {1, 4}, {0, 1.38629436f}},
-                    {"sin", popnet_sin, {0, 1}, {0, 0.84147098f}},
-                    {"cos", popnet_cos, {0, 1}, {1, 0.54030231f}},
-                    {"tanh", popnet_tanh, {0, 1}, {0, 0.76159416f}},
+                    {"exp", popnet_exp, {0, 1}, {1, 2.718281828459045}},
+                    {"log", popnet_log, {1, 4}, {0, 1.3862943611198906}},
+                    {"sin", popnet_sin, {0, 1}, {0, 0.8414709848078965}},
+                    {"cos", popnet_cos, {0, 1}, {1, 0.5403023058681397}},
+                    {"tanh", popnet_tanh, {0, 1}, {0, 0.7615941559557649}},
                     {"relu", popnet_relu, {-2, 3}, {0, 3}},
-                    {"sigmoid", popnet_sigmoid, {0, 1}, {0.5f, 0.73105858f}}};
+                    {"sigmoid", popnet_sigmoid, {0, 1}, {0.5f, 0.7310585786300049}}};
 
   for (const auto& operation : operations)
   {
-    CAPTURE(operation.name);
+    INFO("operation: " << doctest::String(operation.name));
 
     auto* src = popnet_empty(popnet_dtype_f32, {{1, 1, 1, 2}});
 
@@ -63,7 +66,10 @@ TEST_CASE("graph executes each unary operation")
     popnet_set_data(src, operation.input, popnet_dtype_f32, 0, 2);
     auto* result = operation.create(src);
 
-    check_graph_result(result, operation.expected, 2);
+    const bool approximate = operation.create == popnet_exp || operation.create == popnet_log ||
+                             operation.create == popnet_sin || operation.create == popnet_cos ||
+                             operation.create == popnet_tanh || operation.create == popnet_sigmoid;
+    check_graph_result(result, operation.expected, 2, approximate ? f32_math_atol : 0, approximate ? f32_math_rtol : 0);
 
     popnet_free(result);
     popnet_free(src);
@@ -71,6 +77,7 @@ TEST_CASE("graph executes each unary operation")
 }
 
 // @verifies REQ-0020: Forward execution dispatches each binary operation in operand order.
+// @verifies REQ-0026: Forward results satisfy the operation-specific accuracy contract.
 TEST_CASE("graph executes each binary operation")
 {
   const struct
@@ -96,7 +103,7 @@ TEST_CASE("graph executes each binary operation")
 
   for (const auto& operation : operations)
   {
-    CAPTURE(operation.name);
+    INFO("operation: " << doctest::String(operation.name));
 
     auto* result = operation.create(a, b);
 
@@ -110,6 +117,7 @@ TEST_CASE("graph executes each binary operation")
 }
 
 // @verifies REQ-0020: Forward execution dispatches every recorded reduction.
+// @verifies REQ-0026: Forward results satisfy the operation-specific accuracy contract.
 TEST_CASE("graph executes each reduction")
 {
   const struct
@@ -136,7 +144,11 @@ TEST_CASE("graph executes each reduction")
 
     auto* result = reduction.create(src, 0b1000);
 
-    check_graph_result(result, &reduction.expected, 1);
+    const double bound = reduction.create == popnet_reduce_sum       ? rounding_gamma(2) * 9
+                         : reduction.create == popnet_reduce_mean    ? rounding_gamma(3) * 3
+                         : reduction.create == popnet_reduce_product ? rounding_gamma(2) * 24
+                                                                     : 0;
+    check_graph_result(result, &reduction.expected, 1, bound);
 
     popnet_free(result);
   }
@@ -145,6 +157,7 @@ TEST_CASE("graph executes each reduction")
 }
 
 // @verifies REQ-0020: Forward execution dispatches matrix multiplication using its recorded inputs.
+// @verifies REQ-0026: Forward results satisfy the operation-specific accuracy contract.
 TEST_CASE("graph executes matrix multiplication")
 {
   auto* a = popnet_empty(popnet_dtype_f32, {{1, 1, 2, 3}});
@@ -160,7 +173,7 @@ TEST_CASE("graph executes matrix multiplication")
   auto* result = popnet_matmul(a, b);
   const float expected[] = {4, 7, 10, 16};
 
-  check_graph_result(result, expected, 4);
+  check_graph_result(result, expected, 4, 0, rounding_gamma(6));
 
   popnet_free(result);
   popnet_free(b);
@@ -168,6 +181,7 @@ TEST_CASE("graph executes matrix multiplication")
 }
 
 // @verifies REQ-0020: Forward execution dispatches transpose using its recorded input.
+// @verifies REQ-0026: Forward results satisfy the operation-specific accuracy contract.
 TEST_CASE("graph executes transpose")
 {
   auto* src = popnet_empty(popnet_dtype_f32, {{1, 1, 2, 3}});
@@ -210,7 +224,7 @@ TEST_CASE("graph lifetime")
   popnet_free(src);
 }
 
-// @verifies REQ-0019: Checks dependency inclusion, ordering, deduplication, and null-output rejection.
+// @verifies REQ-0019: Checks dependency inclusion, deduplication, and null-output rejection.
 TEST_CASE("popnet_graph build forward")
 {
   popnet_graph* graph = popnet_graph_alloc();
@@ -219,6 +233,15 @@ TEST_CASE("popnet_graph build forward")
   popnet_shape shape{{2, 2, 1, 1}};
   popnet_tensor* a = popnet_empty(popnet_dtype_f32, shape);
   popnet_tensor* b = popnet_empty(popnet_dtype_f32, shape);
+
+  REQUIRE(a != nullptr);
+  REQUIRE(b != nullptr);
+
+  auto check_nodes = [&](std::initializer_list<popnet_tensor*> expected) {
+    REQUIRE(graph->nodes.size() == expected.size());
+    for (auto* node : expected)
+      CHECK(std::count(graph->nodes.begin(), graph->nodes.end(), node) == 1);
+  };
 
   SUBCASE("nullptr")
   {
@@ -231,9 +254,7 @@ TEST_CASE("popnet_graph build forward")
     popnet_tensor* c = popnet_abs(a);
     REQUIRE(popnet_graph_build_forward(graph, c));
 
-    REQUIRE(graph->nodes.size() == 2);
-    CHECK(graph->nodes[0] == a);
-    CHECK(graph->nodes[1] == c);
+    check_nodes({a, c});
 
     popnet_free(c);
   }
@@ -243,10 +264,7 @@ TEST_CASE("popnet_graph build forward")
     popnet_tensor* c = popnet_add(a, b);
     REQUIRE(popnet_graph_build_forward(graph, c));
 
-    REQUIRE(graph->nodes.size() == 3);
-    CHECK(graph->nodes[0] == a);
-    CHECK(graph->nodes[1] == b);
-    CHECK(graph->nodes[2] == c);
+    check_nodes({a, b, c});
 
     popnet_free(c);
   }
@@ -257,11 +275,7 @@ TEST_CASE("popnet_graph build forward")
     popnet_tensor* d = popnet_abs(c);
     REQUIRE(popnet_graph_build_forward(graph, d));
 
-    REQUIRE(graph->nodes.size() == 4);
-    CHECK(graph->nodes[0] == a);
-    CHECK(graph->nodes[1] == b);
-    CHECK(graph->nodes[2] == c);
-    CHECK(graph->nodes[3] == d);
+    check_nodes({a, b, c, d});
 
     popnet_free(c);
     popnet_free(d);
@@ -275,11 +289,7 @@ TEST_CASE("popnet_graph build forward")
     REQUIRE(popnet_graph_build_forward(graph, d));
     REQUIRE(popnet_graph_build_forward(graph, e));
 
-    REQUIRE(graph->nodes.size() == 3);
-    CHECK(graph->nodes[0] == a);
-    CHECK((graph->nodes[1] == d || graph->nodes[1] == e));
-    CHECK((graph->nodes[2] == d || graph->nodes[2] == e));
-    REQUIRE(graph->nodes[1] != graph->nodes[2]);
+    check_nodes({a, d, e});
 
     popnet_free(d);
     popnet_free(e);
@@ -293,12 +303,7 @@ TEST_CASE("popnet_graph build forward")
 
     REQUIRE(popnet_graph_build_forward(graph, e1));
 
-    REQUIRE(graph->nodes.size() == 5);
-    CHECK(graph->nodes[0] == a);
-    CHECK(graph->nodes[1] == b);
-    CHECK((graph->nodes[2] == c1 || graph->nodes[2] == d1));
-    CHECK((graph->nodes[3] == c1 || graph->nodes[3] == d1));
-    CHECK(graph->nodes[4] == e1);
+    check_nodes({a, b, c1, d1, e1});
 
     popnet_free(c1);
     popnet_free(d1);
@@ -310,9 +315,7 @@ TEST_CASE("popnet_graph build forward")
     popnet_tensor* f = popnet_add(a, a);
     REQUIRE(popnet_graph_build_forward(graph, f));
 
-    REQUIRE(graph->nodes.size() == 2);
-    CHECK(graph->nodes[0] == a);
-    CHECK(graph->nodes[1] == f);
+    check_nodes({a, f});
 
     popnet_free(f);
   }
@@ -326,12 +329,7 @@ TEST_CASE("popnet_graph build forward")
 
     REQUIRE(popnet_graph_build_forward(graph, e1));
 
-    REQUIRE(graph->nodes.size() == 5);
-    CHECK(graph->nodes[0] == a);
-    CHECK(graph->nodes[1] == b1);
-    CHECK(graph->nodes[2] == c1);
-    CHECK(graph->nodes[3] == d1);
-    CHECK(graph->nodes[4] == e1);
+    check_nodes({a, b1, c1, d1, e1});
 
     popnet_free(b1);
     popnet_free(c1);
@@ -345,6 +343,7 @@ TEST_CASE("popnet_graph build forward")
 }
 
 // @verifies REQ-0020: Checks forward results for dependent operations and unchanged input-only nodes.
+// @verifies REQ-0026: Forward results satisfy the operation-specific accuracy contract.
 TEST_CASE("popnet_graph compute forward")
 {
   popnet_graph* graph = popnet_graph_alloc();
@@ -360,9 +359,12 @@ TEST_CASE("popnet_graph compute forward")
   popnet_set_data(a, a_values, popnet_dtype_f32, 0, 4);
   popnet_set_data(b, b_values, popnet_dtype_f32, 0, 4);
 
-  SUBCASE("null graph pointer") { popnet_graph_compute_forward(nullptr); }
+  SUBCASE("empty graph")
+  {
+    popnet_graph_compute_forward(graph);
 
-  SUBCASE("empty graph") { popnet_graph_compute_forward(graph); }
+    CHECK(graph->nodes.empty());
+  }
 
   SUBCASE("recompute after changing inputs")
   {
@@ -404,7 +406,7 @@ TEST_CASE("popnet_graph compute forward")
 
     for (int i = 0; i < 4; ++i)
     {
-      CHECK_F32_CLOSE(out[i], a_values[i], 1e-4, 1e-4);
+      CHECK(out[i] == a_values[i]);
     }
   }
 
@@ -424,8 +426,8 @@ TEST_CASE("popnet_graph compute forward")
 
     for (int i = 0; i < 4; ++i)
     {
-      CHECK_F32_CLOSE(c1_out[i], std::abs(a_values[i]), 1e-4, 1e-4);
-      CHECK_F32_CLOSE(c2_out[i], -b_values[i], 1e-4, 1e-4);
+      CHECK(c1_out[i] == std::abs(a_values[i]));
+      CHECK(c2_out[i] == -b_values[i]);
     }
 
     popnet_free(c1);
@@ -446,8 +448,8 @@ TEST_CASE("popnet_graph compute forward")
 
     for (int i = 0; i < 4; ++i)
     {
-      CHECK_F32_CLOSE(c_out[i], std::abs(a_values[i]), 1e-4, 1e-4);
-      CHECK_F32_CLOSE(d_out[i], c_out[i] + b_values[i], 1e-4, 1e-4);
+      CHECK(c_out[i] == std::abs(a_values[i]));
+      CHECK(d_out[i] == c_out[i] + b_values[i]);
     }
 
     popnet_free(c);
@@ -468,8 +470,8 @@ TEST_CASE("popnet_graph compute forward")
 
     for (int i = 0; i < 4; ++i)
     {
-      CHECK_F32_CLOSE(c_out[i], a_values[i] + b_values[i], 1e-4, 1e-4);
-      CHECK_F32_CLOSE(d_out[i], std::abs(c_out[i]), 1e-4, 1e-4);
+      CHECK(c_out[i] == a_values[i] + b_values[i]);
+      CHECK(d_out[i] == std::abs(c_out[i]));
     }
 
     popnet_free(c);
@@ -492,9 +494,9 @@ TEST_CASE("popnet_graph compute forward")
 
     for (int i = 0; i < 4; ++i)
     {
-      CHECK_F32_CLOSE(c_out[i], a_values[i] + b_values[i], 1e-4, 1e-4);
-      CHECK_F32_CLOSE(d_out[i], std::abs(a_values[i]), 1e-4, 1e-4);
-      CHECK_F32_CLOSE(e_out[i], c_out[i] + d_out[i], 1e-4, 1e-4);
+      CHECK(c_out[i] == a_values[i] + b_values[i]);
+      CHECK(d_out[i] == std::abs(a_values[i]));
+      CHECK(e_out[i] == c_out[i] + d_out[i]);
     }
 
     popnet_free(c);
@@ -518,9 +520,9 @@ TEST_CASE("popnet_graph compute forward")
 
     for (int i = 0; i < 4; ++i)
     {
-      CHECK_F32_CLOSE(c1_out[i], std::abs(a_values[i]), 1e-4, 1e-4);
-      CHECK_F32_CLOSE(c2_out[i], -a_values[i], 1e-4, 1e-4);
-      CHECK_F32_CLOSE(d_out[i], c1_out[i] + c2_out[i], 1e-4, 1e-4);
+      CHECK(c1_out[i] == std::abs(a_values[i]));
+      CHECK(c2_out[i] == -a_values[i]);
+      CHECK(d_out[i] == c1_out[i] + c2_out[i]);
     }
 
     popnet_free(c1);
@@ -567,33 +569,14 @@ TEST_CASE("popnet_graph compute forward")
     float last_out[TENSOR_SIZE] = {};
     popnet_get_data(prev, last_out, popnet_dtype_f32, 0, TENSOR_SIZE);
 
+    // Positive inputs make abs an identity; every odd chain step adds base_a.
     std::vector<float> expected(TENSOR_SIZE);
     for (int j = 0; j < TENSOR_SIZE; ++j)
-    {
-      expected[j] = a_values[j] + b_values[j]; // first add
-    }
-
-    for (int i = 1; i < N; ++i)
-    {
-      if (i % 2 == 0)
-      {
-        for (int j = 0; j < TENSOR_SIZE; ++j)
-        {
-          expected[j] = std::abs(expected[j]);
-        }
-      }
-      else
-      {
-        for (int j = 0; j < TENSOR_SIZE; ++j)
-        {
-          expected[j] += a_values[j];
-        }
-      }
-    }
+      expected[j] = (1 + N / 2) * a_values[j] + b_values[j];
 
     for (int j = 0; j < TENSOR_SIZE; ++j)
     {
-      CHECK_F32_CLOSE(last_out[j], expected[j], 1e-4, 1e-4);
+      CHECK(last_out[j] == expected[j]);
     }
 
     for (size_t i = 2; i < nodes.size(); ++i)

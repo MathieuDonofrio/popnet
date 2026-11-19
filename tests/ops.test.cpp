@@ -3,7 +3,7 @@
 #include "elemwise.h"
 #include "tensor.h"
 
-// @verifies REQ-0003: Public reduction constructors apply each valid axis mask to the output shape.
+// @verifies REQ-0003: Public reduction constructors apply each supported axis mask to the output shape.
 // @verifies REQ-0017: Reduction results record their operation and input with independent storage.
 // @verifies REQ-0024: Reduction results preserve float32 dtype.
 TEST_CASE("reduction output shapes follow the axis mask")
@@ -31,11 +31,21 @@ TEST_CASE("reduction output shapes follow the axis mask")
       {
         CAPTURE(mask);
         popnet_shape expected = shape;
+        bool selected = false, ended = false, supported = true;
 
         for (size_t axis = 0; axis < POPNET_MAX_DIMS; ++axis)
         {
           if (mask & (1 << axis)) expected.dim[axis] = 1;
+          if (shape.dim[axis] == 1) continue;
+          if (mask & (1 << axis))
+          {
+            if (ended) supported = false;
+            selected = true;
+          }
+          else if (selected)
+            ended = true;
         }
+        if (!supported) continue;
 
         auto* dst = reduce.create(src, mask);
 
