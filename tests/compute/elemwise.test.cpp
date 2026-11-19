@@ -18,8 +18,8 @@
 // these sampled checks are not an exhaustive certification of libm or the domain.
 template <auto compute> static void check_unary_accuracy(float actual, double expected)
 {
-  if constexpr (compute == popnet_compute_exp || compute == popnet_compute_log || compute == popnet_compute_sin ||
-                compute == popnet_compute_cos || compute == popnet_compute_tanh || compute == popnet_compute_sigmoid)
+  if (compute == popnet_compute_exp || compute == popnet_compute_log || compute == popnet_compute_sin ||
+      compute == popnet_compute_cos || compute == popnet_compute_tanh || compute == popnet_compute_sigmoid)
     CHECK_F32_CLOSE(actual, expected, f32_math_atol, f32_math_rtol);
   else
     CHECK(actual == static_cast<float>(expected));
