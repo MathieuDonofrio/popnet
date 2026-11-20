@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Navigate and validate Popnet's documented traceability relationships.
+"""Navigate and validate a repository's documented traceability relationships.
 
 Requires PyYAML: python -m pip install PyYAML
 Run from any directory: python <repository>/tools/trace/trace.py <command>
@@ -9,8 +9,9 @@ import argparse
 import json
 import re
 import sys
-from collections import defaultdict
+from collections import defaultdict, deque
 from dataclasses import dataclass, field
+from functools import cache
 from pathlib import Path
 
 try:
@@ -25,7 +26,6 @@ KINDS = {
     "requirement": ("docs/requirements", "REQ", ("Obligation",)),
     "adr": ("docs/architecture", "ADR", ("Context", "Decision", "Rationale", "Consequences")),
 }
-ID_RE = re.compile(r"^(INT|REQ|ADR)-\d{4}$")
 TEST_RE = re.compile(r'^\s*TEST_CASE\s*\(\s*"((?:\\.|[^"\\])*)"\s*\)', re.MULTILINE | re.DOTALL)
 ANNOTATION_RE = re.compile(r'^\s*//\s*@verifies\b(.*)$')
 VALID_ANNOTATION_RE = re.compile(r'^\s*(REQ-\d{4})(?:\s*:\s*.*)?\s*$')
@@ -55,6 +55,21 @@ def unique_mapping(loader, node):
 StrictLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, unique_mapping)
 
 
+def markdown_lines(lines, first_line=1):
+    """Yield line numbers and text outside fenced code blocks."""
+    fence = None
+    for number, line in enumerate(lines, first_line):
+        match = FENCE_RE.match(line)
+        if match:
+            marker = match.group(1)
+            if fence is None:
+                fence = marker
+            elif marker.startswith(fence):
+                fence = None
+        elif fence is None:
+            yield number, line
+
+
 @dataclass
 class Document:
     kind: str
@@ -69,23 +84,11 @@ class Document:
         return {"id": self.id, "type": self.kind, "title": self.title, "path": self.path}
 
 
-@dataclass
-class TestCase:
-    path: str
-    line: int
-    name: str
-    requirements: list[str]
-
-    def brief(self):
-        return {"name": self.name, "path": self.path, "line": self.line}
-
-
 class Index:
     def __init__(self, root: Path):
         self.root = root.resolve()
         self.documents = []
         self.by_id = {}
-        self.tests = []
         self.tests_by_requirement = defaultdict(list)
         self.requirements_by_intent = defaultdict(list)
         self.diagnostics = []
@@ -99,7 +102,7 @@ class Index:
 
     def _load(self):
         if not (self.root / "docs/intents").is_dir() or not (self.root / "docs/requirements").is_dir():
-            raise ValueError(f"not a Popnet repository: missing docs/intents or docs/requirements in {self.root}")
+            raise ValueError(f"missing docs/intents or docs/requirements in {self.root}")
         for kind, (folder, _, _) in KINDS.items():
             base = self.root / folder
             if not base.exists():
@@ -120,9 +123,6 @@ class Index:
         else:
             for path in sorted(t for t in tests.rglob("*") if t.suffix in (".cpp", ".cc", ".cxx")):
                 self._load_tests(path)
-        for test in self.tests:
-            for req_id in test.requirements:
-                self.tests_by_requirement[req_id].append(test)
         self.diagnostics.sort(key=lambda d: (d["path"], d["line"] or 0, d["code"]))
 
     def rel(self, path):
@@ -178,62 +178,52 @@ class Index:
 
     def _check_sections(self, lines, start, kind, location):
         sections = {}
+        nonempty = set()
         current = None
-        fence = None
-        for i in range(start, len(lines)):
-            line = lines[i]
-            f = FENCE_RE.match(line)
-            if f:
-                marker = f.group(1)
-                if fence is None:
-                    fence = marker
-                elif marker[0] == fence[0] and len(marker) >= len(fence):
-                    fence = None
-                continue
-            if fence:
-                continue
+        for number, line in markdown_lines(lines[start:], start + 1):
             heading = HEADING_RE.match(line)
             if heading:
                 current = heading.group(1).strip()
                 if current in sections:
-                    self.diagnostic("DUPLICATE_SECTION", f"duplicate section: {current}", location, i + 1)
+                    self.diagnostic("DUPLICATE_SECTION", f"duplicate section: {current}", location, number)
                 else:
-                    sections[current] = {"line": i + 1, "body": []}
-            elif current:
-                sections[current]["body"].append(line)
+                    sections[current] = number
+            elif current and line.strip():
+                nonempty.add(current)
         for section in KINDS[kind][2]:
             if section not in sections:
                 self.diagnostic("MISSING_SECTION", f"missing required section: {section}", location)
-            elif not "".join(sections[section]["body"]).strip():
-                self.diagnostic("EMPTY_SECTION", f"empty required section: {section}", location, sections[section]["line"])
+            elif section not in nonempty:
+                self.diagnostic("EMPTY_SECTION", f"empty required section: {section}", location, sections[section])
 
-    def _reference_line(self, doc, field, value, occurrence=1):
-        lines = doc.text.splitlines()
-        at = doc.field_lines.get(field, 1)
-        for idx in range(at, len(lines)):
-            if re.match(r'^\S[^:]*:', lines[idx]) and idx + 1 > at:
+    @staticmethod
+    def _reference_lines(lines, field_line):
+        locations = defaultdict(deque)
+        for number, line in enumerate(lines[field_line:], field_line + 1):
+            if re.match(r'^\S[^:]*:', line):
                 break
-            if lines[idx].strip().removeprefix("- ").strip().strip('"\'') == value:
-                occurrence -= 1
-                if occurrence == 0:
-                    return idx + 1
-        return at
+            value = line.strip().removeprefix("- ").strip().strip('"\'')
+            locations[value].append(number)
+        return locations
 
     def _check_references(self):
+        heading_fragments = cache(self._heading_fragments)
         for doc in self.documents:
             if doc.kind != "requirement":
                 continue
+            lines = doc.text.splitlines()
             for field_name in ("intents", "specifications"):
                 values = doc.metadata.get(field_name)
                 if not isinstance(values, list):
                     continue
+                field_line = doc.field_lines.get(field_name)
+                locations = self._reference_lines(lines, field_line or 1)
                 seen = set()
-                occurrences = defaultdict(int)
                 for value in values:
+                    loc = field_line
                     if isinstance(value, str):
-                        occurrences[value] += 1
-                    loc = (self._reference_line(doc, field_name, value, occurrences[value])
-                           if isinstance(value, str) else doc.field_lines.get(field_name))
+                        value_lines = locations.get(value)
+                        loc = value_lines.popleft() if value_lines else field_line or 1
                     if not isinstance(value, str) or not value.strip():
                         self.diagnostic("INVALID_REFERENCE", f"{field_name} entries must be nonempty strings", doc.path, loc)
                         continue
@@ -251,37 +241,24 @@ class Index:
                         target = (self.root / file_part).resolve()
                         if not file_part or not target.is_relative_to(self.root) or not target.is_file():
                             self.diagnostic("UNKNOWN_SPECIFICATION", f"missing referenced file: {value}", doc.path, loc)
-                        elif sep and (not fragment or not self._has_heading(target, fragment)):
+                        elif sep and (not fragment or fragment not in heading_fragments(target)):
                             self.diagnostic("UNKNOWN_SECTION", f"missing referenced section: {value}", doc.path, loc)
 
     @staticmethod
-    def _has_heading(path, fragment):
-        def slug(title):
-            return re.sub(r'\s+', '-', re.sub(r'[^\w -]', '', title.casefold()).strip())
-        headings = []
-        fenced = None
-        for line in path.read_text(encoding="utf-8-sig").splitlines():
-            match = FENCE_RE.match(line)
-            if match:
-                marker = match.group(1)
-                if fenced is None:
-                    fenced = marker
-                elif marker[0] == fenced[0] and len(marker) >= len(fenced):
-                    fenced = None
-                continue
-            if fenced:
-                continue
-            heading = re.match(r'^#{1,6}\s+(.*?)\s*#*\s*$', line)
-            if heading:
-                headings.append(slug(heading.group(1)))
-        # Support GitHub's automatic suffixes for repeated headings.
+    def _heading_fragments(path):
+        fragments = set()
         counts = defaultdict(int)
-        for name in headings:
+        for _, line in markdown_lines(path.read_text(encoding="utf-8-sig").splitlines()):
+            heading = re.match(r'^#{1,6}\s+(.*?)\s*#*\s*$', line)
+            if not heading:
+                continue
+            title = re.sub(r'[^\w -]', '', heading.group(1).casefold()).strip()
+            name = re.sub(r'\s+', '-', title)
+            # GitHub adds numeric suffixes to repeated headings.
             suffix = counts[name]
             counts[name] += 1
-            if (name if suffix == 0 else f"{name}-{suffix}") == fragment:
-                return True
-        return False
+            fragments.add(f"{name}-{suffix}" if suffix else name)
+        return fragments
 
     def _load_tests(self, path):
         location = self.rel(path)
@@ -293,8 +270,10 @@ class Index:
             if match:
                 annotations[idx] = match.group(1)
         used = set()
+        start = previous_offset = 0
         for match in TEST_RE.finditer(text):
-            start = text.count("\n", 0, match.start())
+            start += text.count("\n", previous_offset, match.start())
+            previous_offset = match.start()
             cursor = start - 1
             pending = []
             while cursor >= 0:
@@ -307,7 +286,8 @@ class Index:
                     break
             pending.reverse()
             used.update(pending)
-            references = []
+            test = {"name": match.group(1), "path": location, "line": start + 1}
+            references = set()
             for idx in pending:
                 a = VALID_ANNOTATION_RE.fullmatch(annotations[idx])
                 if a is None:
@@ -319,15 +299,15 @@ class Index:
                 if req in references:
                     self.diagnostic("DUPLICATE_ANNOTATION", f"duplicate @verifies for {req} in test case", location, idx + 1)
                 else:
-                    references.append(req)
+                    references.add(req)
+                    self.tests_by_requirement[req].append(test)
             if not pending:
                 self.diagnostic("MISSING_ANNOTATION", "TEST_CASE must have at least one @verifies annotation", location, start + 1)
-            self.tests.append(TestCase(location, start + 1, match.group(1), references))
         for idx in sorted(set(annotations) - used):
             self.diagnostic("MISPLACED_ANNOTATION", "@verifies annotation is not directly associated with a TEST_CASE", location, idx + 1)
 
     def _tests_for(self, req_id):
-        return [test.brief() for test in self.tests_by_requirement[req_id]]
+        return self.tests_by_requirement.get(req_id, [])
 
     def search(self, query):
         query = query.strip().casefold()
@@ -384,8 +364,9 @@ class Index:
         if intent_id is not None:
             req_ids = {r.id for r in self.requirements_by_intent[intent_id]}
             requirements = [r for r in requirements if r.id in req_ids]
-        linked = sum(bool(self.tests_by_requirement[d.id]) for d in requirements)
         total = len(requirements)
+        without_tests = [d.brief() for d in requirements if not self._tests_for(d.id)]
+        linked = total - len(without_tests)
         result = {
             "summary": {
                 "intents_total": len(intents),
@@ -400,14 +381,11 @@ class Index:
                     for req in sorted(self.requirements_by_intent[intent.id], key=lambda r: r.id)
                 ]} for intent in intents
             ],
-            "requirements_without_tests": [d.brief() for d in requirements if not self.tests_by_requirement[d.id]],
+            "requirements_without_tests": without_tests,
         }
         if intent_id is None:
-            result["requirements_without_intents"] = [
-                d.brief() for d in requirements if not any(
-                    d in members for members in self.requirements_by_intent.values()
-                )
-            ]
+            linked_paths = {r.path for group in self.requirements_by_intent.values() for r in group}
+            result["requirements_without_intents"] = [d.brief() for d in requirements if d.path not in linked_paths]
         return result
 
 
@@ -456,6 +434,15 @@ def print_coverage(info):
             print(f"  {req['id']} — {req['title']}")
 
 
+def not_found(message, as_json):
+    if as_json:
+        print(json.dumps({"schema_version": SCHEMA_VERSION,
+                          "error": {"code": "NOT_FOUND", "message": message}}, indent=2))
+    else:
+        print(message, file=sys.stderr)
+    return 1
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -490,23 +477,14 @@ def main():
             for item in results:
                 print(f"{item['id'] or '-':<9} {item['title']}\n          {item['path']}")
     elif args.command == "show":
-        info = index.show(args.id)
-        if info is None:
-            if args.json:
-                print(json.dumps({"schema_version": SCHEMA_VERSION, "error": {"code": "NOT_FOUND", "message": f"unknown artifact ID: {args.id}"}}, indent=2))
-            else:
-                print(f"unknown artifact ID: {args.id}", file=sys.stderr)
-            return 1
-        result = info
+        result = index.show(args.id)
+        if result is None:
+            return not_found(f"unknown artifact ID: {args.id}", args.json)
         if not args.json:
-            print_show(info)
+            print_show(result)
     elif args.command == "coverage":
         if args.intent_id is not None and (args.intent_id not in index.by_id or index.by_id[args.intent_id].kind != "intent"):
-            if args.json:
-                print(json.dumps({"schema_version": SCHEMA_VERSION, "error": {"code": "NOT_FOUND", "message": f"unknown intent: {args.intent_id}"}}, indent=2))
-            else:
-                print(f"unknown intent: {args.intent_id}", file=sys.stderr)
-            return 1
+            return not_found(f"unknown intent: {args.intent_id}", args.json)
         result = index.coverage(args.intent_id)
         if args.badge:
             percent = result["summary"]["test_traceability_percent"]

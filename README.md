@@ -2,7 +2,9 @@
 
 [![Build & Tests](https://github.com/MathieuDonofrio/popnet/actions/workflows/ci.yml/badge.svg)](https://github.com/MathieuDonofrio/popnet/actions/workflows/ci.yml)
 [![Code coverage](https://codecov.io/gh/MathieuDonofrio/popnet/graph/badge.svg)](https://app.codecov.io/gh/MathieuDonofrio/popnet)
-[![Traceability coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Ftraceability.json)](https://github.com/MathieuDonofrio/popnet/actions/workflows/traceability.yml)
+[![Traceability coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Ftraceability.json)](https://github.com/MathieuDonofrio/popnet/actions/workflows/repository-reports.yml)
+[![SLOC](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Fsloc.json)](tools/code_metrics/README.md)
+[![P95 CC](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Fcc.json)](tools/code_metrics/README.md)
 
 
 A lightweight tensor library for neural networks, with a C API and a C++20 implementation.
@@ -20,7 +22,7 @@ A lightweight tensor library for neural networks, with a C API and a C++20 imple
 
 ## Supported Platforms
 
-The following platforms and compilers are built and tested by the CI/CD.
+Build & Tests tests three configurations by default. Enable `full_matrix` when running the workflow manually to test all supported combinations below.
 
 | Platform | Compilers |
 |---|---|
