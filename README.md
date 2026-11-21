@@ -1,8 +1,8 @@
 # Popnet
 
 [![Build & Tests](https://github.com/MathieuDonofrio/popnet/actions/workflows/ci.yml/badge.svg)](https://github.com/MathieuDonofrio/popnet/actions/workflows/ci.yml)
-[![Combined Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Fcoverage.json)](https://mathieudonofrio.github.io/popnet/#coverage)
-[![Traceability Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Ftraceability.json)](https://mathieudonofrio.github.io/popnet/#traceability)
+[![Code Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Fcoverage.json)](https://mathieudonofrio.github.io/popnet/#coverage)
+[![Requirement Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Ftraceability.json)](https://mathieudonofrio.github.io/popnet/#traceability)
 [![Source Lines of Code](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Fsloc.json)](https://mathieudonofrio.github.io/popnet/#complexity)
 [![P95 Cognitive Complexity](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Fcognitive-complexity.json)](https://mathieudonofrio.github.io/popnet/#complexity)
 

@@ -258,6 +258,8 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(report["p95"], 1)
 
         badges = generate.metric_badges(report)
+        self.assertEqual(badges["coverage"]["label"], "Code Coverage")
+        self.assertEqual(badges["traceability"]["label"], "Requirement Coverage")
         self.assertEqual({name: badge["message"] for name, badge in badges.items()}, {
             "coverage": "66.7%",
             "traceability": "50.0%",

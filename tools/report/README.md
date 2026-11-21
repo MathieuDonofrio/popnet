@@ -26,6 +26,8 @@ Open the dashboard with `#coverage`, `#traceability`, or `#complexity` appended 
 
 The workflow deploys the report to GitHub Pages on `main`. Set the repository's **Settings → Pages → Source** to **GitHub Actions** before the first deployment.
 
+If GitHub returns a 404 after finding the `github-pages` artifact, check that publishing source and rerun the failed deployment job. If the artifact has expired, run Build & Tests again on `main`.
+
 The report embeds production C/C++ sources, test files referenced by traceability, and the linked documentation previews. It represents one checkout and coverage run.
 
 Run the generator tests with the Python dependencies installed:

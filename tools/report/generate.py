@@ -160,8 +160,8 @@ def metric_badges(report: dict) -> dict:
         return {"schemaVersion": 1, "label": label, "message": message, "color": "blue"}
 
     return {
-        "coverage": percentage_badge("Combined Coverage", report["coverage"]["combined"]),
-        "traceability": percentage_badge("Traceability Coverage", report["trace"]["combined"]),
+        "coverage": percentage_badge("Code Coverage", report["coverage"]["combined"]),
+        "traceability": percentage_badge("Requirement Coverage", report["trace"]["combined"]),
         "sloc": code_metrics.make_badge("sloc", report["sloc"], 95),
         "cognitive-complexity": code_metrics.make_badge("cognitive", report["p95"], 95),
     }
