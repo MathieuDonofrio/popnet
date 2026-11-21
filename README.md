@@ -3,7 +3,7 @@
 [![Build & Tests](https://github.com/MathieuDonofrio/popnet/actions/workflows/ci.yml/badge.svg)](https://github.com/MathieuDonofrio/popnet/actions/workflows/ci.yml)
 [![Code Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fcode-metrics-history%2Fcoverage.json)](https://mathieudonofrio.github.io/popnet/#coverage)
 [![Requirement Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fcode-metrics-history%2Ftraceability.json)](https://mathieudonofrio.github.io/popnet/#traceability)
-[![Source Lines of Code](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fcode-metrics-history%2Fsloc.json)](https://mathieudonofrio.github.io/popnet/#complexity)
+[![Source Lines of Code](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fcode-metrics-history%2Fsloc.json)](https://mathieudonofrio.github.io/popnet/)
 [![P95 Cognitive Complexity](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fcode-metrics-history%2Fcognitive-complexity.json)](https://mathieudonofrio.github.io/popnet/#complexity)
 
 
@@ -89,9 +89,7 @@ Reports are generated as `coverage/index.html`, `coverage/coverage.json` (LLVM J
 
 ## Interactive Code Report
 
-The [interactive code report](https://mathieudonofrio.github.io/popnet/) shows historical trends and the latest published results on `main` for code coverage, requirement coverage, source lines of code, and P95 cognitive complexity. Use the **Branch** selector to explore **Code Coverage**, **Requirement Coverage**, and **Complexity** for the latest available successful build of an active branch. **Dashboard** shows the history of `main`. To browse a run offline, download and extract its `popnet-code-report` artifact and open `index.html` in a browser.
-
-See the [dashboard generator guide](tools/report/README.md) for local generation and metric definitions.
+The [interactive code report](https://mathieudonofrio.github.io/popnet/) shows metric history for `main` and has a branch selector for the explorers. For offline viewing, extract the `popnet-code-report` artifact from a CI run and open `index.html`. See the [code report guide](tools/report/README.md) for local generation and metric definitions.
 
 ## Benchmarks
 
@@ -100,21 +98,4 @@ Run `build/bench/popnet_bench --benchmark_repetitions=5` (add `.exe` on Windows)
 
 ## Traceability
 
-The traceability tool navigates and validates relationships between intents, requirements, and tests.
-
-Install dependencies:
-
-```sh
-python -m pip install -r tools/trace/requirements.txt
-```
-
-Usage:
-
-```sh
-python tools/trace/trace.py search "tensor lifetime"
-python tools/trace/trace.py show REQ-0012
-python tools/trace/trace.py coverage
-python tools/trace/trace.py validate
-```
-
-All commands support `--json` for structured output. Coverage measures declared requirement-to-test links, not code coverage or verification completeness.
+Use the [traceability tool](tools/trace/README.md) to search and validate declared links between intents, requirements, specifications, and tests.

@@ -358,12 +358,14 @@ class ReportTests(unittest.TestCase):
         arbitrary = '</script><img src=x onerror=alert(1)>&"\u2028'
         data = {"sources": {"src/file.cpp": {"lines": [arbitrary]}}, "title": arbitrary}
 
-        html = generate.render_report(data)
+        html = generate.render_report(data, project_name="Example & <Project>")
         parser = ReportHTML()
         parser.feed(html)
         parser.close()
 
         self.assertTrue(html.startswith("<!doctype html>"))
+        self.assertIn("<title>Example &amp; &lt;Project&gt; — Code Report</title>", html)
+        self.assertIn("<h1>Example &amp; &lt;Project&gt; — Code Report</h1>", html)
         self.assertEqual(parser.scripts, 4)
         self.assertEqual(parser.external_resources, [])
         self.assertNotIn(arbitrary, html)

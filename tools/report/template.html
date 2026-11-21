@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Popnet — Code Report</title>
+<title>{{REPORT_TITLE}}</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -47,7 +47,7 @@
   h1, h2, p { margin: 0; }
   h1 { font-size: clamp(22px, 4vw, 30px); letter-spacing: -.035em; }
   h2 { font-size: 16px; }
-  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 20px; margin-bottom: 20px; }
+  header { margin-bottom: 16px; }
   small, .muted { color: var(--muted); }
   a, button.link { color: var(--accent); }
   button, input { font: inherit; color: inherit; }
@@ -70,9 +70,40 @@
   .panel { min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
   .panel-head { padding: 13px 15px; border-bottom: 1px solid var(--border); }
   .panel-head p { margin-top: 3px; color: var(--muted); font-size: 13px; }
-  .panel-head input, .jump input { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; }
-  .branch-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-bottom: 12px; }
-  .branch-picker select { max-width: 100%; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font: inherit; }
+  .panel-head input, .jump input {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px;
+  }
+  .branch-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 10px; }
+  .branch-trigger {
+    display: inline-flex; align-items: center; gap: 9px; min-width: 0; max-width: min(100%, 24rem);
+    padding: 6px 11px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  }
+  .branch-trigger strong {
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+    padding-left: 9px; border-left: 1px solid var(--border); color: var(--accent); font: 600 12px var(--mono);
+  }
+  .branch-trigger::after {
+    content: ""; flex: 0 0 6px; height: 6px; margin: -3px 2px 0 4px;
+    border: solid var(--muted); border-width: 0 1.5px 1.5px 0; transform: rotate(45deg);
+  }
+  .branch-trigger:hover, .branch-trigger:has(+ :popover-open) { background: var(--selected); border-color: var(--accent); }
+  .branch-options {
+    width: max-content; min-width: 12rem; max-width: min(27rem, calc(100vw - 28px)); max-height: 50vh;
+    padding: 5px; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 9px;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+  }
+  @supports (top: anchor(bottom)) {
+    .branch-options { position-anchor: auto; inset: calc(anchor(bottom) + 5px) auto auto anchor(left); margin: 0; }
+  }
+  .branch-option {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px; width: 100%;
+    border: 0; border-radius: 5px; padding: 7px 9px; background: none;
+    text-align: left; overflow-wrap: anywhere; font: 12px/1.5 var(--mono);
+  }
+  .branch-option:hover, .branch-option[aria-pressed="true"] { color: var(--accent); background: var(--selected); }
+  .branch-option[aria-pressed="true"]::after { content: ""; width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: currentColor; }
+  .branch-picker small:empty { display: none; }
   .history-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 12px 0; }
   .history-chart { padding: 13px 15px 8px; margin: 0; }
   .history-chart figcaption { font-weight: 600; }
@@ -121,6 +152,7 @@
   .markdown-text :is(.math.block, .math.display) { display: block; overflow: auto; margin: 8px 0; }
   .test-preview .code { max-height: 20rem; border: 1px solid var(--border); border-radius: 6px; }
   .test-preview summary small { display: block; overflow-wrap: anywhere; }
+  .test-comment { color: var(--muted); overflow-wrap: anywhere; }
   .jump { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
   .jump input { width: 6ch; }
   .jump button { border: 1px solid var(--border); border-radius: 6px; background: var(--page); padding: 5px 9px; }
@@ -171,7 +203,6 @@
   }
   @media (max-width: 650px) {
     .history-charts { grid-template-columns: minmax(0, 1fr); }
-    nav { flex-wrap: wrap; }
   }
   @media (max-width: 550px) {
     main { padding-top: 16px; }
@@ -185,16 +216,16 @@
 <body>
 <main>
   <header>
-    <h1>Popnet — Code Report</h1>
-    <small id="revision"></small>
+    <h1>{{REPORT_TITLE}}</h1>
+    <div class="branch-picker">
+      <button type="button" id="branch-select" class="branch-trigger" popovertarget="branch-options"
+        aria-describedby="branch-status branch-history-note"><span class="muted">Branch</span> <strong id="branch-name"></strong></button>
+      <div id="branch-options" class="branch-options" popover role="group" aria-label="Branches"></div>
+      <small id="branch-status" aria-live="polite"></small>
+      <small id="branch-history-note" hidden>Dashboard shows the default branch’s history.</small>
+    </div>
   </header>
   <noscript><p>This report requires JavaScript to browse its embedded data.</p></noscript>
-  <div class="branch-picker">
-    <label for="branch-select">Branch</label>
-    <select id="branch-select" aria-describedby="branch-status branch-history-note"></select>
-    <small id="branch-status" aria-live="polite"></small>
-    <small id="branch-history-note" hidden>Dashboard shows the default report and its history.</small>
-  </div>
   <section class="metrics" aria-label="Summary">
     <article class="card"><h2>Code Coverage</h2><strong id="coverage-value"></strong><small id="line-summary" class="metric-breakdown"></small><small id="branch-summary" class="metric-breakdown"></small></article>
     <article class="card"><h2>Requirement Coverage</h2><strong id="trace-value"></strong><small id="trace-requirements" class="metric-breakdown"></small><small id="trace-intents" class="metric-breakdown"></small></article>
@@ -215,7 +246,7 @@
       <summary>Recorded measurements</summary>
       <div class="results">
         <table aria-label="Metric history">
-          <thead><tr><th scope="col">Date (UTC)</th><th scope="col">Commit</th><th scope="col">Code coverage</th><th scope="col">Requirement coverage</th><th scope="col">SLOC</th><th scope="col">P95 complexity</th></tr></thead>
+          <thead><tr><th scope="col">Local date and time</th><th scope="col">Commit</th><th scope="col">Code coverage</th><th scope="col">Requirement coverage</th><th scope="col">SLOC</th><th scope="col">P95 complexity</th></tr></thead>
           <tbody id="history-rows"></tbody>
         </table>
       </div>
@@ -300,6 +331,8 @@
   const number = value => value.toLocaleString();
   const percentage = value => value.toFixed(1) + "%";
   const write = (id, value) => { byId(id).textContent = value; };
+  const localDate = new Intl.DateTimeFormat(undefined, {dateStyle: "medium", timeStyle: "short"});
+  const chartDate = new Intl.DateTimeFormat(undefined, {dateStyle: "short"});
   const matches = (query, ...values) => {
     const text = values.join(" ").toLowerCase();
     return query.trim().toLowerCase().split(/\s+/).every(word => text.includes(word));
@@ -320,9 +353,11 @@
   }
 
   const emptyCoverage = {covered: 0, total: 0};
-  const ratioPercent = ({covered, total}) => total ? percentage(100 * covered / total) : "—";
+  const rate = ({covered, total}) => total ? 100 * covered / total : null;
+  const ratioPercent = counts => counts.total ? percentage(rate(counts)) : "—";
   let activeReport = report;
-  const fileCoverage = (path, key = "combined") => activeReport?.sources[path]?.coverage?.[key] ?? emptyCoverage;
+  let selectedBranch;
+  const fileCoverage = path => activeReport.sources[path].coverage?.combined ?? emptyCoverage;
   const coverageState = (covered, total) => total === 0 ? "" : covered === total ? "hit" : covered ? "partial" : "miss";
 
   function fractionBreakdown(label, {covered, total}) {
@@ -331,15 +366,13 @@
 
   function renderSummary() {
     const dashboard = section === "dashboard";
-    byId("branch-history-note").hidden = !dashboard || !byId("branch-select").value;
+    byId("branch-history-note").hidden = !dashboard || !selectedBranch;
     const view = dashboard ? report : activeReport;
-    const revision = view?.revision;
-    write("revision", revision ? [revision.ref === "HEAD" ? "" : revision.ref, revision.commit.slice(0, 12),
-      revision.generated.replace("T", " ").replace(/(Z|\+00:00)$/, " UTC")].filter(Boolean).join(" · ") : "");
-    write("coverage-value", view?.badges?.coverage.message ?? (view ? ratioPercent(view.coverage.combined) : "—"));
-    write("trace-value", view?.badges?.traceability.message ?? (view ? ratioPercent(view.trace.combined) : "—"));
-    write("sloc-value", view?.badges?.sloc.message ?? (view ? number(view.sloc) : "—"));
-    write("p95-value", view?.badges?.["cognitive-complexity"].message ?? (view ? number(view.p95) : "—"));
+    const badges = view?.badges;
+    write("coverage-value", badges?.coverage.message ?? (view ? ratioPercent(view.coverage.combined) : "—"));
+    write("trace-value", badges?.traceability.message ?? (view ? ratioPercent(view.trace.combined) : "—"));
+    write("sloc-value", badges?.sloc.message ?? (view ? number(view.sloc) : "—"));
+    write("p95-value", badges?.["cognitive-complexity"].message ?? (view ? number(view.p95) : "—"));
     if (!view) {
       for (const id of ["line-summary", "branch-summary", "trace-requirements", "trace-intents",
         "files-total", "max-complexity", "functions-total"]) write(id, "");
@@ -443,7 +476,7 @@
     }
 
     const {path, start, end} = selection;
-    const view = buildSource(path, selectLine, section === "coverage");
+    const view = buildSource(activeReport.sources[path], selectLine, section === "coverage");
     selectedRows = [];
     rows = view.rows;
     source.replaceChildren(view.body);
@@ -453,20 +486,26 @@
     if (start) markSource(start, end);
   }
 
-  function buildSource(path, onLine, showCoverage = false, reportView = activeReport) {
-    const decisions = showCoverage ? fileCoverage(path, "branches").lines : undefined;
-    const lineCoverage = showCoverage ? fileCoverage(path, "lines").lines : undefined;
+  function buildSource(sourceFile, onLine, showCoverage = false) {
+    const coverage = showCoverage ? sourceFile.coverage : undefined;
     const body = element("div", undefined, "code-body");
     body.classList.toggle("coverage-code", showCoverage);
-    const sourceFile = reportView.sources[path];
     const sourceRows = sourceFile.lines.map((text, index) => {
       const line = index + 1;
-      const records = decisions?.[line];
-      const outcomes = records?.flatMap(record => Object.values(record.outcomes)) ?? [];
-      const covered = outcomes.filter(Boolean).length;
-      const ran = lineCoverage?.[line]?.[0].outcomes.Executed;
+      const records = coverage?.branches?.lines[line];
+      let covered = 0;
+      let total = 0;
+      if (records) {
+        for (const record of records) {
+          for (const outcome of Object.values(record.outcomes)) {
+            total += 1;
+            if (outcome) covered += 1;
+          }
+        }
+      }
+      const ran = coverage?.lines?.lines[line]?.[0].outcomes.Executed;
       const lineState = ran === undefined ? "" : ran ? "hit" : "miss";
-      const row = element("div", undefined, "code-row " + (coverageState(covered, outcomes.length) || lineState));
+      const row = element("div", undefined, "code-row " + (coverageState(covered, total) || lineState));
       const lineClass = "line-number " + lineState;
       const lineno = onLine ? button(line, () => onLine(line), lineClass) : element("span", line, lineClass);
       if (onLine) {
@@ -476,8 +515,8 @@
       row.append(lineno);
       if (showCoverage) {
         const fraction = element("span", undefined, "coverage-fraction");
-        if (outcomes.length) {
-          const control = button(covered + "/" + outcomes.length, () => inspectCoverage(control, row, line, records), "coverage-fraction");
+        if (total) {
+          const control = button(covered + "/" + total, () => inspectCoverage(control, row, line, records), "coverage-fraction");
           control.title = "Inspect branch outcomes at line " + line;
           control.setAttribute("aria-expanded", "false");
           control.setAttribute("aria-controls", "coverage-inspector");
@@ -487,16 +526,16 @@
       }
       const kind = /^\s*\/\//.test(text) ? "comment" : /^\s*#/.test(text) ? "directive" : "";
       row.append(element("code", text, kind));
+      body.append(row);
       return row;
     });
-    body.append(...sourceRows);
     return {body, rows: sourceRows};
   }
 
-  function openSource(path, start, end, reveal = true) {
+  function openSource(path, start, end) {
     selections[section] = {path, start, end};
     renderSource();
-    if (reveal && matchMedia("(max-width: 870px)").matches) {
+    if (matchMedia("(max-width: 870px)").matches) {
       byId("source-title").focus({preventScroll: true});
       byId("source-view").scrollIntoView({block: "start"});
     }
@@ -514,8 +553,9 @@
   });
   lineInput.addEventListener("input", () => lineInput.setCustomValidity(""));
 
-  function selectTabFromHash() {
-    const tab = tabs.find(item => item.dataset.section === location.hash.slice(1)) ?? tabs[0];
+  function selectTabFromUrl() {
+    const target = location.hash.slice(1) || new URLSearchParams(location.search).get("tab");
+    const tab = tabs.find(item => item.dataset.section === target) ?? tabs[0];
     section = tab.dataset.section;
     workspace.dataset.section = section;
     for (const item of tabs) {
@@ -531,16 +571,7 @@
   for (const tab of tabs) {
     tab.addEventListener("click", () => { location.hash = tab.dataset.section; });
   }
-  window.addEventListener("hashchange", selectTabFromHash);
-
-  function disclosure(label, open) {
-    const details = element("details");
-    details.open = open;
-    details.append(element("summary", label));
-    const branch = element("div", undefined, "branch");
-    details.append(branch);
-    return {details, branch};
-  }
+  window.addEventListener("hashchange", selectTabFromUrl);
 
   function score(stats) {
     const result = element("small", undefined, "file-score");
@@ -584,10 +615,14 @@
         const parent = folders.get(folder);
         folder += part + "/";
         if (!folders.has(folder)) {
-          const {details, branch} = disclosure(part + "/", true);
+          const details = element("details");
+          const summary = element("summary");
+          const branch = element("div", undefined, "branch");
           const label = element("span", part + "/", "folder-label");
           label.append(score(totals.get(folder)));
-          details.firstElementChild.replaceChildren(label);
+          summary.append(label);
+          details.append(summary, branch);
+          details.open = true;
           parent.append(details);
           folders.set(folder, branch);
         }
@@ -621,23 +656,33 @@
 
   function initializeBranches() {
     const branches = JSON.parse(byId("report-branches").textContent);
-    const select = byId("branch-select");
-    const initial = element("option", report.revision.ref === "HEAD" ? "Current checkout" : report.revision.ref);
-    initial.value = "";
-    select.append(initial);
-    branches.forEach((branch, index) => {
-      const option = element("option", branch.name);
-      option.value = String(index);
-      select.append(option);
-    });
+    const trigger = byId("branch-select");
+    const choices = byId("branch-options");
+    const initialName = report.revision.ref === "HEAD" ? "Current checkout" : report.revision.ref;
     let request = 0;
-    select.addEventListener("change", async () => {
+
+    function addChoice(name, branch) {
+      const choice = button(name, () => {
+        choices.querySelector('[aria-pressed="true"]').setAttribute("aria-pressed", "false");
+        choice.setAttribute("aria-pressed", "true");
+        write("branch-name", name);
+        trigger.title = name;
+        choices.hidePopover();
+        trigger.focus();
+        if (selectedBranch === branch && activeReport) return;
+        selectedBranch = branch;
+        loadBranch(branch);
+      }, "branch-option");
+      choice.setAttribute("aria-pressed", !branch);
+      choices.append(choice);
+    }
+
+    async function loadBranch(branch) {
       const current = ++request;
-      if (!select.value) {
+      if (!branch) {
         selectBranchView(report);
         return;
       }
-      const branch = branches[Number(select.value)];
       if (!Number.isSafeInteger(branch?.artifact)) {
         selectBranchView(null, "No successful report snapshot available for this branch.");
         return;
@@ -648,13 +693,18 @@
         if (!response.ok) throw new Error("Report download failed");
         const view = await response.json();
         if (current !== request) return;
-        const status = "Latest successful run · " + branch.commit.slice(0, 12) + " · " +
-          branch.generated.slice(0, 10) + (branch.commit === branch.head ? "" : " · Branch has newer commits");
+        const status = branch.commit === branch.head ? "" : "Branch has newer commits. Showing " +
+          branch.commit.slice(0, 12) + " from " + localDate.format(new Date(branch.generated)) + ".";
         selectBranchView(view, status);
       } catch {
         if (current === request) selectBranchView(null, "Could not load the branch report.");
       }
-    });
+    }
+
+    write("branch-name", initialName);
+    trigger.title = initialName;
+    addChoice(initialName);
+    for (const branch of branches) addChoice(branch.name, branch);
   }
 
   function documentLink(path, label) {
@@ -770,9 +820,10 @@
   }
 
   function renderTest(test) {
-    const reportView = activeReport;
+    const sourceFile = activeReport.sources[test.path];
     const details = element("details", undefined, "test-preview");
     const summary = element("summary", test.name);
+    if (test.comment) summary.append(element("span", " — " + test.comment, "test-comment"));
     summary.append(element("small", test.path + ":" + test.line, "mono muted"));
     const code = element("div", undefined, "code");
     code.tabIndex = 0;
@@ -780,7 +831,7 @@
     details.append(summary, code);
     details.addEventListener("toggle", () => {
       if (!details.open || code.firstElementChild) return;
-      const view = buildSource(test.path, undefined, false, reportView);
+      const view = buildSource(sourceFile);
       const target = view.rows[test.line - 1];
       code.append(view.body);
       if (target) {
@@ -811,7 +862,7 @@
       const requirements = intent.requirements.map(id => trace.requirements[id]).filter(req =>
         (!gapsOnly || !req.tests.length || !req.intents.length) &&
         (intentMatches || matches(query, req.id, req.title, req.path, req.markdown.text,
-          ...req.specifications.map(spec => spec.path), ...req.tests.flatMap(test => [test.name, test.path]))));
+          ...req.specifications.map(spec => spec.path), ...req.tests.flatMap(test => [test.name, test.comment, test.path]))));
       if (!intentMatches && !requirements.length) continue;
       if (!intent.id && !requirements.length) continue;
       const group = element("div", undefined, "trace-group");
@@ -877,7 +928,7 @@
     return node;
   }
 
-  function historyChart(measurements, metric, date) {
+  function historyChart(measurements, metric) {
     const chart = element("figure", undefined, "panel history-chart");
     chart.append(element("figcaption", metric.label));
     const svg = svgElement("svg", {viewBox: "0 0 480 185", role: "img", "aria-label": metric.label + " over time"});
@@ -903,7 +954,7 @@
     const dates = first === last ? [first] : [first, last];
     for (const time of dates) {
       const anchor = first === last ? "middle" : time === first ? "start" : "end";
-      svg.append(svgElement("text", {x: x(time), y: 174, "text-anchor": anchor}, date.format(time)));
+      svg.append(svgElement("text", {x: x(time), y: 174, "text-anchor": anchor}, chartDate.format(time)));
     }
 
     let path = "";
@@ -920,7 +971,7 @@
       path += (previousPoint ? "L" : "M") + cx + " " + cy;
       previousPoint = true;
       const dot = svgElement("circle", {cx, cy, r: 3.5, class: "history-point"});
-      dot.append(svgElement("title", {}, date.format(entry.time) + " · " + metric.format(value) + " · " + entry.commit.slice(0, 12)));
+      dot.append(svgElement("title", {}, localDate.format(entry.time) + " · " + metric.format(value) + " · " + entry.commit.slice(0, 12)));
       dots.push(dot);
     });
     svg.append(svgElement("path", {d: path, class: "history-line"}), ...dots);
@@ -930,28 +981,23 @@
   function renderHistory() {
     const entries = JSON.parse(byId("report-history").textContent);
     const measurements = entries.map(entry => ({...entry, time: Date.parse(entry.recorded_at)}));
-    const rate = counts => counts.total ? 100 * counts.covered / counts.total : null;
     const metrics = [
       {label: "Code coverage", value: entry => rate(entry.code_coverage), format: percentage, percent: true},
       {label: "Requirement coverage", value: entry => rate(entry.requirement_coverage), format: percentage, percent: true},
       {label: "Source lines of code", value: entry => entry.sloc, format: number},
       {label: "P95 cognitive complexity", value: entry => entry.p95, format: number},
     ];
-    const date = new Intl.DateTimeFormat("en", {
-      timeZone: "UTC", year: "numeric", month: "short", day: "numeric",
-      hour: "2-digit", minute: "2-digit", hourCycle: "h23",
-    });
     write("history-description", measurements.length === 1
       ? "One measurement recorded. Trends appear after the next recorded build."
-      : number(measurements.length) + " recorded measurements · UTC");
+      : number(measurements.length) + " recorded measurements");
     if (measurements.length) {
-      byId("history-charts").append(...metrics.map(metric => historyChart(measurements, metric, date)));
+      byId("history-charts").append(...metrics.map(metric => historyChart(measurements, metric)));
     }
     for (const entry of [...measurements].reverse()) {
       const row = element("tr");
       const commit = element("td", entry.commit.slice(0, 12), "mono");
       commit.title = entry.commit;
-      row.append(element("td", date.format(entry.time)), commit);
+      row.append(element("td", localDate.format(entry.time)), commit);
       for (const metric of metrics) {
         const value = metric.value(entry);
         row.append(element("td", value === null ? "—" : metric.format(value)));
@@ -967,7 +1013,7 @@
   initializeBranches();
   renderHistory();
   selectBranchView(report);
-  selectTabFromHash();
+  selectTabFromUrl();
 </script>
 </body>
 </html>

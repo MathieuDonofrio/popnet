@@ -15,8 +15,38 @@ def source_name(value, root, production):
 
 
 def total(records):
-    outcomes = [outcome for record in records for outcome in record["outcomes"].values()]
-    return {"covered": sum(outcomes), "total": len(outcomes)}
+    covered = count = 0
+    for record in records:
+        outcomes = record["outcomes"].values()
+        covered += sum(outcomes)
+        count += len(outcomes)
+    return {"covered": covered, "total": count}
+
+
+METRICS = ("lines", "branches")
+
+
+def add_totals(counts):
+    covered = count = 0
+    for metric in counts:
+        covered += metric["covered"]
+        count += metric["total"]
+    return {"covered": covered, "total": count}
+
+
+def file_coverage(metrics):
+    coverage = {metric: {"lines": lines, **total(record for records in lines.values() for record in records)}
+                for metric, lines in metrics.items()}
+    return {**coverage, "combined": add_totals(coverage.values())}
+
+
+def report_coverage(sources):
+    summary = {
+        metric: add_totals(source["coverage"][metric] for source in sources.values()
+                           if metric in source.get("coverage", {}))
+        for metric in METRICS
+    }
+    return {**summary, "combined": add_totals(summary.values())}
 
 
 def location(line, column, end_line, end_column, source):

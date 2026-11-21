@@ -28,7 +28,7 @@ KINDS = {
 }
 TEST_RE = re.compile(r'^\s*TEST_CASE\s*\(\s*"((?:\\.|[^"\\])*)"\s*\)', re.MULTILINE | re.DOTALL)
 ANNOTATION_RE = re.compile(r'^\s*//\s*@verifies\b(.*)$')
-VALID_ANNOTATION_RE = re.compile(r'^\s*(REQ-\d{4})(?:\s*:\s*.*)?\s*$')
+VALID_ANNOTATION_RE = re.compile(r'^\s*(REQ-\d{4})(?:\s*:\s*(.*?))?\s*$')
 HEADING_RE = re.compile(r'^##\s+(.+?)\s*#*\s*$')
 FENCE_RE = re.compile(r'^\s*(`{3,}|~{3,})')
 FILENAME_RE = re.compile(r'^(INT|REQ|ADR)-\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$')
@@ -303,14 +303,14 @@ class Index:
                 if a is None:
                     self.diagnostic("INVALID_ANNOTATION", "expected // @verifies REQ-NNNN: optional rationale", location, idx + 1)
                     continue
-                req = a.group(1)
+                req, comment = a.groups()
                 if req not in self.by_id or self.by_id[req].kind != "requirement":
                     self.diagnostic("UNKNOWN_REQUIREMENT", f"unknown requirement in @verifies: {req}", location, idx + 1)
                 if req in references:
                     self.diagnostic("DUPLICATE_ANNOTATION", f"duplicate @verifies for {req} in test case", location, idx + 1)
                 else:
                     references.add(req)
-                    self.tests_by_requirement[req].append(test)
+                    self.tests_by_requirement[req].append({**test, "comment": comment} if comment else test)
             if not pending:
                 self.diagnostic("MISSING_ANNOTATION", "TEST_CASE must have at least one @verifies annotation", location, start + 1)
         for idx in sorted(set(annotations) - used):
@@ -455,6 +455,8 @@ def not_found(message, as_json):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2],
+                        help="Repository to inspect")
     commands = parser.add_subparsers(dest="command", required=True)
     for name in ("search", "show", "coverage", "validate"):
         sub = commands.add_parser(name)
@@ -469,9 +471,8 @@ def main():
     args = parser.parse_args()
     if args.command == "coverage" and args.badge and args.json:
         parser.error("--badge and --json cannot be combined")
-    root = Path(__file__).resolve().parents[2]
     try:
-        index = Index(root)
+        index = Index(args.root)
     except (OSError, ValueError) as exc:
         if args.json:
             print(json.dumps({"schema_version": SCHEMA_VERSION,

@@ -15,6 +15,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -46,12 +50,11 @@ jobs:
               { runner: 'macos-15', arch: 'arm64', compiler: 'clang++',
                 standard: { build_type: 'RelWithDebInfo', native: 'ON' } },
             ];
+            const variants = ['Debug', 'RelWithDebInfo'].flatMap(build_type =>
+              ['ON', 'OFF'].map(native => ({ build_type, native })));
             const full = process.env.FULL_MATRIX === 'true';
-            const builds = platforms.flatMap(({ standard, ...platform }) => {
-              if (!full) return standard ? [{ ...platform, ...standard }] : [];
-              return ['Debug', 'RelWithDebInfo'].flatMap(build_type =>
-                ['ON', 'OFF'].map(native => ({ ...platform, build_type, native })));
-            });
+            const builds = platforms.flatMap(({ standard, ...platform }) =>
+              (full ? variants : standard ? [standard] : []).map(variant => ({ ...platform, ...variant })));
             core.setOutput('builds', { include: builds });
 
   test:
@@ -62,9 +65,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.matrix.outputs.builds) }}
-    defaults:
-      run:
-        shell: bash
     env:
       UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
     steps:
@@ -101,11 +101,11 @@ jobs:
             fi
           fi
           if [[ "$RUNNER_OS" == Windows && "$COMPILER" == clang-cl ]]; then
+            target=x86_64
             if [[ "$ARCH" == arm64 ]]; then
-              extra+=(-DCMAKE_CXX_COMPILER_TARGET=aarch64-pc-windows-msvc)
-            else
-              extra+=(-DCMAKE_CXX_COMPILER_TARGET=x86_64-pc-windows-msvc)
+              target=aarch64
             fi
+            extra+=("-DCMAKE_CXX_COMPILER_TARGET=$target-pc-windows-msvc")
           fi
           cmake -S . -B build/ci -G Ninja \
             -DCMAKE_CXX_COMPILER="$COMPILER" -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
@@ -120,10 +120,11 @@ jobs:
   coverage:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    permissions:
-      contents: read
     env:
       COVERAGE_PRESET: linux-clang-coverage
+      REPORT_KIND: >-
+        ${{ github.event_name != 'pull_request' && github.ref_type == 'branch' &&
+            (github.ref == 'refs/heads/main' && 'history' || 'branch') || 'standalone' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -151,24 +152,29 @@ jobs:
         run: python -m unittest discover -s tools/report
       - name: Generate code report dashboard
         run: |
-          python tools/report/generate.py --coverage-json "build/$COVERAGE_PRESET/coverage/coverage.json" \
-            --badges-dir badge --metrics-snapshot metrics-snapshot.json --branch-snapshot branch-report.json
+          outputs=()
+          case "$REPORT_KIND" in
+            history) outputs+=(--badges-dir badge --metrics-snapshot metrics-snapshot.json) ;;
+            branch)  outputs+=(--branch-snapshot branch-report.json) ;;
+          esac
+          python tools/report/generate.py --project-name Popnet --coverage-json "build/$COVERAGE_PRESET/coverage/coverage.json" \
+            "${outputs[@]}"
       - name: Upload code report dashboard
-        if: github.ref != 'refs/heads/main' || github.event_name == 'pull_request'
+        if: env.REPORT_KIND != 'history'
         uses: actions/upload-artifact@v4
         with:
           name: popnet-code-report
           path: report/index.html
           if-no-files-found: error
       - name: Upload branch report snapshot
-        if: github.ref_type == 'branch' && github.ref != 'refs/heads/main' && github.event_name != 'pull_request'
+        if: env.REPORT_KIND == 'branch'
         uses: actions/upload-artifact@v4
         with:
           name: branch-report
           path: branch-report.json
           if-no-files-found: error
       - name: Stage report and metrics
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        if: env.REPORT_KIND == 'history'
         uses: actions/upload-artifact@v4
         with:
           name: code-report-inputs
@@ -194,7 +200,6 @@ jobs:
           name: code-report-inputs
       - name: Record and publish metrics
         id: publish
-        shell: bash
         run: |
           main_ref=$(git ls-remote --exit-code origin refs/heads/main)
           if [[ "${main_ref%%$'\t'*}" != "$GITHUB_SHA" ]]; then
@@ -216,11 +221,9 @@ jobs:
 
           python tools/report/history.py --snapshot metrics-snapshot.json \
             --history "$history_dir/history.json" --report report/index.html
-          for badge in coverage.json traceability.json sloc.json cognitive-complexity.json; do
-            cp "badge/$badge" "$history_dir/"
-            git -C "$history_dir" add "$badge"
-          done
-          git -C "$history_dir" add history.json
+          badges=(coverage.json traceability.json sloc.json cognitive-complexity.json)
+          (cd badge && cp "${badges[@]}" "$history_dir/")
+          git -C "$history_dir" add -- history.json "${badges[@]}"
           if ! git -C "$history_dir" diff --cached --quiet; then
             git -C "$history_dir" -c user.name='github-actions[bot]' \
               -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \

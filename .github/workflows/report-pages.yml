@@ -11,7 +11,6 @@ permissions: {}
 
 concurrency:
   group: popnet-report-pages
-  cancel-in-progress: false
 
 jobs:
   assemble:
@@ -44,7 +43,9 @@ jobs:
         id: site
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 -m tools.report.publish_site --repository "$GITHUB_REPOSITORY" --output site --github-output "$GITHUB_OUTPUT"
+        run: >-
+          python3 -m tools.report.publish_site --repository "$GITHUB_REPOSITORY"
+          --report-artifact popnet-code-report --output site --github-output "$GITHUB_OUTPUT"
       - name: Stage report for GitHub Pages
         if: steps.site.outputs.published == 'true'
         uses: actions/upload-pages-artifact@v4

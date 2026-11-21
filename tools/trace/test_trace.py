@@ -109,9 +109,27 @@ class TraceTests(unittest.TestCase):
         self.assertEqual([item["id"] for item in intent["requirements"]], ["REQ-0001"])
         self.assertEqual([item["id"] for item in requirement["intents"]], ["INT-0001"])
         self.assertEqual(requirement["specifications"], [{"path": "docs/specifications/tensor.md#retention"}])
-        tests = [{"path": "tests/tensor/lifetime.cpp", "line": 2, "name": "retained tensor"}]
+        tests = [{"path": "tests/tensor/lifetime.cpp", "line": 2, "name": "retained tensor",
+                  "comment": "Exercises retained storage"}]
         self.assertEqual(intent["requirements"][0]["tests"], tests)
         self.assertEqual(requirement["tests"], tests)
+
+    def test_test_link_comments_are_specific_to_the_requirement(self):
+        self.write_repository()
+        self.write("tests/tensor/lifetime.cpp", """
+            // @verifies REQ-0001:  Retains the input: even after release.
+            // @verifies REQ-0002:  Reports the expected shape.
+            TEST_CASE("test for both requirements") {}
+            // @verifies REQ-0001
+            TEST_CASE("no comment") {}
+        """)
+
+        first = self.json_output("show", "REQ-0001", "--json")["tests"]
+        second = self.json_output("show", "REQ-0002", "--json")["tests"]
+
+        self.assertEqual(first[0]["comment"], "Retains the input: even after release.")
+        self.assertNotIn("comment", first[1])
+        self.assertEqual(second[0]["comment"], "Reports the expected shape.")
 
     def test_coverage_reports_global_gaps_and_intent_scope(self):
         self.write_repository()

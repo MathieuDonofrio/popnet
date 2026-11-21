@@ -6,7 +6,6 @@ from . import coverage_data
 
 
 SCHEMA_VERSION = 1
-METRICS = ("lines", "branches")
 PRODUCTION_ROOTS = ("src", "include")
 
 
@@ -16,12 +15,13 @@ def snapshot(report: dict, commit: str) -> dict:
         source = report["sources"][path]
         sources[path] = {
             "lines": source["lines"],
-            "coverage": {metric: source.get("coverage", {}).get(metric, {}).get("lines", {}) for metric in METRICS},
+            "coverage": {metric: source.get("coverage", {}).get(metric, {}).get("lines", {})
+                         for metric in coverage_data.METRICS},
         }
     return {"schema_version": SCHEMA_VERSION, "commit": commit, "sources": sources}
 
 
-def counts_by_line(records_by_line: dict, line_count: int, metric: str) -> dict:
+def validate_lines(records_by_line: dict, line_count: int, metric: str) -> None:
     for line, records in records_by_line.items():
         if not line.isascii() or not line.isdecimal() or line.startswith("0") or int(line) > line_count:
             raise ValueError("invalid coverage line number")
@@ -35,7 +35,6 @@ def counts_by_line(records_by_line: dict, line_count: int, metric: str) -> dict:
                 raise ValueError("invalid coverage outcomes")
         if metric == "lines" and (len(records) != 1 or set(records[0]["outcomes"]) != {"Executed"}):
             raise ValueError("invalid line execution record")
-    return coverage_data.total(record for records in records_by_line.values() for record in records)
 
 
 def report_view(data: dict, commit: str) -> dict:
@@ -44,7 +43,6 @@ def report_view(data: dict, commit: str) -> dict:
         raise ValueError("branch snapshot schema or commit does not match")
     if not data["sources"]:
         raise ValueError("branch snapshot has no production sources")
-    summary = {metric: {"covered": 0, "total": 0} for metric in (*METRICS, "combined")}
     sources = {}
     for path, source in sorted(data["sources"].items()):
         parts = PurePosixPath(path).parts
@@ -54,14 +52,8 @@ def report_view(data: dict, commit: str) -> dict:
         lines = source["lines"]
         if not isinstance(lines, list) or not all(isinstance(line, str) for line in lines):
             raise ValueError("invalid source lines")
-        coverage = {}
-        for metric in METRICS:
-            records = source["coverage"][metric]
-            counts = counts_by_line(records, len(lines), metric)
-            coverage[metric] = {"lines": records, **counts}
-        coverage["combined"] = {key: sum(coverage[metric][key] for metric in METRICS) for key in ("covered", "total")}
-        for metric, totals in summary.items():
-            for key in totals:
-                totals[key] += coverage[metric][key]
-        sources[path] = {"lines": lines, "coverage": coverage}
-    return {"production": list(sources), "sources": sources, "coverage": summary}
+        coverage = {metric: source["coverage"][metric] for metric in coverage_data.METRICS}
+        for metric, records in coverage.items():
+            validate_lines(records, len(lines), metric)
+        sources[path] = {"lines": lines, "coverage": coverage_data.file_coverage(coverage)}
+    return {"production": list(sources), "sources": sources, "coverage": coverage_data.report_coverage(sources)}

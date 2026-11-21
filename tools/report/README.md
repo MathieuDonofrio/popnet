@@ -1,6 +1,6 @@
-# Interactive Code Report
+# Interactive code report
 
-Generate LLVM coverage for the current checkout using the repository's coverage preset. With Python 3.10 or newer, run the following commands from the repository root:
+From the repository root, with Python 3.10 or newer:
 
 ```sh
 cmake --preset linux-clang-coverage
@@ -9,41 +9,22 @@ python -m pip install -r tools/trace/requirements.txt -r tools/code_metrics/requ
 python tools/report/generate.py --coverage-json build/linux-clang-coverage/coverage/coverage.json
 ```
 
-On Windows, use an x64 Visual Studio developer shell and replace `linux-clang-coverage` with `windows-clang-coverage`. Generate coverage and the dashboard on the same checkout so source paths and line numbers agree. With `--coverage-json`, the generator reads the adjacent `coverage.info` for line data. Use `--lcov` to override its location. An LCOV export alone also produces code coverage, with LLVM's numeric block and branch IDs in branch details.
+On Windows, use an x64 Visual Studio developer shell and the `windows-clang-coverage` preset. Generate the report from the same checkout as the coverage export. The generator looks for `coverage.info` beside `coverage.json`. Use `--lcov` to specify another file or generate from LCOV alone, using LLVM block and branch IDs in the details.
 
-Open `report/index.html` locally. Use `--output` to write a different file. The Build & Tests workflow also publishes the page as the `popnet-code-report` artifact. Download and extract that artifact from the workflow run to open it locally. The page embeds all source and metric data it needs. Repository document links use the checkout's GitHub `origin` and commit and require a connection. If the report cannot determine a GitHub repository, it shows the document path.
+Open `report/index.html` in a browser. Use `--output` to change the destination, `--root` to report on another checkout, `--project-name` to override the checkout folder name, and `--badges-dir` to export the badge values. The report works offline. Repository document links use the GitHub origin and measured commit.
 
-- **Code Coverage** adds covered lines and covered branch outcomes and divides that sum by all instrumented lines and branch outcomes. The report, folder, and file percentages use that definition. The summary card also shows separate line and branch fractions and percentages. Line number colors show whether each instrumented line ran, and yellow rows indicate partial branch coverage. A branch fraction like `1/4` means one of four recorded outcomes on that line executed. Select it to inspect the branch outcomes directly below that line.
-- **Requirement Coverage** adds intents with at least one linked requirement and requirements with at least one linked test, then divides by the total number of intents and requirements. Each document counts once in its group. Traceability uses relationships declared in repository documents and `@verifies` annotations. The details pane renders the full Markdown body of the selected intent or requirement. Expand a Markdown specification to switch between rendered and raw text. Markdown tables and TeX math delimited by `$...$` or `$$...$$` render offline. Math uses the browser's MathML support, and formulas the converter cannot render appear as text. Embedded images are disabled. Expand a linked test to see its source in place, scrolled to the test declaration. **Show gaps only** displays missing intent-to-requirement and requirement-to-test links.
-- **Source lines of code** sums Lizard's per-file NLOC on the production C/C++ files under `src/` and `include/`.
-- **P95 cognitive complexity** uses the nearest-rank percentile of the same Lizard scores shown in the function table. The card also shows the highest function score.
+## Metrics and navigation
 
-Folder coverage combines the covered/total counts for descendant files. For repeated template instantiations, an outcome counts as covered at a source location if LLVM reports it covered in any instance. Dashboard percentages can differ from other LLVM summaries.
+- **Code Coverage** divides covered lines and branch outcomes by all instrumented lines and branch outcomes. Folder totals add the counts from descendant files. If LLVM reports repeated template instantiations, an outcome counts as covered if any instance covered it. Yellow marks partial branch coverage. Select a fraction such as `1/4` to inspect its outcomes.
+- **Requirement Coverage** counts intents linked to at least one requirement and requirements linked to at least one test, divided by the total number of intents and requirements. The card also gives both rates separately. Open a document to read its full Markdown. Linked specifications can switch between rendered Markdown and raw text. Linked tests show any `@verifies` rationale and expand to reveal the test source.
+- **Source lines of code** sums Lizard's non-comment lines in `src/` and `include/`. See the [code metrics guide](../code_metrics/README.md) for the percentile calculation. The **P95 cognitive complexity** card also shows the highest function score.
 
-The Requirement Coverage card shows the fraction and percentage of requirements with at least one linked test and of intents with at least one linked requirement.
+**Dashboard** charts the four metrics in the browser's local time zone. Links can select a tab with `#coverage`, `#traceability`, or `#complexity`. The same keys work with `?tab=`.
 
-The report opens on **Dashboard**, which plots the four metrics by measurement time in UTC. Append `#coverage`, `#traceability`, or `#complexity` to the page URL to open an explorer directly. Use `--badges-dir` to export the four README badge values with a local report.
+## Publishing
 
-**Publish Popnet Report** deploys the site to GitHub Pages after a successful qualifying Build & Tests run. Set the repository's **Settings → Pages → Source** to **GitHub Actions** before the first deployment.
+Set **Settings → Pages → Source** to **GitHub Actions**. The Pages workflow uses the latest successful qualifying **Build & Tests** run. It publishes the report and branch snapshots containing production source, linked test source, document previews, and metrics. An active branch needs a successful same-repository push or manual run with the report workflow. Rerun the workflow to replace an expired snapshot. Deleted branches disappear after the next deployment.
 
-If GitHub returns a 404 after finding the `github-pages` artifact, check that publishing source and rerun the failed deployment job. If the artifact has expired, run Build & Tests again on `main`.
+The branch picker switches the three explorers. Dashboard and README badges use `main`. The workflow updates `code-metrics-history` with one measurement per commit and the current badge values. Reruns keep the original measurement time. Commits go through the workflow's `GITHUB_TOKEN` as `github-actions[bot]`. If you protect the history branch, allow the workflow's direct pushes.
 
-The report embeds production C/C++ sources, test files referenced by traceability, and linked documentation previews for the current checkout. Reports published from `main` also embed the numeric history for offline viewing. Local and pull-request reports show their current measurement.
-
-### Branch reports
-
-The **Branch** selector is always visible, including in a downloaded report with a single checkout. On the hosted report, it switches **Code Coverage**, **Requirement Coverage**, and **Complexity** together. The selector lists the repository's current branches, excluding generated branches. A push or manual Build & Tests run with the updated workflow creates a report snapshot with the measured commit, production source, line and branch coverage, intent and requirement documents, referenced specifications, linked test source, and complexity data. The site uses the latest successful run with an available snapshot. It shows when the branch has newer commits or when a snapshot is unavailable. If the artifact has expired, rerun Build & Tests on the branch. If the branch predates this feature, bring in the updated workflow from `main` first.
-
-The Pages publisher runs from `main` and accepts branch snapshots as data from successful same-repository pushes or manual runs. A new deployment drops branches that have been deleted. These snapshots are published as JSON to the same Pages site as the main report. **Dashboard** uses the `main` report and its history from `code-metrics-history`. The README badges also use `main` values. Both coverage badges use a red-to-green scale from 0% to 100%, with yellow at 50% and gray when there is no data.
-
-## Metrics branch
-
-On the first successful publishing run from `main`, Build & Tests creates the standalone `code-metrics-history` branch. It contains `history.json` and the four current badge JSON files. The history stores one measurement per source commit. A rerun refreshes its values and keeps its original timestamp. History starts with the first publishing run.
-
-The publishing job makes normal Git commits as `github-actions[bot]`, using the job's built-in `GITHUB_TOKEN` with `contents: write`. Keep `main` as the default branch and GitHub Pages set to **GitHub Actions**. On `code-metrics-history`, you can block force pushes and deletions. Allow the workflow's direct pushes to that branch when configuring any branch rules. After the new branch supplies all four README badges, the old `badges` branch is no longer needed.
-
-Run the generator tests with the Python dependencies installed:
-
-```sh
-python -m unittest discover -s tools/report
-```
+Run the report tests with `python -m unittest discover -s tools/report`.

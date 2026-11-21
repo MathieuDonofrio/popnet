@@ -2,7 +2,6 @@
 
 import argparse
 import json
-import re
 import subprocess
 from collections import defaultdict
 from io import BytesIO
@@ -14,10 +13,10 @@ from zipfile import BadZipFile, ZipFile
 from . import branch_report
 
 
-BRANCH_ELEMENT = re.compile(r'(<script id="report-branches" type="application/json">)\[\](</script>)')
+BRANCH_ELEMENT = '<script id="report-branches" type="application/json">[]</script>'
 BRANCH_ARTIFACT = "branch-report"
 BRANCH_FILE = "branch-report.json"
-REPORT_ARTIFACT = "popnet-code-report"
+REPORT_ARTIFACT = "code-report"
 GENERATED_BRANCHES = {"badge", "badges", "code-metrics-history", "gh-pages"}
 MAX_ARCHIVE_BYTES = 32 * 1024 * 1024
 
@@ -77,14 +76,13 @@ class Actions:
             return files.read(member)
 
 
-def main_report(actions: Actions) -> str | None:
-    for _, artifact in actions.artifacts("main", REPORT_ARTIFACT):
-        html = actions.read_artifact(artifact, "index.html").decode("utf-8")
-        if BRANCH_ELEMENT.search(html) and 'id="branch-select"' in html:
-            return html
-        # The latest report predates full branch reports. Wait for the next main run.
+def main_report(actions: Actions, report_artifact: str) -> str | None:
+    latest = next(actions.artifacts("main", report_artifact), None)
+    if latest is None:
         return None
-    return None
+    html = actions.read_artifact(latest[1], "index.html").decode("utf-8")
+    # Publish once the latest report supports full branch snapshots.
+    return html if BRANCH_ELEMENT in html and 'id="branch-select"' in html else None
 
 
 def branch_snapshot(actions: Actions, branch: str):
@@ -103,8 +101,8 @@ def branch_snapshot(actions: Actions, branch: str):
     return None
 
 
-def assemble(actions: Actions, output: Path) -> bool:
-    html = main_report(actions)
+def assemble(actions: Actions, output: Path, report_artifact: str = REPORT_ARTIFACT) -> bool:
+    html = main_report(actions, report_artifact)
     if html is None:
         return False
 
@@ -128,7 +126,7 @@ def assemble(actions: Actions, output: Path) -> bool:
         manifest.append(entry)
 
     payload = json.dumps(manifest, separators=(",", ":")).replace("<", "\\u003c")
-    html = BRANCH_ELEMENT.sub(lambda match: match[1] + payload + match[2], html, count=1)
+    html = html.replace(BRANCH_ELEMENT, BRANCH_ELEMENT.replace("[]", payload), 1)
     (output / "index.html").write_text(html, encoding="utf-8")
     return True
 
@@ -136,10 +134,11 @@ def assemble(actions: Actions, output: Path) -> bool:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repository", required=True)
+    parser.add_argument("--report-artifact", default=REPORT_ARTIFACT, help="Published report artifact name")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--github-output", type=Path, required=True)
     args = parser.parse_args()
-    if not assemble(Actions(args.repository), args.output):
+    if not assemble(Actions(args.repository), args.output, args.report_artifact):
         print("Waiting for a successful main run of Build & Tests with the branch-capable report.")
         return
     with args.github_output.open("a", encoding="utf-8") as output:

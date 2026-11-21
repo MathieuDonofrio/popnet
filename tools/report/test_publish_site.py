@@ -86,7 +86,8 @@ class PublishSiteTests(unittest.TestCase):
                 "requirements": {"REQ-0001": {
                     "id": "REQ-0001", "title": "Branch requirement", "path": "docs/requirements/requirement.md",
                     "markdown": markup, "intents": [{"id": "INT-0001"}],
-                    "tests": [{"name": "Branch test", "path": "tests/example.cpp", "line": 1}],
+                    "tests": [{"name": "Branch test", "path": "tests/example.cpp", "line": 1,
+                               "comment": "Verifies a branch-specific behavior."}],
                     "specifications": [{"path": "docs/specifications/example.md#math"}],
                 }},
                 "specifications": {"docs/specifications/example.md#math": {
@@ -138,6 +139,8 @@ class PublishSiteTests(unittest.TestCase):
         self.assertEqual(branch["revision"]["commit"], "branch-commit")
         self.assertEqual(branch["trace"]["combined"], {"covered": 2, "total": 2})
         self.assertEqual(branch["trace"]["intents"][0]["requirements"], ["REQ-0001"])
+        self.assertEqual(branch["trace"]["requirements"]["REQ-0001"]["tests"][0]["comment"],
+                         "Verifies a branch-specific behavior.")
         self.assertEqual(branch["functions"][0]["name"], "branchFunction")
         self.assertEqual(branch["p95"], 7)
         html = branch["trace"]["requirements"]["REQ-0001"]["markdown"]["html"]

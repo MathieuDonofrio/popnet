@@ -92,7 +92,10 @@ def trace_view(raw, sources):
             line = integer(ref["line"], 1)
             if line > len(sources[path]["lines"]):
                 raise ValueError("test line outside branch source")
-            req["tests"].append({"name": string(ref["name"]), "path": path, "line": line})
+            test = {"name": string(ref["name"]), "path": path, "line": line}
+            if "comment" in ref:
+                test["comment"] = string(ref["comment"])
+            req["tests"].append(test)
 
         req["specifications"] = []
         for ref in entry["specifications"]:
