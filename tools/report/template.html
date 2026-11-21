@@ -71,6 +71,16 @@
   .panel-head { padding: 13px 15px; border-bottom: 1px solid var(--border); }
   .panel-head p { margin-top: 3px; color: var(--muted); font-size: 13px; }
   .panel-head input, .jump input { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; }
+  .history-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 12px 0; }
+  .history-chart { padding: 13px 15px 8px; margin: 0; }
+  .history-chart figcaption { font-weight: 600; }
+  .history-chart svg { display: block; width: 100%; height: auto; }
+  .history-chart svg text { fill: var(--muted); font: 12px system-ui, sans-serif; }
+  .history-gridline { stroke: var(--border); vector-effect: non-scaling-stroke; }
+  .history-line { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
+  .history-point { fill: var(--accent); }
+  .history-table { padding: 5px 12px 10px; }
+  .history-table .results { margin-top: 6px; }
   input[type="search"] { width: 100%; margin-top: 10px; }
   .results, .code { max-height: min(63vh, 740px); overflow: auto; }
   .tree { padding: 8px 12px; overflow-wrap: anywhere; }
@@ -157,6 +167,10 @@
     .workspace, .workspace[data-section="complexity"], .workspace[data-section="traceability"] { grid-template-columns: minmax(0, 1fr); }
     .results { max-height: 46vh; }
   }
+  @media (max-width: 650px) {
+    .history-charts { grid-template-columns: minmax(0, 1fr); }
+    nav { flex-wrap: wrap; }
+  }
   @media (max-width: 550px) {
     main { padding-top: 16px; }
     .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -180,10 +194,25 @@
     <article class="card"><h2>P95 cognitive complexity</h2><strong id="p95-value"></strong><small id="max-complexity" class="metric-breakdown"></small><small id="functions-total"></small></article>
   </section>
   <nav aria-label="Explorers">
-    <button type="button" data-section="coverage" aria-pressed="true" aria-controls="coverage-panel">Coverage</button>
+    <button type="button" data-section="dashboard" aria-pressed="true" aria-controls="dashboard-panel">Dashboard</button>
+    <button type="button" data-section="coverage" aria-pressed="false" aria-controls="coverage-panel">Coverage</button>
     <button type="button" data-section="traceability" aria-pressed="false" aria-controls="traceability-panel">Traceability</button>
     <button type="button" data-section="complexity" aria-pressed="false" aria-controls="complexity-panel">Complexity</button>
   </nav>
+  <section id="dashboard-panel" aria-labelledby="history-title">
+    <h2 id="history-title">Metrics over time</h2>
+    <p id="history-description" class="muted"></p>
+    <div id="history-charts" class="history-charts"></div>
+    <details class="panel history-table">
+      <summary>Recorded measurements</summary>
+      <div class="results">
+        <table aria-label="Metric history">
+          <thead><tr><th scope="col">Date (UTC)</th><th scope="col">Commit</th><th scope="col">Code coverage</th><th scope="col">Requirement coverage</th><th scope="col">SLOC</th><th scope="col">P95 complexity</th></tr></thead>
+          <tbody id="history-rows"></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
   <div class="workspace" data-section="coverage">
     <div>
       <section id="coverage-panel" class="panel" aria-labelledby="coverage-title">
@@ -254,6 +283,7 @@
   </div>
 </main>
 <script id="report-data" type="application/json"></script>
+<script id="report-history" type="application/json">[]</script>
 <script>
   "use strict";
   const report = JSON.parse(document.getElementById("report-data").textContent);
@@ -461,7 +491,7 @@
   lineInput.addEventListener("input", () => lineInput.setCustomValidity(""));
 
   function selectTabFromHash() {
-    const target = location.hash.slice(1) || "coverage";
+    const target = location.hash.slice(1) || "dashboard";
     const tab = tabs.find(item => item.dataset.section === target);
     if (!tab) return;
     section = target;
@@ -471,7 +501,8 @@
       byId(item.getAttribute("aria-controls")).hidden = item !== tab;
     }
     byId("trace-details").hidden = section !== "traceability";
-    renderSource();
+    workspace.hidden = section === "dashboard";
+    if (!workspace.hidden) renderSource();
   }
 
   for (const tab of tabs) {
@@ -755,6 +786,96 @@
     byId("functions").replaceChildren(...rows);
   }
 
+  function svgElement(tag, attributes, label) {
+    const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const [name, value] of Object.entries(attributes)) node.setAttribute(name, value);
+    if (label !== undefined) node.textContent = label;
+    return node;
+  }
+
+  function historyChart(measurements, metric, date) {
+    const chart = element("figure", undefined, "panel history-chart");
+    chart.append(element("figcaption", metric.label));
+    const svg = svgElement("svg", {viewBox: "0 0 480 185", role: "img", "aria-label": metric.label + " over time"});
+    chart.append(svg);
+    const first = measurements[0].time;
+    const last = measurements[measurements.length - 1].time;
+    const values = measurements.map(entry => metric.value(entry));
+    const greatest = values.reduce((maximum, value) => Math.max(maximum, value ?? 0), 0);
+    const top = metric.percent ? 100 : 4 * Math.max(1, Math.ceil(greatest / 4));
+    const left = 66;
+    const right = 460;
+    const baseline = 155;
+    const height = 135;
+    const x = time => first === last ? (left + right) / 2 : left + (right - left) * (time - first) / (last - first);
+    const y = value => baseline - height * value / top;
+    const tick = value => number(value) + (metric.percent ? "%" : "");
+
+    for (let index = 0; index <= 4; index += 1) {
+      const value = top * index / 4;
+      svg.append(svgElement("line", {x1: left, x2: right, y1: y(value), y2: y(value), class: "history-gridline"}),
+        svgElement("text", {x: left - 8, y: y(value) + 4, "text-anchor": "end"}, tick(value)));
+    }
+    const dates = first === last ? [first] : [first, last];
+    for (const time of dates) {
+      const anchor = first === last ? "middle" : time === first ? "start" : "end";
+      svg.append(svgElement("text", {x: x(time), y: 174, "text-anchor": anchor}, date.format(time)));
+    }
+
+    let path = "";
+    let previousPoint = false;
+    const dots = [];
+    measurements.forEach((entry, index) => {
+      const value = values[index];
+      if (value === null) {
+        previousPoint = false;
+        return;
+      }
+      const cx = x(entry.time);
+      const cy = y(value);
+      path += (previousPoint ? "L" : "M") + cx + " " + cy;
+      previousPoint = true;
+      const dot = svgElement("circle", {cx, cy, r: 3.5, class: "history-point"});
+      dot.append(svgElement("title", {}, date.format(entry.time) + " · " + metric.format(value) + " · " + entry.commit.slice(0, 12)));
+      dots.push(dot);
+    });
+    svg.append(svgElement("path", {d: path, class: "history-line"}), ...dots);
+    return chart;
+  }
+
+  function renderHistory() {
+    const entries = JSON.parse(byId("report-history").textContent);
+    const measurements = entries.map(entry => ({...entry, time: Date.parse(entry.recorded_at)}));
+    const rate = counts => counts.total ? 100 * counts.covered / counts.total : null;
+    const metrics = [
+      {label: "Code coverage", value: entry => rate(entry.code_coverage), format: percentage, percent: true},
+      {label: "Requirement coverage", value: entry => rate(entry.requirement_coverage), format: percentage, percent: true},
+      {label: "Source lines of code", value: entry => entry.sloc, format: number},
+      {label: "P95 cognitive complexity", value: entry => entry.p95, format: number},
+    ];
+    const date = new Intl.DateTimeFormat("en", {
+      timeZone: "UTC", year: "numeric", month: "short", day: "numeric",
+      hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+    });
+    write("history-description", measurements.length === 1
+      ? "One measurement recorded. Trends appear after the next recorded build."
+      : number(measurements.length) + " recorded measurements · UTC");
+    if (measurements.length) {
+      byId("history-charts").append(...metrics.map(metric => historyChart(measurements, metric, date)));
+    }
+    for (const entry of [...measurements].reverse()) {
+      const row = element("tr");
+      const commit = element("td", entry.commit.slice(0, 12), "mono");
+      commit.title = entry.commit;
+      row.append(element("td", date.format(entry.time)), commit);
+      for (const metric of metrics) {
+        const value = metric.value(entry);
+        row.append(element("td", value === null ? "—" : metric.format(value)));
+      }
+      byId("history-rows").append(row);
+    }
+  }
+
   byId("file-search").addEventListener("input", renderFiles);
   byId("trace-search").addEventListener("input", renderTrace);
   byId("trace-gaps").addEventListener("change", renderTrace);
@@ -763,6 +884,7 @@
   renderFiles();
   renderTrace();
   renderFunctions();
+  renderHistory();
   selectTabFromHash();
 </script>
 </body>

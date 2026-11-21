@@ -18,7 +18,7 @@ DATA_MARKER = '<script id="report-data" type="application/json"></script>'
 
 sys.path.insert(0, str(ROOT))
 from tools.code_metrics import code_metrics
-from tools.report import coverage_data
+from tools.report import coverage_data, history
 from tools.report.markdown_preview import MARKDOWN
 from tools.trace.trace import Index, markdown_headings
 
@@ -227,6 +227,7 @@ def main() -> None:
     parser.add_argument("--lcov", type=Path, help="Path to LLVM coverage.info (defaults to a sibling of the JSON file)")
     parser.add_argument("--output", type=Path, default=Path("report/index.html"))
     parser.add_argument("--badges-dir", type=Path, help="Write Shields.io badge JSON alongside the report")
+    parser.add_argument("--metrics-snapshot", type=Path, help="Write this run's metrics for the history job")
     args = parser.parse_args()
     try:
         if not (args.lcov or args.coverage_json):
@@ -234,13 +235,19 @@ def main() -> None:
         lcov = args.lcov or args.coverage_json.with_name("coverage.info")
         data = collect_report(ROOT, lcov, args.coverage_json)
         badges = metric_badges(data)
-        html = render_report({**data, "revision": git_metadata(), "badges": badges})
+        revision = git_metadata()
+        measurement = history.snapshot(data, revision)
+        html = render_report({**data, "revision": revision, "badges": badges})
+        html = history.embed_history(html, history.record(history.empty_history(), measurement))
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(html, encoding="utf-8")
         if args.badges_dir is not None:
             args.badges_dir.mkdir(parents=True, exist_ok=True)
             for name, badge in badges.items():
                 (args.badges_dir / f"{name}.json").write_text(json.dumps(badge, indent=2) + "\n", encoding="utf-8")
+        if args.metrics_snapshot is not None:
+            args.metrics_snapshot.parent.mkdir(parents=True, exist_ok=True)
+            args.metrics_snapshot.write_text(json.dumps(measurement, indent=2) + "\n", encoding="utf-8")
     except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as exc:
         parser.error(str(exc))
     print(f"Wrote {args.output}")

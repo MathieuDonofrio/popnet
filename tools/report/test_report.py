@@ -9,6 +9,7 @@ from urllib.parse import urlunsplit
 
 import generate
 from tools.report import coverage_data
+from tools.report import history
 from tools.report import markdown_preview
 
 
@@ -352,7 +353,35 @@ class ReportTests(unittest.TestCase):
         parser.close()
 
         self.assertTrue(html.startswith("<!doctype html>"))
-        self.assertEqual(parser.scripts, 2)
+        self.assertEqual(parser.scripts, 3)
         self.assertEqual(parser.external_resources, [])
         self.assertNotIn(arbitrary, html)
         self.assertEqual(json.loads("".join(parser.payload)), data)
+
+    def test_history_records_one_measurement_per_commit_and_embeds_it(self):
+        data = {
+            "coverage": {"combined": {"covered": 10, "total": 12}},
+            "trace": {"combined": {"covered": 2, "total": 3}},
+            "sloc": 40,
+            "p95": 8,
+        }
+        latest = history.snapshot(data, {"commit": "new", "generated": "2026-11-20T10:00:00+00:00"})
+        older = history.snapshot({**data, "sloc": 38}, {"commit": "old", "generated": "2026-11-19T10:00:00+00:00"})
+        rerun = {**older, "recorded_at": "2026-11-21T10:00:00+00:00", "p95": 7}
+
+        recorded = history.record(history.empty_history(), latest)
+        recorded = history.record(recorded, older)
+        recorded = history.record(recorded, rerun)
+        html = history.embed_history(generate.render_report(data), recorded)
+        payload = history.HISTORY_ELEMENT.search(html)
+
+        self.assertEqual(recorded["measurements"], [{**older, "p95": 7}, latest])
+        self.assertEqual(history.record(recorded, rerun), recorded)
+        self.assertIn('"p95":7', payload[0])
+        self.assertIn('"code_coverage":{"covered":10,"total":12}', payload[0])
+        self.assertIn('"requirement_coverage":{"covered":2,"total":3}', payload[0])
+        self.assertNotIn('id="report-history" type="application/json">[]', html)
+
+    def test_history_rejects_an_unknown_schema(self):
+        with self.assertRaisesRegex(ValueError, "unsupported metrics history schema"):
+            history.record({"schema_version": 0, "measurements": []}, {})

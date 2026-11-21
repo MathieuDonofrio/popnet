@@ -22,13 +22,19 @@ Folder coverage combines the covered/total counts for descendant files. For repe
 
 The traceability card shows the fraction and percentage of requirements with at least one linked test and of intents with at least one linked requirement.
 
-Open the dashboard with `#coverage`, `#traceability`, or `#complexity` appended to the page URL to open that tab. Use `--badges-dir` to export the four README badge values with the dashboard. The Build & Tests workflow publishes them from the same report run on `main`.
+The report opens on **Dashboard**, which plots the four metrics by measurement time in UTC. Append `#coverage`, `#traceability`, or `#complexity` to the page URL to open an explorer directly. Use `--badges-dir` to export the four README badge values with a local report.
 
 The workflow deploys the report to GitHub Pages on `main`. Set the repository's **Settings → Pages → Source** to **GitHub Actions** before the first deployment.
 
 If GitHub returns a 404 after finding the `github-pages` artifact, check that publishing source and rerun the failed deployment job. If the artifact has expired, run Build & Tests again on `main`.
 
-The report embeds production C/C++ sources, test files referenced by traceability, and the linked documentation previews. It represents one checkout and coverage run.
+The report embeds production C/C++ sources, test files referenced by traceability, and linked documentation previews for the current checkout. Reports published from `main` also embed the numeric history for offline viewing. Local and pull-request reports show their current measurement.
+
+## Metrics branch
+
+On the first successful publishing run from `main`, Build & Tests creates the standalone `code-metrics-history` branch. It contains `history.json` and the four current badge JSON files. The history stores one measurement per source commit. A rerun refreshes its values and keeps its original timestamp. History starts with the first publishing run.
+
+The publishing job makes normal Git commits as `github-actions[bot]`, using the job's built-in `GITHUB_TOKEN` with `contents: write`. Keep `main` as the default branch and GitHub Pages set to **GitHub Actions**. On `code-metrics-history`, you can block force pushes and deletions. Allow the workflow's direct pushes to that branch when configuring any branch rules. After the new branch supplies all four README badges, the old `badges` branch is no longer needed.
 
 Run the generator tests with the Python dependencies installed:
 

@@ -1,10 +1,10 @@
 # Popnet
 
 [![Build & Tests](https://github.com/MathieuDonofrio/popnet/actions/workflows/ci.yml/badge.svg)](https://github.com/MathieuDonofrio/popnet/actions/workflows/ci.yml)
-[![Code Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Fcoverage.json)](https://mathieudonofrio.github.io/popnet/#coverage)
-[![Requirement Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Ftraceability.json)](https://mathieudonofrio.github.io/popnet/#traceability)
-[![Source Lines of Code](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Fsloc.json)](https://mathieudonofrio.github.io/popnet/#complexity)
-[![P95 Cognitive Complexity](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Fcognitive-complexity.json)](https://mathieudonofrio.github.io/popnet/#complexity)
+[![Code Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fcode-metrics-history%2Fcoverage.json)](https://mathieudonofrio.github.io/popnet/#coverage)
+[![Requirement Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fcode-metrics-history%2Ftraceability.json)](https://mathieudonofrio.github.io/popnet/#traceability)
+[![Source Lines of Code](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fcode-metrics-history%2Fsloc.json)](https://mathieudonofrio.github.io/popnet/#complexity)
+[![P95 Cognitive Complexity](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fcode-metrics-history%2Fcognitive-complexity.json)](https://mathieudonofrio.github.io/popnet/#complexity)
 
 
 A lightweight tensor library for neural networks, with a C API and a C++20 implementation.
@@ -89,7 +89,7 @@ Reports are generated as `coverage/index.html`, `coverage/coverage.json` (LLVM J
 
 ## Interactive Code Report
 
-The [interactive code report](https://mathieudonofrio.github.io/popnet/) shows combined line and branch coverage, requirement and test traceability, source lines of code, and cognitive complexity for the latest published run on `main`. To browse a different run offline, download and extract its `popnet-code-report` artifact and open `index.html` in a browser.
+The [interactive code report](https://mathieudonofrio.github.io/popnet/) shows historical trends and the latest published results on `main` for code coverage, requirement coverage, source lines of code, and P95 cognitive complexity. To browse a run offline, download and extract its `popnet-code-report` artifact and open `index.html` in a browser.
 
 See the [dashboard generator guide](tools/report/README.md) for local generation and metric definitions.
 
