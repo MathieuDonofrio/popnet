@@ -6,7 +6,7 @@ from pathlib import Path
 from zipfile import ZipFile
 
 import generate
-from tools.report import branch_coverage, publish_site
+from tools.report import branch_coverage, branch_report, publish_site
 
 
 class PublishSiteTests(unittest.TestCase):
@@ -76,7 +76,27 @@ class PublishSiteTests(unittest.TestCase):
 
     def test_site_uses_main_html_and_a_separate_json_file_per_available_branch(self):
         main_html = generate.render_report({"revision": {"commit": "main-commit"}})
-        snapshot = self.coverage_snapshot()
+        markup = {"text": "## Branch obligation\n\n<script>unsafe</script>", "html": "<img onerror=unsafe>"}
+        snapshot = {
+            "code": self.coverage_snapshot(),
+            "test_sources": {"tests/example.cpp": ["// branch test"]},
+            "trace": {
+                "intents": [{"id": "INT-0001", "title": "Branch intent",
+                             "path": "docs/intents/intent.md", "markdown": markup}],
+                "requirements": {"REQ-0001": {
+                    "id": "REQ-0001", "title": "Branch requirement", "path": "docs/requirements/requirement.md",
+                    "markdown": markup, "intents": [{"id": "INT-0001"}],
+                    "tests": [{"name": "Branch test", "path": "tests/example.cpp", "line": 1}],
+                    "specifications": [{"path": "docs/specifications/example.md#math"}],
+                }},
+                "specifications": {"docs/specifications/example.md#math": {
+                    "text": "$x^2$", "title": "Math", "html": "<img onerror=unsafe>",
+                }},
+            },
+            "functions": [{"name": "branchFunction", "file": "src/example.cpp", "start_line": 1,
+                           "end_line": 2, "cognitive_complexity": 7}],
+            "sloc": 2,
+        }
 
         class Fixture:
             def artifacts(self, branch, name):
@@ -114,11 +134,28 @@ class PublishSiteTests(unittest.TestCase):
         self.assertNotIn("int value;", page)
         self.assertIn("main-commit", page)
         self.assertEqual(branch["sources"]["src/example.cpp"]["lines"][0], "int value;")
+        self.assertEqual(branch["sources"]["tests/example.cpp"]["lines"], ["// branch test"])
+        self.assertEqual(branch["revision"]["commit"], "branch-commit")
+        self.assertEqual(branch["trace"]["combined"], {"covered": 2, "total": 2})
+        self.assertEqual(branch["trace"]["intents"][0]["requirements"], ["REQ-0001"])
+        self.assertEqual(branch["functions"][0]["name"], "branchFunction")
+        self.assertEqual(branch["p95"], 7)
+        html = branch["trace"]["requirements"]["REQ-0001"]["markdown"]["html"]
+        self.assertIn("<h2>Branch obligation</h2>", html)
+        self.assertNotIn("<script>", html)
+        self.assertNotIn("onerror", html)
+        spec = branch["trace"]["specifications"]["docs/specifications/example.md#math"]["html"]
+        self.assertIn("<math ", spec)
+        self.assertNotIn("onerror", spec)
+        exported = branch_report.snapshot(branch, "branch-commit")
+        self.assertNotIn("html", json.dumps(exported))
+        self.assertEqual(branch_report.report_view(json.loads(json.dumps(exported)), "branch-commit")["trace"],
+                         branch["trace"])
 
     def test_archive_reader_only_reads_the_expected_member(self):
         archive = BytesIO()
         with ZipFile(archive, "w") as files:
-            files.writestr("coverage-snapshot.json", "{}")
+            files.writestr(publish_site.BRANCH_FILE, "{}")
             files.writestr("../index.html", "untrusted html")
 
         class Fixture(publish_site.Actions):
@@ -127,4 +164,4 @@ class PublishSiteTests(unittest.TestCase):
 
         fixture = Fixture("owner/repo")
         self.assertEqual(fixture.read_artifact({"id": 1, "size_in_bytes": len(archive.getvalue())},
-                                               "coverage-snapshot.json"), b"{}")
+                                               publish_site.BRANCH_FILE), b"{}")

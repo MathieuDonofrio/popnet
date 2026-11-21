@@ -268,6 +268,17 @@ class ReportTests(unittest.TestCase):
             "cognitive-complexity": "1",
         })
 
+    def test_coverage_badges_color_both_metrics_by_percentage(self):
+        for covered, total, color in [(0, 2, "#bf2626"), (1, 2, "#bfbf26"), (2, 2, "#26bf26"),
+                                      (0, 0, "lightgrey")]:
+            with self.subTest(covered=covered, total=total):
+                combined = {"covered": covered, "total": total}
+                badges = generate.metric_badges({
+                    "coverage": {"combined": combined}, "trace": {"combined": combined}, "sloc": 0, "p95": 0,
+                })
+                self.assertEqual(badges["coverage"]["color"], color)
+                self.assertEqual(badges["traceability"]["color"], color)
+
     def test_rejects_coverage_line_outside_current_source(self):
         self.write("src/logic.cpp", "int decide(int x);\n")
         lcov = self.write("coverage.info", "SF:src/logic.cpp\nBRDA:3,0,0,1\nend_of_record\n")

@@ -60,7 +60,7 @@
   .card { min-width: 0; padding: 12px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
   .card h2 { color: var(--muted); font-size: 13px; }
   .card strong { display: block; font-size: 27px; font-weight: 650; letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
-  nav { display: flex; gap: 6px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+  nav { display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
   nav button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 9px clamp(8px, 2vw, 18px); color: var(--muted); font-weight: 600; }
   nav button[aria-pressed="true"] { color: var(--accent); border-bottom-color: var(--accent); }
   .workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 12px; }
@@ -71,7 +71,7 @@
   .panel-head { padding: 13px 15px; border-bottom: 1px solid var(--border); }
   .panel-head p { margin-top: 3px; color: var(--muted); font-size: 13px; }
   .panel-head input, .jump input { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; }
-  .branch-picker { display: grid; gap: 4px; margin-top: 10px; }
+  .branch-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-bottom: 12px; }
   .branch-picker select { max-width: 100%; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font: inherit; }
   .history-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 12px 0; }
   .history-chart { padding: 13px 15px 8px; margin: 0; }
@@ -189,16 +189,22 @@
     <small id="revision"></small>
   </header>
   <noscript><p>This report requires JavaScript to browse its embedded data.</p></noscript>
+  <div class="branch-picker">
+    <label for="branch-select">Branch</label>
+    <select id="branch-select" aria-describedby="branch-status branch-history-note"></select>
+    <small id="branch-status" aria-live="polite"></small>
+    <small id="branch-history-note" hidden>Dashboard shows the default report and its history.</small>
+  </div>
   <section class="metrics" aria-label="Summary">
-    <article class="card"><h2>Combined coverage</h2><strong id="coverage-value"></strong><small id="line-summary" class="metric-breakdown"></small><small id="branch-summary" class="metric-breakdown"></small></article>
-    <article class="card"><h2>Traceability</h2><strong id="trace-value"></strong><small id="trace-requirements" class="metric-breakdown"></small><small id="trace-intents" class="metric-breakdown"></small></article>
+    <article class="card"><h2>Code Coverage</h2><strong id="coverage-value"></strong><small id="line-summary" class="metric-breakdown"></small><small id="branch-summary" class="metric-breakdown"></small></article>
+    <article class="card"><h2>Requirement Coverage</h2><strong id="trace-value"></strong><small id="trace-requirements" class="metric-breakdown"></small><small id="trace-intents" class="metric-breakdown"></small></article>
     <article class="card"><h2>Source lines of code</h2><strong id="sloc-value"></strong><small id="files-total"></small></article>
     <article class="card"><h2>P95 cognitive complexity</h2><strong id="p95-value"></strong><small id="max-complexity" class="metric-breakdown"></small><small id="functions-total"></small></article>
   </section>
   <nav aria-label="Explorers">
     <button type="button" data-section="dashboard" aria-pressed="true" aria-controls="dashboard-panel">Dashboard</button>
-    <button type="button" data-section="coverage" aria-pressed="false" aria-controls="coverage-panel">Coverage</button>
-    <button type="button" data-section="traceability" aria-pressed="false" aria-controls="traceability-panel">Traceability</button>
+    <button type="button" data-section="coverage" aria-pressed="false" aria-controls="coverage-panel">Code Coverage</button>
+    <button type="button" data-section="traceability" aria-pressed="false" aria-controls="traceability-panel">Requirement Coverage</button>
     <button type="button" data-section="complexity" aria-pressed="false" aria-controls="complexity-panel">Complexity</button>
   </nav>
   <section id="dashboard-panel" aria-labelledby="history-title">
@@ -221,12 +227,6 @@
         <div class="panel-head">
           <h2 id="coverage-title">Production files</h2>
           <p>Covered lines and branch outcomes divided by all instrumented lines and branch outcomes.</p>
-          <div id="branch-picker" class="branch-picker" hidden>
-            <label for="coverage-branch">Branch</label>
-            <select id="coverage-branch"></select>
-            <p id="branch-status" aria-live="polite"></p>
-            <small id="branch-summary-detail"></small>
-          </div>
           <input id="file-search" type="search" placeholder="Filter by filename or path" aria-label="Filter by filename or path">
         </div>
         <div id="files" class="tree results"></div>
@@ -235,7 +235,7 @@
         <div class="panel-head">
           <h2 id="trace-title">Intents and requirements</h2>
           <p>Coverage counts requirements with declared test links. These links alone do not establish behavioral correctness.</p>
-          <input id="trace-search" type="search" placeholder="Filter by ID, title, or path" aria-label="Filter traceability by ID, title, or path">
+          <input id="trace-search" type="search" placeholder="Filter by ID, title, or path" aria-label="Filter intents and requirements by ID, title, or path">
           <label class="gap-filter"><input id="trace-gaps" type="checkbox"> Show gaps only</label>
         </div>
         <div id="intents" class="tree results"></div>
@@ -263,7 +263,7 @@
     <div class="viewer-stack">
     <section id="trace-details" class="panel" aria-labelledby="trace-details-title" hidden>
       <div class="panel-head source-title">
-        <h2 id="trace-details-title" tabindex="-1">Traceability details</h2>
+        <h2 id="trace-details-title" tabindex="-1">Requirement coverage details</h2>
         <span id="trace-doc-link"></span>
       </div>
       <div id="trace-detail-body" class="detail-body"></div>
@@ -319,43 +319,53 @@
     return node;
   }
 
-  const commit = report.revision.commit;
-  write("revision", [report.revision.ref === "HEAD" ? "" : report.revision.ref,
-    commit.slice(0, 12), report.revision.generated.replace("T", " ").replace("+00:00", " UTC")]
-    .filter(Boolean).join(" · "));
   const emptyCoverage = {covered: 0, total: 0};
   const ratioPercent = ({covered, total}) => total ? percentage(100 * covered / total) : "—";
-  let coverageView = report;
-  const fileCoverage = (path, key = "combined") => coverageView?.sources[path]?.coverage?.[key] ?? emptyCoverage;
+  let activeReport = report;
+  const fileCoverage = (path, key = "combined") => activeReport?.sources[path]?.coverage?.[key] ?? emptyCoverage;
   const coverageState = (covered, total) => total === 0 ? "" : covered === total ? "hit" : covered ? "partial" : "miss";
 
   function fractionBreakdown(label, {covered, total}) {
     return label + " " + number(covered) + "/" + number(total) + " (" + ratioPercent({covered, total}) + ")";
   }
-  write("coverage-value", report.badges.coverage.message);
-  write("line-summary", fractionBreakdown("Lines", report.coverage.lines));
-  write("branch-summary", fractionBreakdown("Branches", report.coverage.branches));
-  const trace = report.trace;
-  write("trace-value", report.badges.traceability.message);
-  write("trace-requirements", fractionBreakdown("Requirements → tests", {
-    covered: trace.summary.requirements_with_tests, total: trace.summary.requirements_total,
-  }));
-  write("trace-intents", fractionBreakdown("Intents → requirements", {
-    covered: trace.summary.intents_with_requirements, total: trace.summary.intents_total,
-  }));
-  write("sloc-value", report.badges.sloc.message);
-  write("files-total", number(report.production.length) + " production files");
-  write("p95-value", report.badges["cognitive-complexity"].message);
-  const maxComplexity = report.functions.reduce((highest, fn) => Math.max(highest, fn.cognitive_complexity), 0);
-  write("max-complexity", "Highest score " + number(maxComplexity));
-  write("functions-total", number(report.functions.length) + " functions");
+
+  function renderSummary() {
+    const dashboard = section === "dashboard";
+    byId("branch-history-note").hidden = !dashboard || !byId("branch-select").value;
+    const view = dashboard ? report : activeReport;
+    const revision = view?.revision;
+    write("revision", revision ? [revision.ref === "HEAD" ? "" : revision.ref, revision.commit.slice(0, 12),
+      revision.generated.replace("T", " ").replace(/(Z|\+00:00)$/, " UTC")].filter(Boolean).join(" · ") : "");
+    write("coverage-value", view?.badges?.coverage.message ?? (view ? ratioPercent(view.coverage.combined) : "—"));
+    write("trace-value", view?.badges?.traceability.message ?? (view ? ratioPercent(view.trace.combined) : "—"));
+    write("sloc-value", view?.badges?.sloc.message ?? (view ? number(view.sloc) : "—"));
+    write("p95-value", view?.badges?.["cognitive-complexity"].message ?? (view ? number(view.p95) : "—"));
+    if (!view) {
+      for (const id of ["line-summary", "branch-summary", "trace-requirements", "trace-intents",
+        "files-total", "max-complexity", "functions-total"]) write(id, "");
+      return;
+    }
+    write("line-summary", fractionBreakdown("Lines", view.coverage.lines));
+    write("branch-summary", fractionBreakdown("Branches", view.coverage.branches));
+    const summary = view.trace.summary;
+    write("trace-requirements", fractionBreakdown("Requirements → tests", {
+      covered: summary.requirements_with_tests, total: summary.requirements_total,
+    }));
+    write("trace-intents", fractionBreakdown("Intents → requirements", {
+      covered: summary.intents_with_requirements, total: summary.intents_total,
+    }));
+    write("files-total", number(view.production.length) + " production files");
+    const maxComplexity = view.functions.reduce((highest, fn) => Math.max(highest, fn.cognitive_complexity), 0);
+    write("max-complexity", "Highest score " + number(maxComplexity));
+    write("functions-total", number(view.functions.length) + " functions");
+  }
 
   const tabs = [...document.querySelectorAll("nav button")];
   const workspace = document.querySelector(".workspace");
   const selections = {};
   const source = byId("code");
   const lineInput = byId("line-input");
-  let section = "coverage";
+  let section = "dashboard";
   let rows = [];
   let selectedRows = [];
   let inspected = null;
@@ -424,10 +434,10 @@
     byId("legend").hidden = !selection || section !== "coverage";
     if (!selection) {
       const prompts = {
-        coverage: coverageView ? "Select a production file." : "No source available for this selection.",
+        coverage: "Select a production file.",
         complexity: "Select a function to view its source.",
       };
-      write("source-message", prompts[section]);
+      write("source-message", activeReport ? prompts[section] : "No source available for this branch.");
       source.replaceChildren();
       return;
     }
@@ -443,12 +453,12 @@
     if (start) markSource(start, end);
   }
 
-  function buildSource(path, onLine, showCoverage = false) {
+  function buildSource(path, onLine, showCoverage = false, reportView = activeReport) {
     const decisions = showCoverage ? fileCoverage(path, "branches").lines : undefined;
     const lineCoverage = showCoverage ? fileCoverage(path, "lines").lines : undefined;
     const body = element("div", undefined, "code-body");
     body.classList.toggle("coverage-code", showCoverage);
-    const sourceFile = (showCoverage ? coverageView : report).sources[path];
+    const sourceFile = reportView.sources[path];
     const sourceRows = sourceFile.lines.map((text, index) => {
       const line = index + 1;
       const records = decisions?.[line];
@@ -505,10 +515,8 @@
   lineInput.addEventListener("input", () => lineInput.setCustomValidity(""));
 
   function selectTabFromHash() {
-    const target = location.hash.slice(1) || "dashboard";
-    const tab = tabs.find(item => item.dataset.section === target);
-    if (!tab) return;
-    section = target;
+    const tab = tabs.find(item => item.dataset.section === location.hash.slice(1)) ?? tabs[0];
+    section = tab.dataset.section;
     workspace.dataset.section = section;
     for (const item of tabs) {
       item.setAttribute("aria-pressed", item === tab);
@@ -516,6 +524,7 @@
     }
     byId("trace-details").hidden = section !== "traceability";
     workspace.hidden = section === "dashboard";
+    renderSummary();
     if (!workspace.hidden) renderSource();
   }
 
@@ -540,7 +549,7 @@
       const meter = element("meter");
       meter.max = stats.total;
       meter.value = stats.covered;
-      meter.setAttribute("aria-label", "Combined coverage " + stats.covered + " of " + stats.total);
+      meter.setAttribute("aria-label", "Code coverage " + stats.covered + " of " + stats.total);
       result.append(meter);
     } else {
       result.title = "No data for this metric";
@@ -553,10 +562,10 @@
     const query = byId("file-search").value;
     const host = byId("files");
     host.replaceChildren();
-    if (!coverageView) return;
+    if (!activeReport) return;
     const folders = new Map([["", host]]);
     const totals = new Map();
-    for (const path of coverageView.production) {
+    for (const path of activeReport.production) {
       const stats = fileCoverage(path);
       let folder = "";
       for (const part of path.split("/").slice(0, -1)) {
@@ -567,7 +576,7 @@
         totals.set(folder, sum);
       }
     }
-    for (const path of coverageView.production.filter(path => matches(query, path))) {
+    for (const path of activeReport.production.filter(path => matches(query, path))) {
       const parts = path.split("/");
       const filename = parts.pop();
       let folder = "";
@@ -596,60 +605,54 @@
     if (!host.children.length) host.append(element("p", "No matching files.", "message"));
   }
 
-  function selectCoverageView(view, status) {
-    coverageView = view;
+  function selectBranchView(view, status = "") {
+    activeReport = view;
     const path = view?.production.find(path => fileCoverage(path).total) ?? view?.production[0];
     selections.coverage = path ? {path} : undefined;
-    byId("file-search").value = "";
-    byId("file-search").disabled = !view;
+    selections.complexity = undefined;
+    activeArtifact = undefined;
     write("branch-status", status);
-    write("branch-summary-detail", view && view !== report ? [
-      fractionBreakdown("Combined", view.coverage.combined),
-      fractionBreakdown("Lines", view.coverage.lines),
-      fractionBreakdown("Branches", view.coverage.branches),
-    ].join(" · ") : "");
     renderFiles();
-    if (section === "coverage") renderSource();
+    renderTrace();
+    renderFunctions();
+    renderSummary();
+    if (section !== "dashboard") renderSource();
   }
 
-  function initializeCoverageBranches() {
+  function initializeBranches() {
     const branches = JSON.parse(byId("report-branches").textContent);
-    if (!branches.length) return;
-    const select = byId("coverage-branch");
-    const main = element("option", "main");
-    main.value = "";
-    select.append(main);
+    const select = byId("branch-select");
+    const initial = element("option", report.revision.ref === "HEAD" ? "Current checkout" : report.revision.ref);
+    initial.value = "";
+    select.append(initial);
     branches.forEach((branch, index) => {
       const option = element("option", branch.name);
       option.value = String(index);
       select.append(option);
     });
-    const mainStatus = "Published main report · " + commit.slice(0, 12);
     let request = 0;
-    write("branch-status", mainStatus);
-    byId("branch-picker").hidden = false;
     select.addEventListener("change", async () => {
       const current = ++request;
       if (!select.value) {
-        selectCoverageView(report, mainStatus);
+        selectBranchView(report);
         return;
       }
       const branch = branches[Number(select.value)];
       if (!Number.isSafeInteger(branch?.artifact)) {
-        selectCoverageView(null, "No successful coverage snapshot available.");
+        selectBranchView(null, "No successful report snapshot available for this branch.");
         return;
       }
-      selectCoverageView(null, "Loading branch coverage…");
+      selectBranchView(null, "Loading branch report…");
       try {
         const response = await fetch("branches/" + branch.artifact + ".json");
-        if (!response.ok) throw new Error("Coverage download failed");
+        if (!response.ok) throw new Error("Report download failed");
         const view = await response.json();
         if (current !== request) return;
         const status = "Latest successful run · " + branch.commit.slice(0, 12) + " · " +
           branch.generated.slice(0, 10) + (branch.commit === branch.head ? "" : " · Branch has newer commits");
-        selectCoverageView(view, status);
+        selectBranchView(view, status);
       } catch {
-        if (current === request) selectCoverageView(null, "Could not load branch coverage. Choose a branch to retry.");
+        if (current === request) selectBranchView(null, "Could not load the branch report.");
       }
     });
   }
@@ -659,18 +662,17 @@
     const link = element("a", label);
     const [filename, fragment] = path.split("#", 2);
     const encoded = filename.split("/").map(encodeURIComponent).join("/");
-    link.href = report.revision.document_base + encodeURIComponent(commit) +
+    link.href = report.revision.document_base + encodeURIComponent(activeReport.revision.commit) +
       "/" + encoded + (fragment ? "#" + encodeURIComponent(fragment) : "");
     return link;
   }
 
   const artifactLabel = doc => doc.id + " — " + doc.title;
-  const artifacts = new Map([...trace.intents, ...Object.values(trace.requirements)].map(doc => [doc.id, doc]));
   let activeArtifact;
 
-  function intentProgress(intent) {
+  function intentProgress(intent, requirements) {
     const total = intent.requirements.length;
-    const linked = intent.requirements.filter(id => trace.requirements[id].tests.length).length;
+    const linked = intent.requirements.filter(id => requirements[id].tests.length).length;
     return {linked, total};
   }
 
@@ -687,19 +689,21 @@
       if (item.dataset.artifact === id) item.setAttribute("aria-current", "true");
       else item.removeAttribute("aria-current");
     }
-    const doc = artifacts.get(id);
+    const trace = activeReport?.trace;
+    const doc = id === undefined ? undefined : trace?.intents.find(item => item.id === id) ??
+      (trace && Object.hasOwn(trace.requirements, id) ? trace.requirements[id] : undefined);
     const body = byId("trace-detail-body");
     const link = byId("trace-doc-link");
     body.replaceChildren();
     link.replaceChildren();
-    write("trace-details-title", doc ? artifactLabel(doc) : "Traceability details");
+    write("trace-details-title", doc ? artifactLabel(doc) : "Requirement coverage details");
     if (doc) link.append(documentLink(doc.path, "View repository document"));
     if (!doc) {
-      body.append(element("p", "No matching intent or requirement.", "muted"));
+      body.append(element("p", trace ? "No matching intent or requirement." : "No requirement data available for this branch.", "muted"));
     } else {
       body.append(renderedMarkdown(doc.markdown.html));
       if (doc.type === "intent") {
-        const {linked, total} = intentProgress(doc);
+        const {linked, total} = intentProgress(doc, trace.requirements);
         body.append(element("h3", "Requirement coverage"),
           element("p", total ? linked + " of " + total + " requirements have linked tests." : "No requirements are linked."));
       } else {
@@ -745,7 +749,7 @@
   }
 
   function renderSpecification(path) {
-    const preview = trace.specifications[path];
+    const preview = activeReport.trace.specifications[path];
     const details = element("details", undefined, "spec-preview");
     const controls = element("div", undefined, "spec-controls");
     const raw = element("pre", preview.text, "detail-text spec-text");
@@ -766,6 +770,7 @@
   }
 
   function renderTest(test) {
+    const reportView = activeReport;
     const details = element("details", undefined, "test-preview");
     const summary = element("summary", test.name);
     summary.append(element("small", test.path + ":" + test.line, "mono muted"));
@@ -775,7 +780,7 @@
     details.append(summary, code);
     details.addEventListener("toggle", () => {
       if (!details.open || code.firstElementChild) return;
-      const view = buildSource(test.path);
+      const view = buildSource(test.path, undefined, false, reportView);
       const target = view.rows[test.line - 1];
       code.append(view.body);
       if (target) {
@@ -791,11 +796,16 @@
     const gapsOnly = byId("trace-gaps").checked;
     const host = byId("intents");
     host.replaceChildren();
+    const trace = activeReport?.trace;
+    if (!trace) {
+      selectArtifact();
+      return;
+    }
     const groups = [...trace.intents];
     if (trace.unassigned.length) groups.push({title: "Requirements without an intent", requirements: trace.unassigned});
     for (const intent of groups) {
       const label = intent.id ? artifactLabel(intent) : intent.title;
-      const {linked, total} = intentProgress(intent);
+      const {linked, total} = intentProgress(intent, trace.requirements);
       if (gapsOnly && intent.id && total && linked === total) continue;
       const intentMatches = matches(query, label, intent.path, intent.markdown?.text);
       const requirements = intent.requirements.map(id => trace.requirements[id]).filter(req =>
@@ -839,7 +849,7 @@
 
   function renderFunctions() {
     const query = byId("function-search").value;
-    const functions = report.functions.filter(fn => matches(query, fn.name, fn.file));
+    const functions = (activeReport?.functions ?? []).filter(fn => matches(query, fn.name, fn.file));
     functions.sort((a, b) => (ascending ? 1 : -1) * compare(a[sortKey], b[sortKey]) ||
       compare(a.file, b.file) || a.start_line - b.start_line || compare(a.name, b.name));
     for (const item of sortButtons) {
@@ -855,7 +865,8 @@
       row.append(name, element("td", fn.file, "mono"), element("td", fn.start_line), element("td", fn.cognitive_complexity));
       return row;
     });
-    write("function-count", rows.length ? number(rows.length) + " functions shown" : "No matching functions.");
+    write("function-count", rows.length ? number(rows.length) + " functions shown" :
+      activeReport ? "No matching functions." : "No complexity data available for this branch.");
     byId("functions").replaceChildren(...rows);
   }
 
@@ -953,12 +964,9 @@
   byId("trace-search").addEventListener("input", renderTrace);
   byId("trace-gaps").addEventListener("change", renderTrace);
   byId("function-search").addEventListener("input", renderFunctions);
-  openSource(report.production.find(path => fileCoverage(path).total) ?? report.production[0], undefined, undefined, false);
-  renderFiles();
-  initializeCoverageBranches();
-  renderTrace();
-  renderFunctions();
+  initializeBranches();
   renderHistory();
+  selectBranchView(report);
   selectTabFromHash();
 </script>
 </body>

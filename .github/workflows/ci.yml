@@ -152,7 +152,7 @@ jobs:
       - name: Generate code report dashboard
         run: |
           python tools/report/generate.py --coverage-json "build/$COVERAGE_PRESET/coverage/coverage.json" \
-            --badges-dir badge --metrics-snapshot metrics-snapshot.json --coverage-snapshot coverage-snapshot.json
+            --badges-dir badge --metrics-snapshot metrics-snapshot.json --branch-snapshot branch-report.json
       - name: Upload code report dashboard
         if: github.ref != 'refs/heads/main' || github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
@@ -160,12 +160,12 @@ jobs:
           name: popnet-code-report
           path: report/index.html
           if-no-files-found: error
-      - name: Upload branch coverage snapshot
+      - name: Upload branch report snapshot
         if: github.ref_type == 'branch' && github.ref != 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: branch-coverage
-          path: coverage-snapshot.json
+          name: branch-report
+          path: branch-report.json
           if-no-files-found: error
       - name: Stage report and metrics
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

@@ -35,7 +35,12 @@ jobs:
         with:
           ref: main
           persist-credentials: false
-      - name: Assemble the report and branch coverage
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install report rendering tools
+        run: python3 -m pip install -r tools/report/requirements.txt
+      - name: Assemble the report and branch snapshots
         id: site
         env:
           GH_TOKEN: ${{ github.token }}

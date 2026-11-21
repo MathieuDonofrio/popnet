@@ -89,7 +89,7 @@ Reports are generated as `coverage/index.html`, `coverage/coverage.json` (LLVM J
 
 ## Interactive Code Report
 
-The [interactive code report](https://mathieudonofrio.github.io/popnet/) shows historical trends and the latest published results on `main` for code coverage, requirement coverage, source lines of code, and P95 cognitive complexity. Use the **Branch** selector in Coverage to explore the latest available successful build for an active branch. To browse a run offline, download and extract its `popnet-code-report` artifact and open `index.html` in a browser.
+The [interactive code report](https://mathieudonofrio.github.io/popnet/) shows historical trends and the latest published results on `main` for code coverage, requirement coverage, source lines of code, and P95 cognitive complexity. Use the **Branch** selector to explore **Code Coverage**, **Requirement Coverage**, and **Complexity** for the latest available successful build of an active branch. **Dashboard** shows the history of `main`. To browse a run offline, download and extract its `popnet-code-report` artifact and open `index.html` in a browser.
 
 See the [dashboard generator guide](tools/report/README.md) for local generation and metric definitions.
 

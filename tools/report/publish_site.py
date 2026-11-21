@@ -1,4 +1,4 @@
-"""Assemble the Pages site from the main report and branch coverage artifacts."""
+"""Assemble the Pages site from the main report and branch report artifacts."""
 
 import argparse
 import json
@@ -11,11 +11,12 @@ from pathlib import Path
 from urllib.parse import urlencode
 from zipfile import BadZipFile, ZipFile
 
-from . import branch_coverage
+from . import branch_report
 
 
 BRANCH_ELEMENT = re.compile(r'(<script id="report-branches" type="application/json">)\[\](</script>)')
-BRANCH_ARTIFACT = "branch-coverage"
+BRANCH_ARTIFACT = "branch-report"
+BRANCH_FILE = "branch-report.json"
 REPORT_ARTIFACT = "popnet-code-report"
 GENERATED_BRANCHES = {"badge", "badges", "code-metrics-history", "gh-pages"}
 MAX_ARCHIVE_BYTES = 32 * 1024 * 1024
@@ -79,26 +80,26 @@ class Actions:
 def main_report(actions: Actions) -> str | None:
     for _, artifact in actions.artifacts("main", REPORT_ARTIFACT):
         html = actions.read_artifact(artifact, "index.html").decode("utf-8")
-        if BRANCH_ELEMENT.search(html):
+        if BRANCH_ELEMENT.search(html) and 'id="branch-select"' in html:
             return html
-        # The latest report predates branch browsing. Wait for the next main run.
+        # The latest report predates full branch reports. Wait for the next main run.
         return None
     return None
 
 
-def branch_report(actions: Actions, branch: str):
+def branch_snapshot(actions: Actions, branch: str):
     for run, artifact in actions.artifacts(branch, BRANCH_ARTIFACT):
         try:
-            data = json.loads(actions.read_artifact(artifact, "coverage-snapshot.json"))
-            view = branch_coverage.report_view(data, run["head_sha"])
+            data = json.loads(actions.read_artifact(artifact, BRANCH_FILE))
+            view = branch_report.report_view(data, run["head_sha"])
         except (AttributeError, BadZipFile, KeyError, TypeError, ValueError) as exc:
-            print(f"Skipping invalid coverage artifact {artifact['id']} for {branch!r}: {exc}")
+            print(f"Skipping invalid report artifact {artifact['id']} for {branch!r}: {exc}")
             continue
         return {
             "artifact": artifact["id"],
             "commit": run["head_sha"],
             "generated": artifact["created_at"],
-        }, view
+        }, {**view, "revision": {"ref": branch, "commit": run["head_sha"], "generated": artifact["created_at"]}}
     return None
 
 
@@ -115,7 +116,7 @@ def assemble(actions: Actions, output: Path) -> bool:
         if name == "main" or name in GENERATED_BRANCHES:
             continue
         entry = {"name": name, "head": branch["commit"]["sha"]}
-        result = branch_report(actions, name)
+        result = branch_snapshot(actions, name)
         if result is not None:
             metadata, view = result
             entry.update(metadata)
