@@ -28,6 +28,20 @@
       },
       "sloc": 1583,
       "p95": 12
+    },
+    {
+      "commit": "ea43be2006b55fd7d613692d005caa3496c1040a",
+      "recorded_at": "2026-11-21T05:18:57+00:00",
+      "code_coverage": {
+        "covered": 1135,
+        "total": 1268
+      },
+      "requirement_coverage": {
+        "covered": 22,
+        "total": 26
+      },
+      "sloc": 1583,
+      "p95": 12
     }
   ]
 }
