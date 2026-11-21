@@ -18,7 +18,7 @@ DATA_MARKER = '<script id="report-data" type="application/json"></script>'
 
 sys.path.insert(0, str(ROOT))
 from tools.code_metrics import code_metrics
-from tools.report import coverage_data, history
+from tools.report import branch_coverage, coverage_data, history
 from tools.report.markdown_preview import MARKDOWN
 from tools.trace.trace import Index, markdown_headings
 
@@ -228,6 +228,7 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=Path("report/index.html"))
     parser.add_argument("--badges-dir", type=Path, help="Write Shields.io badge JSON alongside the report")
     parser.add_argument("--metrics-snapshot", type=Path, help="Write this run's metrics for the history job")
+    parser.add_argument("--coverage-snapshot", type=Path, help="Write coverage and production source for branch browsing")
     args = parser.parse_args()
     try:
         if not (args.lcov or args.coverage_json):
@@ -248,6 +249,10 @@ def main() -> None:
         if args.metrics_snapshot is not None:
             args.metrics_snapshot.parent.mkdir(parents=True, exist_ok=True)
             args.metrics_snapshot.write_text(json.dumps(measurement, indent=2) + "\n", encoding="utf-8")
+        if args.coverage_snapshot is not None:
+            args.coverage_snapshot.parent.mkdir(parents=True, exist_ok=True)
+            snapshot = branch_coverage.snapshot(data, revision["commit"])
+            args.coverage_snapshot.write_text(json.dumps(snapshot, separators=(",", ":")) + "\n", encoding="utf-8")
     except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as exc:
         parser.error(str(exc))
     print(f"Wrote {args.output}")

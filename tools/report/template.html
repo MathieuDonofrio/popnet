@@ -71,6 +71,8 @@
   .panel-head { padding: 13px 15px; border-bottom: 1px solid var(--border); }
   .panel-head p { margin-top: 3px; color: var(--muted); font-size: 13px; }
   .panel-head input, .jump input { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; }
+  .branch-picker { display: grid; gap: 4px; margin-top: 10px; }
+  .branch-picker select { max-width: 100%; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font: inherit; }
   .history-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 12px 0; }
   .history-chart { padding: 13px 15px 8px; margin: 0; }
   .history-chart figcaption { font-weight: 600; }
@@ -219,6 +221,12 @@
         <div class="panel-head">
           <h2 id="coverage-title">Production files</h2>
           <p>Covered lines and branch outcomes divided by all instrumented lines and branch outcomes.</p>
+          <div id="branch-picker" class="branch-picker" hidden>
+            <label for="coverage-branch">Branch</label>
+            <select id="coverage-branch"></select>
+            <p id="branch-status" aria-live="polite"></p>
+            <small id="branch-summary-detail"></small>
+          </div>
           <input id="file-search" type="search" placeholder="Filter by filename or path" aria-label="Filter by filename or path">
         </div>
         <div id="files" class="tree results"></div>
@@ -284,6 +292,7 @@
 </main>
 <script id="report-data" type="application/json"></script>
 <script id="report-history" type="application/json">[]</script>
+<script id="report-branches" type="application/json">[]</script>
 <script>
   "use strict";
   const report = JSON.parse(document.getElementById("report-data").textContent);
@@ -316,7 +325,8 @@
     .filter(Boolean).join(" · "));
   const emptyCoverage = {covered: 0, total: 0};
   const ratioPercent = ({covered, total}) => total ? percentage(100 * covered / total) : "—";
-  const fileCoverage = (path, key = "combined") => report.sources[path].coverage?.[key] ?? emptyCoverage;
+  let coverageView = report;
+  const fileCoverage = (path, key = "combined") => coverageView?.sources[path]?.coverage?.[key] ?? emptyCoverage;
   const coverageState = (covered, total) => total === 0 ? "" : covered === total ? "hit" : covered ? "partial" : "miss";
 
   function fractionBreakdown(label, {covered, total}) {
@@ -413,7 +423,10 @@
     write("source-path", selection?.path ?? "");
     byId("legend").hidden = !selection || section !== "coverage";
     if (!selection) {
-      const prompts = {coverage: "Select a production file.", complexity: "Select a function to view its source."};
+      const prompts = {
+        coverage: coverageView ? "Select a production file." : "No source available for this selection.",
+        complexity: "Select a function to view its source.",
+      };
       write("source-message", prompts[section]);
       source.replaceChildren();
       return;
@@ -435,7 +448,8 @@
     const lineCoverage = showCoverage ? fileCoverage(path, "lines").lines : undefined;
     const body = element("div", undefined, "code-body");
     body.classList.toggle("coverage-code", showCoverage);
-    const sourceRows = report.sources[path].lines.map((text, index) => {
+    const sourceFile = (showCoverage ? coverageView : report).sources[path];
+    const sourceRows = sourceFile.lines.map((text, index) => {
       const line = index + 1;
       const records = decisions?.[line];
       const outcomes = records?.flatMap(record => Object.values(record.outcomes)) ?? [];
@@ -539,9 +553,10 @@
     const query = byId("file-search").value;
     const host = byId("files");
     host.replaceChildren();
+    if (!coverageView) return;
     const folders = new Map([["", host]]);
     const totals = new Map();
-    for (const path of report.production) {
+    for (const path of coverageView.production) {
       const stats = fileCoverage(path);
       let folder = "";
       for (const part of path.split("/").slice(0, -1)) {
@@ -552,7 +567,7 @@
         totals.set(folder, sum);
       }
     }
-    for (const path of report.production.filter(path => matches(query, path))) {
+    for (const path of coverageView.production.filter(path => matches(query, path))) {
       const parts = path.split("/");
       const filename = parts.pop();
       let folder = "";
@@ -579,6 +594,64 @@
       folders.get(folder).append(item);
     }
     if (!host.children.length) host.append(element("p", "No matching files.", "message"));
+  }
+
+  function selectCoverageView(view, status) {
+    coverageView = view;
+    const path = view?.production.find(path => fileCoverage(path).total) ?? view?.production[0];
+    selections.coverage = path ? {path} : undefined;
+    byId("file-search").value = "";
+    byId("file-search").disabled = !view;
+    write("branch-status", status);
+    write("branch-summary-detail", view && view !== report ? [
+      fractionBreakdown("Combined", view.coverage.combined),
+      fractionBreakdown("Lines", view.coverage.lines),
+      fractionBreakdown("Branches", view.coverage.branches),
+    ].join(" · ") : "");
+    renderFiles();
+    if (section === "coverage") renderSource();
+  }
+
+  function initializeCoverageBranches() {
+    const branches = JSON.parse(byId("report-branches").textContent);
+    if (!branches.length) return;
+    const select = byId("coverage-branch");
+    const main = element("option", "main");
+    main.value = "";
+    select.append(main);
+    branches.forEach((branch, index) => {
+      const option = element("option", branch.name);
+      option.value = String(index);
+      select.append(option);
+    });
+    const mainStatus = "Published main report · " + commit.slice(0, 12);
+    let request = 0;
+    write("branch-status", mainStatus);
+    byId("branch-picker").hidden = false;
+    select.addEventListener("change", async () => {
+      const current = ++request;
+      if (!select.value) {
+        selectCoverageView(report, mainStatus);
+        return;
+      }
+      const branch = branches[Number(select.value)];
+      if (!Number.isSafeInteger(branch?.artifact)) {
+        selectCoverageView(null, "No successful coverage snapshot available.");
+        return;
+      }
+      selectCoverageView(null, "Loading branch coverage…");
+      try {
+        const response = await fetch("branches/" + branch.artifact + ".json");
+        if (!response.ok) throw new Error("Coverage download failed");
+        const view = await response.json();
+        if (current !== request) return;
+        const status = "Latest successful run · " + branch.commit.slice(0, 12) + " · " +
+          branch.generated.slice(0, 10) + (branch.commit === branch.head ? "" : " · Branch has newer commits");
+        selectCoverageView(view, status);
+      } catch {
+        if (current === request) selectCoverageView(null, "Could not load branch coverage. Choose a branch to retry.");
+      }
+    });
   }
 
   function documentLink(path, label) {
@@ -882,6 +955,7 @@
   byId("function-search").addEventListener("input", renderFunctions);
   openSource(report.production.find(path => fileCoverage(path).total) ?? report.production[0], undefined, undefined, false);
   renderFiles();
+  initializeCoverageBranches();
   renderTrace();
   renderFunctions();
   renderHistory();

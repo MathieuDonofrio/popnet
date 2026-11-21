@@ -152,13 +152,20 @@ jobs:
       - name: Generate code report dashboard
         run: |
           python tools/report/generate.py --coverage-json "build/$COVERAGE_PRESET/coverage/coverage.json" \
-            --badges-dir badge --metrics-snapshot metrics-snapshot.json
+            --badges-dir badge --metrics-snapshot metrics-snapshot.json --coverage-snapshot coverage-snapshot.json
       - name: Upload code report dashboard
         if: github.ref != 'refs/heads/main' || github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: popnet-code-report
           path: report/index.html
+          if-no-files-found: error
+      - name: Upload branch coverage snapshot
+        if: github.ref_type == 'branch' && github.ref != 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: branch-coverage
+          path: coverage-snapshot.json
           if-no-files-found: error
       - name: Stage report and metrics
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
@@ -177,8 +184,6 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
-    outputs:
-      published: ${{ steps.publish.outputs.published }}
     env:
       METRICS_BRANCH: code-metrics-history
     steps:
@@ -230,25 +235,3 @@ jobs:
           name: popnet-code-report
           path: report/index.html
           if-no-files-found: error
-      - name: Stage code report for GitHub Pages
-        if: steps.publish.outputs.published == 'true'
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: report/
-
-  deploy-report:
-    needs: publish-metrics
-    if: needs.publish-metrics.outputs.published == 'true'
-    runs-on: ubuntu-24.04
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Check GitHub Pages configuration
-        uses: actions/configure-pages@v5
-      - name: Deploy code report
-        id: deployment
-        uses: actions/deploy-pages@v4

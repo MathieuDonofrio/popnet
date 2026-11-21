@@ -24,11 +24,17 @@ The traceability card shows the fraction and percentage of requirements with at 
 
 The report opens on **Dashboard**, which plots the four metrics by measurement time in UTC. Append `#coverage`, `#traceability`, or `#complexity` to the page URL to open an explorer directly. Use `--badges-dir` to export the four README badge values with a local report.
 
-The workflow deploys the report to GitHub Pages on `main`. Set the repository's **Settings → Pages → Source** to **GitHub Actions** before the first deployment.
+**Publish Popnet Report** deploys the site to GitHub Pages after a successful qualifying Build & Tests run. Set the repository's **Settings → Pages → Source** to **GitHub Actions** before the first deployment.
 
 If GitHub returns a 404 after finding the `github-pages` artifact, check that publishing source and rerun the failed deployment job. If the artifact has expired, run Build & Tests again on `main`.
 
 The report embeds production C/C++ sources, test files referenced by traceability, and linked documentation previews for the current checkout. Reports published from `main` also embed the numeric history for offline viewing. Local and pull-request reports show their current measurement.
+
+### Branch coverage
+
+On the hosted report, open **Coverage** and select a branch. The selector lists the repository's current branches, excluding generated branches. A push or manual Build & Tests run with the updated workflow creates a coverage snapshot with the production source, line and branch coverage, and measured commit. The site uses the latest successful run with an available snapshot. It shows when the branch has newer commits or when a snapshot is unavailable. If the artifact has expired, rerun Build & Tests on the branch. If the branch predates this feature, bring in the updated workflow from `main` first.
+
+The Pages publisher runs from `main` and accepts branch snapshots as data from successful same-repository pushes or manual runs. A new deployment drops branches that have been deleted. Branch coverage is published to the same Pages site as the main report. The Dashboard, Traceability and Complexity tabs, and README badges report the published `main` snapshot.
 
 ## Metrics branch
 

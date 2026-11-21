@@ -353,7 +353,7 @@ class ReportTests(unittest.TestCase):
         parser.close()
 
         self.assertTrue(html.startswith("<!doctype html>"))
-        self.assertEqual(parser.scripts, 3)
+        self.assertEqual(parser.scripts, 4)
         self.assertEqual(parser.external_resources, [])
         self.assertNotIn(arbitrary, html)
         self.assertEqual(json.loads("".join(parser.payload)), data)

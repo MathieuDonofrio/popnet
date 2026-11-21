@@ -1,0 +1,64 @@
+name: Publish Popnet Report
+
+on:
+  workflow_run:
+    workflows: [Build & Tests]
+    types: [completed]
+  delete:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: popnet-report-pages
+  cancel-in-progress: false
+
+jobs:
+  assemble:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      ((github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')) ||
+       (github.event_name == 'delete' && github.event.ref_type == 'branch') ||
+       github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      published: ${{ steps.site.outputs.published }}
+    steps:
+      # Run the publisher from main, regardless of which branch produced an artifact.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Assemble the report and branch coverage
+        id: site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -m tools.report.publish_site --repository "$GITHUB_REPOSITORY" --output site --github-output "$GITHUB_OUTPUT"
+      - name: Stage report for GitHub Pages
+        if: steps.site.outputs.published == 'true'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/
+
+  deploy:
+    needs: assemble
+    if: needs.assemble.outputs.published == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check GitHub Pages configuration
+        uses: actions/configure-pages@v5
+      - name: Deploy code report
+        id: deployment
+        uses: actions/deploy-pages@v4
