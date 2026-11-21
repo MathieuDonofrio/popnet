@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Measure C/C++ source lines or percentile cyclomatic complexity."""
+"""Measure C/C++ source lines or percentile Cognitive Complexity."""
 
 import argparse
 import json
 import math
 import subprocess
 import tempfile
+from colorsys import hsv_to_rgb
 from contextlib import redirect_stderr
 from fractions import Fraction
 from io import StringIO
@@ -80,11 +81,13 @@ def count_sloc(files: list[Path]) -> int:
     return code
 
 
-def count_cc(files: list[Path], percentile: float) -> tuple[int, int]:
+def count_cognitive_complexity(files: list[Path], percentile: float) -> tuple[int, int]:
     try:
         import lizard
+
+        analyzer = lizard.FileAnalyzer(lizard.get_extensions(["cognitive"]))
     except ImportError as exc:
-        raise RuntimeError("Install Lizard with python -m pip install -r tools/code_metrics/requirements.txt") from exc
+        raise RuntimeError("Install the required Lizard version with python -m pip install -r tools/code_metrics/requirements.txt") from exc
 
     complexities = []
     for path in files:
@@ -95,10 +98,10 @@ def count_cc(files: list[Path], percentile: float) -> tuple[int, int]:
             raise RuntimeError(f"{path} cannot be read as UTF-8: {exc}") from exc
         # Lizard can report a parser failure on stderr and return partial results.
         with redirect_stderr(StringIO()) as stderr:
-            analysis = lizard.analyze_file.analyze_source_code(str(path.with_suffix(".cpp")), source)
+            analysis = analyzer.analyze_source_code(str(path.with_suffix(".cpp")), source)
         if diagnostics := stderr.getvalue():
             raise RuntimeError(f"Lizard failed to analyze {path}: {diagnostics.strip()}")
-        complexities.extend(function.cyclomatic_complexity for function in analysis.function_list)
+        complexities.extend(function.cognitive_complexity for function in analysis.function_list)
 
     if not complexities:
         raise RuntimeError("No C/C++ functions found")
@@ -110,24 +113,29 @@ def count_cc(files: list[Path], percentile: float) -> tuple[int, int]:
 
 def make_badge(metric: str, value: int, percentile: float) -> dict:
     if metric == "sloc":
-        label, message = "SLOC", f"{value:,}"
+        label, message, color = "Source Lines of Code", f"{value:,}", "blue"
     else:
-        label, message = f"P{str(percentile).removesuffix('.0')} CC", str(value)
-    return {"schemaVersion": 1, "label": label, "message": message, "color": "blue"}
+        label, message = f"P{str(percentile).removesuffix('.0')} Cognitive Complexity", str(value)
+        # Sweep the hue from green through yellow to red over scores 0–30.
+        progress = min(value / 30, 1)
+        rgb = hsv_to_rgb((1 - progress) / 3, 0.8, 0.75)
+        color = "#" + "".join(f"{round(channel * 255):02x}" for channel in rgb)
+    return {"schemaVersion": 1, "label": label, "message": message, "color": color}
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("metric", choices=("sloc", "cc"), help="Metric to calculate")
+    parser.add_argument("metric", choices=("sloc", "cognitive"), help="Metric to calculate")
     parser.add_argument("directories", nargs="+", type=Path, help="Directories to scan recursively")
-    parser.add_argument("--percentile", type=percentile_type, metavar="P", help="CC percentile (default: 95)")
+    parser.add_argument("--percentile", type=percentile_type, metavar="P",
+                        help="Cognitive Complexity percentile (default: 95)")
     output = parser.add_mutually_exclusive_group()
     output.add_argument("--json", action="store_true", help="Print machine-readable JSON")
     output.add_argument("--badge", action="store_true", help="Print Shields.io endpoint JSON")
     args = parser.parse_intermixed_args()
 
     if args.metric == "sloc" and args.percentile is not None:
-        parser.error("--percentile is only valid for cc")
+        parser.error("--percentile is only valid for cognitive")
     percentile = args.percentile if args.percentile is not None else 95.0
 
     try:
@@ -148,7 +156,7 @@ def main() -> None:
         if args.metric == "sloc":
             value = count_sloc(files)
         else:
-            value, function_count = count_cc(files, percentile)
+            value, function_count = count_cognitive_complexity(files, percentile)
             report.update(percentile=percentile, functions=function_count)
         report["value"] = value
     except (OSError, ValueError, RuntimeError) as exc:

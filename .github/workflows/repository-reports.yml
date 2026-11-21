@@ -41,7 +41,7 @@ jobs:
           python tools/trace/trace.py coverage --badge > badge/traceability.json
           # These two source roots exclude tests, build output, and fetched dependencies.
           python tools/code_metrics/code_metrics.py sloc src include --badge > badge/sloc.json
-          python tools/code_metrics/code_metrics.py cc src include --badge > badge/cc.json
+          python tools/code_metrics/code_metrics.py cognitive src include --badge > badge/cognitive-complexity.json
           cat badge/*.json
       - name: Stage badge bundle
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

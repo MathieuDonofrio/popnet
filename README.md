@@ -1,10 +1,10 @@
 # Popnet
 
 [![Build & Tests](https://github.com/MathieuDonofrio/popnet/actions/workflows/ci.yml/badge.svg)](https://github.com/MathieuDonofrio/popnet/actions/workflows/ci.yml)
-[![Code coverage](https://codecov.io/gh/MathieuDonofrio/popnet/graph/badge.svg)](https://app.codecov.io/gh/MathieuDonofrio/popnet)
-[![Traceability coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Ftraceability.json)](https://github.com/MathieuDonofrio/popnet/actions/workflows/repository-reports.yml)
-[![SLOC](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Fsloc.json)](tools/code_metrics/README.md)
-[![P95 CC](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Fcc.json)](tools/code_metrics/README.md)
+[![Code Coverage](https://codecov.io/gh/MathieuDonofrio/popnet/graph/badge.svg)](https://app.codecov.io/gh/MathieuDonofrio/popnet)
+[![Traceability Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Ftraceability.json)](https://github.com/MathieuDonofrio/popnet/actions/workflows/repository-reports.yml)
+[![Source Lines of Code](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Frefs%2Fheads%2Fbadges%2Fsloc.json)](tools/code_metrics/README.md)
+[![P95 Cognitive Complexity](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Frefs%2Fheads%2Fbadges%2Fcognitive-complexity.json)](tools/code_metrics/README.md)
 
 
 A lightweight tensor library for neural networks, with a C API and a C++20 implementation.
