@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "measurements": [
+    {
+      "commit": "517e9066e361480be87d4864b079ece0cdac2737",
+      "recorded_at": "2026-11-21T04:48:31+00:00",
+      "code_coverage": {
+        "covered": 1135,
+        "total": 1268
+      },
+      "requirement_coverage": {
+        "covered": 22,
+        "total": 26
+      },
+      "sloc": 1583,
+      "p95": 12
+    }
+  ]
+}
