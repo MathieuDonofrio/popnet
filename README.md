@@ -1,10 +1,10 @@
 # Popnet
 
 [![Build & Tests](https://github.com/MathieuDonofrio/popnet/actions/workflows/ci.yml/badge.svg)](https://github.com/MathieuDonofrio/popnet/actions/workflows/ci.yml)
-[![Code Coverage](https://codecov.io/gh/MathieuDonofrio/popnet/graph/badge.svg)](https://app.codecov.io/gh/MathieuDonofrio/popnet)
-[![Traceability Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Ftraceability.json)](https://github.com/MathieuDonofrio/popnet/actions/workflows/repository-reports.yml)
-[![Source Lines of Code](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Frefs%2Fheads%2Fbadges%2Fsloc.json)](tools/code_metrics/README.md)
-[![P95 Cognitive Complexity](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Frefs%2Fheads%2Fbadges%2Fcognitive-complexity.json)](tools/code_metrics/README.md)
+[![Combined Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Fcoverage.json)](https://mathieudonofrio.github.io/popnet/#coverage)
+[![Traceability Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Ftraceability.json)](https://mathieudonofrio.github.io/popnet/#traceability)
+[![Source Lines of Code](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Fsloc.json)](https://mathieudonofrio.github.io/popnet/#complexity)
+[![P95 Cognitive Complexity](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FMathieuDonofrio%2Fpopnet%2Fbadges%2Fcognitive-complexity.json)](https://mathieudonofrio.github.io/popnet/#complexity)
 
 
 A lightweight tensor library for neural networks, with a C API and a C++20 implementation.
@@ -85,7 +85,13 @@ cmake --build build/linux-clang-coverage --target coverage
 
 On Windows, use `windows-clang-coverage` instead.
 
-Reports are generated as `coverage/index.html` and `coverage/coverage.info` (LCOV) in the corresponding build directory.
+Reports are generated as `coverage/index.html`, `coverage/coverage.json` (LLVM JSON), and `coverage/coverage.info` (LCOV) in the corresponding build directory.
+
+## Interactive Code Report
+
+The [interactive code report](https://mathieudonofrio.github.io/popnet/) shows combined line and branch coverage, requirement and test traceability, source lines of code, and cognitive complexity for the latest published run on `main`. To browse a different run offline, download and extract its `popnet-code-report` artifact and open `index.html` in a browser.
+
+See the [dashboard generator guide](tools/report/README.md) for local generation and metric definitions.
 
 ## Benchmarks
 

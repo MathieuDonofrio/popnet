@@ -70,6 +70,21 @@ def markdown_lines(lines, first_line=1):
             yield number, line
 
 
+def markdown_headings(lines):
+    counts = defaultdict(int)
+    for number, line in markdown_lines(lines):
+        heading = re.match(r'^(#{1,6})\s+(.*?)\s*#*\s*$', line)
+        if not heading:
+            continue
+        depth, title = heading.groups()
+        name = re.sub(r'[^\w -]', '', title.casefold()).strip()
+        name = re.sub(r'\s+', '-', name)
+        # GitHub adds numeric suffixes to repeated headings.
+        suffix = counts[name]
+        counts[name] += 1
+        yield number, len(depth), title, f"{name}-{suffix}" if suffix else name
+
+
 @dataclass
 class Document:
     kind: str
@@ -79,6 +94,11 @@ class Document:
     id: str | None = None
     metadata: dict = field(default_factory=dict)
     field_lines: dict = field(default_factory=dict)
+    body_start: int = 0
+
+    @property
+    def body(self):
+        return "\n".join(self.text.splitlines()[self.body_start:])
 
     def brief(self):
         return {"id": self.id, "type": self.kind, "title": self.title, "path": self.path}
@@ -168,7 +188,8 @@ class Index:
                 self.diagnostic("INVALID_FIELD", f"'{required}' must be a YAML list", location, fields.get(required, 1))
         self._check_sections(lines, body_start, kind, location)
         doc = Document(kind, location, declared_title if isinstance(declared_title, str) else path.stem,
-                       text, declared_id if isinstance(declared_id, str) else None, metadata, fields)
+                       text, declared_id if isinstance(declared_id, str) else None, metadata, fields,
+                       body_start=body_start)
         self.documents.append(doc)
         if doc.id:
             if doc.id in self.by_id:
@@ -246,19 +267,8 @@ class Index:
 
     @staticmethod
     def _heading_fragments(path):
-        fragments = set()
-        counts = defaultdict(int)
-        for _, line in markdown_lines(path.read_text(encoding="utf-8-sig").splitlines()):
-            heading = re.match(r'^#{1,6}\s+(.*?)\s*#*\s*$', line)
-            if not heading:
-                continue
-            title = re.sub(r'[^\w -]', '', heading.group(1).casefold()).strip()
-            name = re.sub(r'\s+', '-', title)
-            # GitHub adds numeric suffixes to repeated headings.
-            suffix = counts[name]
-            counts[name] += 1
-            fragments.add(f"{name}-{suffix}" if suffix else name)
-        return fragments
+        lines = path.read_text(encoding="utf-8-sig").splitlines()
+        return {fragment for _, _, _, fragment in markdown_headings(lines)}
 
     def _load_tests(self, path):
         location = self.rel(path)

@@ -22,6 +22,8 @@ if(CMAKE_SCRIPT_MODE_FILE)
     COMMAND_ERROR_IS_FATAL ANY)
   execute_process(COMMAND "${LLVM_COV}" export ${arguments} -format=lcov
     OUTPUT_FILE "${OUTPUT_DIR}/coverage.info" COMMAND_ERROR_IS_FATAL ANY)
+  execute_process(COMMAND "${LLVM_COV}" export ${arguments} -format=text -skip-functions
+    OUTPUT_FILE "${OUTPUT_DIR}/coverage.json" COMMAND_ERROR_IS_FATAL ANY)
   execute_process(COMMAND "${LLVM_COV}" report ${arguments}
     COMMAND_ERROR_IS_FATAL ANY)
   return()

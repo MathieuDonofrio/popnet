@@ -24,3 +24,5 @@ cmake-build-*
 
 # Python tooling
 __pycache__/
+/report/
+.venv/

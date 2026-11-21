@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Popnet — Code Report</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --page: #f5f7f9;
+    --surface: #fff;
+    --ink: #182335;
+    --muted: #526173;
+    --border: #dbe1e9;
+    --accent: #244ea4;
+    --selected: #e9f0ff;
+    --hit: #e8f5ec;
+    --partial: #fff3cc;
+    --miss: #fbeeee;
+    --hit-ink: #24613c;
+    --partial-ink: #715717;
+    --miss-ink: #973937;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font: 14px/1.5 system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #111821;
+      --surface: #19232f;
+      --ink: #ecf0f7;
+      --muted: #b0bed0;
+      --border: #354457;
+      --accent: #a9c5ff;
+      --selected: #273b58;
+      --hit: #1c352b;
+      --partial: #3d341d;
+      --miss: #3d2a2e;
+      --hit-ink: #9bd9ac;
+      --partial-ink: #f0d289;
+      --miss-ink: #f2afad;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--page); color: var(--ink); }
+  main { max-width: 1560px; margin: auto; padding: 28px clamp(14px, 3vw, 42px) 36px; }
+  h1, h2, p { margin: 0; }
+  h1 { font-size: clamp(22px, 4vw, 30px); letter-spacing: -.035em; }
+  h2 { font-size: 16px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 20px; margin-bottom: 20px; }
+  small, .muted { color: var(--muted); }
+  a, button.link { color: var(--accent); }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  button.link { border: 0; background: none; padding: 0; text-align: left; }
+  button.link:hover { text-decoration: underline; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .mono { font-family: var(--mono); overflow-wrap: anywhere; }
+  .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .card { min-width: 0; padding: 12px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+  .card h2 { color: var(--muted); font-size: 13px; }
+  .card strong { display: block; font-size: 27px; font-weight: 650; letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
+  nav { display: flex; gap: 6px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+  nav button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 9px clamp(8px, 2vw, 18px); color: var(--muted); font-weight: 600; }
+  nav button[aria-pressed="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+  .workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 12px; }
+  .workspace[data-section="complexity"] { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .workspace[data-section="traceability"] { grid-template-columns: minmax(260px, 1fr) minmax(0, 1.8fr); }
+  .viewer-stack { min-width: 0; display: grid; gap: 12px; align-content: start; }
+  .panel { min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  .panel-head { padding: 13px 15px; border-bottom: 1px solid var(--border); }
+  .panel-head p { margin-top: 3px; color: var(--muted); font-size: 13px; }
+  .panel-head input, .jump input { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; }
+  input[type="search"] { width: 100%; margin-top: 10px; }
+  .results, .code { max-height: min(63vh, 740px); overflow: auto; }
+  .tree { padding: 8px 12px; overflow-wrap: anywhere; }
+  details > summary { cursor: pointer; padding: 4px 3px; }
+  .branch { margin-left: 8px; padding-left: 10px; border-left: 1px solid var(--border); }
+  .file { display: flex; width: 100%; justify-content: space-between; gap: 8px; align-items: baseline; color: inherit; border: 0; border-radius: 5px; background: none; text-align: left; padding: 5px 6px; }
+  .folder-label { display: inline-flex; width: calc(100% - 18px); justify-content: space-between; gap: 8px; align-items: baseline; }
+  .file-score { display: inline-flex; flex-shrink: 0; gap: 6px; align-items: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .file-score span { width: 6ch; text-align: right; }
+  .metric-breakdown { display: block; font-variant-numeric: tabular-nums; }
+  .file-score meter { width: 38px; height: 8px; accent-color: var(--hit-ink); }
+  meter::-webkit-meter-bar { background: var(--miss); border: 0; }
+  meter::-webkit-meter-optimum-value { background: var(--hit-ink); }
+  meter::-moz-meter-bar { background: var(--hit-ink); }
+  .file:hover, .file[aria-current="true"] { background: var(--selected); }
+  .trace-status { margin-left: 6px; padding: 1px 5px; border-radius: 4px; white-space: nowrap; }
+  .trace-group + .trace-group { margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px; }
+  .trace-group h3 { margin: 3px 5px; font-size: 13px; }
+  .trace-entry > span:first-child { min-width: 0; }
+  .trace-entry .trace-status { flex-shrink: 0; margin: 0; font-size: 11px; }
+  .trace-entry.intent { font-weight: 650; }
+  .trace-requirements { margin-left: 8px; padding-left: 6px; border-left: 1px solid var(--border); }
+  .detail-body { padding: 14px 15px; }
+  .detail-body h3 { margin: 12px 0 4px; font-size: 14px; }
+  .detail-body h3:first-child { margin-top: 0; }
+  .detail-body ul { padding-left: 20px; margin: 4px 0; }
+  .detail-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .spec-preview { margin: 4px 0; }
+  .spec-text { max-height: 24rem; overflow: auto; padding: 8px 10px; background: var(--page); margin: 4px 0 0; }
+  .spec-controls { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; }
+  .markdown-text :is(h1, h2, h3, h4) { margin: 8px 0 4px; font-size: 1em; }
+  .markdown-text h1 { font-size: 1.15em; }
+  .markdown-text p { margin: 6px 0; }
+  .markdown-text :is(th, td) { border: 1px solid var(--border); }
+  .markdown-text th { position: static; }
+  .markdown-text :is(.math.block, .math.display) { display: block; overflow: auto; margin: 8px 0; }
+  .test-preview .code { max-height: 20rem; border: 1px solid var(--border); border-radius: 6px; }
+  .test-preview summary small { display: block; overflow-wrap: anywhere; }
+  .jump { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+  .jump input { width: 6ch; }
+  .jump button { border: 1px solid var(--border); border-radius: 6px; background: var(--page); padding: 5px 9px; }
+  .source-title { display: flex; justify-content: space-between; gap: 6px 14px; align-items: baseline; flex-wrap: wrap; }
+  #source-path { font-size: 13px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 5px 9px; margin-top: 9px; color: var(--muted); font-size: 12px; }
+  .legend span { border-radius: 4px; padding: 1px 5px; }
+  .hit { background: var(--hit); }
+  .partial { background: var(--partial); }
+  .miss { background: var(--miss); }
+  .hit .coverage-fraction, .legend .hit, .trace-status.hit { color: var(--hit-ink); }
+  .partial .coverage-fraction, .legend .partial, .trace-status.partial { color: var(--partial-ink); }
+  .miss .coverage-fraction, .legend .miss, .trace-status.miss { color: var(--miss-ink); }
+  .gap-filter { margin-top: 9px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .coverage-inspector { position: sticky; left: 0; width: 100cqw; padding: 10px 14px 10px 16px; border: 1px solid var(--border); border-left: 3px solid var(--accent); background: var(--page); font: 13px/1.5 system-ui, sans-serif; }
+  .branch-detail { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; margin-top: 5px; }
+  .branch-detail code { overflow-wrap: anywhere; }
+  .branch-outcomes { display: flex; flex-wrap: wrap; gap: 4px; }
+  .branch-outcomes .trace-status { margin: 0; font-size: 12px; }
+  #code { container-type: inline-size; }
+  .message { padding: 14px 15px; color: var(--muted); }
+  .code-body { display: grid; min-width: max-content; font: 12px/1.65 var(--mono); tab-size: 4; }
+  .code-row { display: grid; grid-template-columns: 4rem 1fr; border-left: 3px solid transparent; }
+  .coverage-code .code-row { grid-template-columns: 4rem 4.5rem 1fr; }
+  .code-row.active { border-left-color: var(--accent); }
+  .code-row.target { box-shadow: inset 0 1px var(--accent), inset 0 -1px var(--accent); }
+  .line-number { padding: 0 8px; text-align: right; border: 0; background: none; color: var(--muted); font: inherit; }
+  .line-number.hit { background: var(--hit); color: var(--hit-ink); }
+  .line-number.miss { background: var(--miss); color: var(--miss-ink); }
+  .code-row.partial .line-number { background: transparent; }
+  .line-number:hover, .active .line-number { color: var(--accent); }
+  .coverage-fraction { padding: 0 5px; color: var(--muted); font: inherit; text-align: center; border: 0; border-right: 1px solid var(--border); background: none; }
+  button.coverage-fraction { border: 0; text-decoration: underline dotted; }
+  button.coverage-fraction:hover, button.coverage-fraction[aria-expanded="true"] { text-decoration-style: solid; }
+  .code-row code { font: inherit; padding: 0 12px; white-space: pre; }
+  .code-row .comment { color: var(--muted); }
+  .code-row .directive { color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; }
+  th { position: sticky; top: 0; background: var(--surface); }
+  th button { border: 0; background: none; padding: 0; text-align: left; font-weight: 600; }
+  th[aria-sort] button { color: var(--accent); }
+  th:last-child, td:last-child { text-align: right; }
+  tr:last-child td { border-bottom: 0; }
+  @media (max-width: 870px) {
+    .workspace, .workspace[data-section="complexity"], .workspace[data-section="traceability"] { grid-template-columns: minmax(0, 1fr); }
+    .results { max-height: 46vh; }
+  }
+  @media (max-width: 550px) {
+    main { padding-top: 16px; }
+    .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .card { padding: 9px 11px; }
+    .card strong { font-size: 23px; }
+    th, td { padding: 6px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Popnet — Code Report</h1>
+    <small id="revision"></small>
+  </header>
+  <noscript><p>This report requires JavaScript to browse its embedded data.</p></noscript>
+  <section class="metrics" aria-label="Summary">
+    <article class="card"><h2>Combined coverage</h2><strong id="coverage-value"></strong><small id="line-summary" class="metric-breakdown"></small><small id="branch-summary" class="metric-breakdown"></small></article>
+    <article class="card"><h2>Traceability</h2><strong id="trace-value"></strong><small id="trace-requirements" class="metric-breakdown"></small><small id="trace-intents" class="metric-breakdown"></small></article>
+    <article class="card"><h2>Source lines of code</h2><strong id="sloc-value"></strong><small id="files-total"></small></article>
+    <article class="card"><h2>P95 cognitive complexity</h2><strong id="p95-value"></strong><small id="max-complexity" class="metric-breakdown"></small><small id="functions-total"></small></article>
+  </section>
+  <nav aria-label="Explorers">
+    <button type="button" data-section="coverage" aria-pressed="true" aria-controls="coverage-panel">Coverage</button>
+    <button type="button" data-section="traceability" aria-pressed="false" aria-controls="traceability-panel">Traceability</button>
+    <button type="button" data-section="complexity" aria-pressed="false" aria-controls="complexity-panel">Complexity</button>
+  </nav>
+  <div class="workspace" data-section="coverage">
+    <div>
+      <section id="coverage-panel" class="panel" aria-labelledby="coverage-title">
+        <div class="panel-head">
+          <h2 id="coverage-title">Production files</h2>
+          <p>Covered lines and branch outcomes divided by all instrumented lines and branch outcomes.</p>
+          <input id="file-search" type="search" placeholder="Filter by filename or path" aria-label="Filter by filename or path">
+        </div>
+        <div id="files" class="tree results"></div>
+      </section>
+      <section id="traceability-panel" class="panel" aria-labelledby="trace-title" hidden>
+        <div class="panel-head">
+          <h2 id="trace-title">Intents and requirements</h2>
+          <p>Coverage counts requirements with declared test links. These links alone do not establish behavioral correctness.</p>
+          <input id="trace-search" type="search" placeholder="Filter by ID, title, or path" aria-label="Filter traceability by ID, title, or path">
+          <label class="gap-filter"><input id="trace-gaps" type="checkbox"> Show gaps only</label>
+        </div>
+        <div id="intents" class="tree results"></div>
+      </section>
+      <section id="complexity-panel" class="panel" aria-labelledby="complexity-title" hidden>
+        <div class="panel-head">
+          <h2 id="complexity-title">Function complexity</h2>
+          <p>Lizard cognitive complexity for functions in <code>src/</code> and <code>include/</code>.</p>
+          <input id="function-search" type="search" placeholder="Filter by function name or path" aria-label="Filter by function name or path">
+          <p id="function-count" aria-live="polite"></p>
+        </div>
+        <div class="results">
+          <table aria-label="Cognitive complexity by function">
+            <thead><tr>
+              <th scope="col"><button type="button" data-sort="name">Function</button></th>
+              <th scope="col"><button type="button" data-sort="file">File</button></th>
+              <th scope="col"><button type="button" data-sort="start_line">Line</button></th>
+              <th scope="col"><button type="button" data-sort="cognitive_complexity">Complexity</button></th>
+            </tr></thead>
+            <tbody id="functions"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+    <div class="viewer-stack">
+    <section id="trace-details" class="panel" aria-labelledby="trace-details-title" hidden>
+      <div class="panel-head source-title">
+        <h2 id="trace-details-title" tabindex="-1">Traceability details</h2>
+        <span id="trace-doc-link"></span>
+      </div>
+      <div id="trace-detail-body" class="detail-body"></div>
+    </section>
+    <section id="source-view" class="panel" aria-labelledby="source-title">
+      <div class="panel-head">
+        <div class="source-title">
+          <h2 id="source-title" tabindex="-1">Source viewer</h2>
+          <form id="jump" class="jump" hidden>
+            <label for="line-input">Line</label>
+            <input id="line-input" inputmode="numeric" pattern="[0-9]+" required>
+            <button>Go</button>
+          </form>
+        </div>
+        <p id="source-path" class="mono" aria-live="polite"></p>
+        <div id="legend" class="legend" hidden>
+          <span class="hit">Green · Covered</span><span class="partial">Yellow · Partially covered branches</span><span class="miss">Red · Uncovered</span>
+          <span>Line number colors show line execution. Select a branch fraction for details.</span>
+        </div>
+      </div>
+      <p id="source-message" class="message"></p>
+      <div id="code" class="code" tabindex="0" aria-label="Source lines" hidden></div>
+    </section>
+    </div>
+  </div>
+</main>
+<script id="report-data" type="application/json"></script>
+<script>
+  "use strict";
+  const report = JSON.parse(document.getElementById("report-data").textContent);
+  const byId = id => document.getElementById(id);
+  const number = value => value.toLocaleString();
+  const percentage = value => value.toFixed(1) + "%";
+  const write = (id, value) => { byId(id).textContent = value; };
+  const matches = (query, ...values) => {
+    const text = values.join(" ").toLowerCase();
+    return query.trim().toLowerCase().split(/\s+/).every(word => text.includes(word));
+  };
+
+  function element(tag, text, className) {
+    const node = document.createElement(tag);
+    if (text !== undefined) node.textContent = text;
+    if (className) node.className = className;
+    return node;
+  }
+
+  function button(text, action, className = "link") {
+    const node = element("button", text, className);
+    node.type = "button";
+    node.addEventListener("click", action);
+    return node;
+  }
+
+  const commit = report.revision.commit;
+  write("revision", [report.revision.ref === "HEAD" ? "" : report.revision.ref,
+    commit.slice(0, 12), report.revision.generated.replace("T", " ").replace("+00:00", " UTC")]
+    .filter(Boolean).join(" · "));
+  const emptyCoverage = {covered: 0, total: 0};
+  const ratioPercent = ({covered, total}) => total ? percentage(100 * covered / total) : "—";
+  const fileCoverage = (path, key = "combined") => report.sources[path].coverage?.[key] ?? emptyCoverage;
+  const coverageState = (covered, total) => total === 0 ? "" : covered === total ? "hit" : covered ? "partial" : "miss";
+
+  function fractionBreakdown(label, {covered, total}) {
+    return label + " " + number(covered) + "/" + number(total) + " (" + ratioPercent({covered, total}) + ")";
+  }
+  write("coverage-value", report.badges.coverage.message);
+  write("line-summary", fractionBreakdown("Lines", report.coverage.lines));
+  write("branch-summary", fractionBreakdown("Branches", report.coverage.branches));
+  const trace = report.trace;
+  write("trace-value", report.badges.traceability.message);
+  write("trace-requirements", fractionBreakdown("Requirements → tests", {
+    covered: trace.summary.requirements_with_tests, total: trace.summary.requirements_total,
+  }));
+  write("trace-intents", fractionBreakdown("Intents → requirements", {
+    covered: trace.summary.intents_with_requirements, total: trace.summary.intents_total,
+  }));
+  write("sloc-value", report.badges.sloc.message);
+  write("files-total", number(report.production.length) + " production files");
+  write("p95-value", report.badges["cognitive-complexity"].message);
+  const maxComplexity = report.functions.reduce((highest, fn) => Math.max(highest, fn.cognitive_complexity), 0);
+  write("max-complexity", "Highest score " + number(maxComplexity));
+  write("functions-total", number(report.functions.length) + " functions");
+
+  const tabs = [...document.querySelectorAll("nav button")];
+  const workspace = document.querySelector(".workspace");
+  const selections = {};
+  const source = byId("code");
+  const lineInput = byId("line-input");
+  let section = "coverage";
+  let rows = [];
+  let selectedRows = [];
+  let inspected = null;
+  const inspector = element("div", undefined, "coverage-inspector");
+  inspector.id = "coverage-inspector";
+  inspector.setAttribute("aria-live", "polite");
+
+  function closeInspector() {
+    inspected?.setAttribute("aria-expanded", "false");
+    inspected = null;
+    inspector.remove();
+  }
+
+  function inspectCoverage(control, row, line, records) {
+    const alreadyOpen = inspected === control;
+    closeInspector();
+    if (alreadyOpen) return;
+    inspected = control;
+    control.setAttribute("aria-expanded", "true");
+    inspector.replaceChildren(element("strong", "Branch outcomes · Line " + line));
+    for (const {label, outcomes} of records) {
+      const detail = element("div", undefined, "branch-detail");
+      const states = element("div", undefined, "branch-outcomes");
+      for (const [name, covered] of Object.entries(outcomes)) {
+        const status = covered ? "Executed" : "Unexecuted";
+        states.append(element("span", name + " · " + status, "trace-status " + (covered ? "hit" : "miss")));
+      }
+      detail.append(element("code", label), states);
+      inspector.append(detail);
+    }
+    row.after(inspector);
+    const overflow = inspector.getBoundingClientRect().bottom - source.getBoundingClientRect().bottom;
+    if (overflow > 0) source.scrollTop += Math.min(overflow, inspector.offsetHeight);
+  }
+
+  function markSource(start, end = start) {
+    for (const row of selectedRows) row.classList.remove("active", "target");
+    selectedRows = rows.slice(start - 1, end);
+    for (const row of selectedRows) row.classList.add("active");
+    const target = rows[start - 1];
+    target.classList.add("target");
+    scrollToSource(source, target);
+    lineInput.value = start;
+  }
+
+  function scrollToSource(container, target) {
+    container.scrollTop += target.getBoundingClientRect().top - container.getBoundingClientRect().top - container.clientHeight / 3;
+  }
+
+  function selectLine(start) {
+    closeInspector();
+    lineInput.setCustomValidity("");
+    selections[section].start = start;
+    selections[section].end = start;
+    markSource(start);
+  }
+
+  function renderSource() {
+    closeInspector();
+    const selection = selections[section];
+    byId("source-view").hidden = section === "traceability";
+    if (section === "traceability") return;
+    byId("jump").hidden = source.hidden = !selection;
+    byId("source-message").hidden = Boolean(selection);
+    write("source-path", selection?.path ?? "");
+    byId("legend").hidden = !selection || section !== "coverage";
+    if (!selection) {
+      const prompts = {coverage: "Select a production file.", complexity: "Select a function to view its source."};
+      write("source-message", prompts[section]);
+      source.replaceChildren();
+      return;
+    }
+
+    const {path, start, end} = selection;
+    const view = buildSource(path, selectLine, section === "coverage");
+    selectedRows = [];
+    rows = view.rows;
+    source.replaceChildren(view.body);
+    source.scrollLeft = source.scrollTop = 0;
+    lineInput.value = "";
+    lineInput.setCustomValidity("");
+    if (start) markSource(start, end);
+  }
+
+  function buildSource(path, onLine, showCoverage = false) {
+    const decisions = showCoverage ? fileCoverage(path, "branches").lines : undefined;
+    const lineCoverage = showCoverage ? fileCoverage(path, "lines").lines : undefined;
+    const body = element("div", undefined, "code-body");
+    body.classList.toggle("coverage-code", showCoverage);
+    const sourceRows = report.sources[path].lines.map((text, index) => {
+      const line = index + 1;
+      const records = decisions?.[line];
+      const outcomes = records?.flatMap(record => Object.values(record.outcomes)) ?? [];
+      const covered = outcomes.filter(Boolean).length;
+      const ran = lineCoverage?.[line]?.[0].outcomes.Executed;
+      const lineState = ran === undefined ? "" : ran ? "hit" : "miss";
+      const row = element("div", undefined, "code-row " + (coverageState(covered, outcomes.length) || lineState));
+      const lineClass = "line-number " + lineState;
+      const lineno = onLine ? button(line, () => onLine(line), lineClass) : element("span", line, lineClass);
+      if (onLine) {
+        const status = ran === undefined ? "" : ran ? ", executed" : ", unexecuted";
+        lineno.setAttribute("aria-label", "Select line " + line + status);
+      }
+      row.append(lineno);
+      if (showCoverage) {
+        const fraction = element("span", undefined, "coverage-fraction");
+        if (outcomes.length) {
+          const control = button(covered + "/" + outcomes.length, () => inspectCoverage(control, row, line, records), "coverage-fraction");
+          control.title = "Inspect branch outcomes at line " + line;
+          control.setAttribute("aria-expanded", "false");
+          control.setAttribute("aria-controls", "coverage-inspector");
+          fraction.append(control);
+        }
+        row.append(fraction);
+      }
+      const kind = /^\s*\/\//.test(text) ? "comment" : /^\s*#/.test(text) ? "directive" : "";
+      row.append(element("code", text, kind));
+      return row;
+    });
+    body.append(...sourceRows);
+    return {body, rows: sourceRows};
+  }
+
+  function openSource(path, start, end, reveal = true) {
+    selections[section] = {path, start, end};
+    renderSource();
+    if (reveal && matchMedia("(max-width: 870px)").matches) {
+      byId("source-title").focus({preventScroll: true});
+      byId("source-view").scrollIntoView({block: "start"});
+    }
+  }
+
+  byId("jump").addEventListener("submit", event => {
+    event.preventDefault();
+    const line = Number(lineInput.value);
+    if (!Number.isInteger(line) || line < 1 || line > rows.length) {
+      lineInput.setCustomValidity("Enter a line from 1 to " + rows.length + ".");
+      lineInput.reportValidity();
+      return;
+    }
+    selectLine(line);
+  });
+  lineInput.addEventListener("input", () => lineInput.setCustomValidity(""));
+
+  function selectTabFromHash() {
+    const target = location.hash.slice(1) || "coverage";
+    const tab = tabs.find(item => item.dataset.section === target);
+    if (!tab) return;
+    section = target;
+    workspace.dataset.section = section;
+    for (const item of tabs) {
+      item.setAttribute("aria-pressed", item === tab);
+      byId(item.getAttribute("aria-controls")).hidden = item !== tab;
+    }
+    byId("trace-details").hidden = section !== "traceability";
+    renderSource();
+  }
+
+  for (const tab of tabs) {
+    tab.addEventListener("click", () => { location.hash = tab.dataset.section; });
+  }
+  window.addEventListener("hashchange", selectTabFromHash);
+
+  function disclosure(label, open) {
+    const details = element("details");
+    details.open = open;
+    details.append(element("summary", label));
+    const branch = element("div", undefined, "branch");
+    details.append(branch);
+    return {details, branch};
+  }
+
+  function score(stats) {
+    const result = element("small", undefined, "file-score");
+    const label = ratioPercent(stats);
+    if (stats.total) {
+      const meter = element("meter");
+      meter.max = stats.total;
+      meter.value = stats.covered;
+      meter.setAttribute("aria-label", "Combined coverage " + stats.covered + " of " + stats.total);
+      result.append(meter);
+    } else {
+      result.title = "No data for this metric";
+    }
+    result.append(element("span", label));
+    return result;
+  }
+
+  function renderFiles() {
+    const query = byId("file-search").value;
+    const host = byId("files");
+    host.replaceChildren();
+    const folders = new Map([["", host]]);
+    const totals = new Map();
+    for (const path of report.production) {
+      const stats = fileCoverage(path);
+      let folder = "";
+      for (const part of path.split("/").slice(0, -1)) {
+        folder += part + "/";
+        const sum = totals.get(folder) ?? {covered: 0, total: 0};
+        sum.covered += stats.covered;
+        sum.total += stats.total;
+        totals.set(folder, sum);
+      }
+    }
+    for (const path of report.production.filter(path => matches(query, path))) {
+      const parts = path.split("/");
+      const filename = parts.pop();
+      let folder = "";
+      for (const part of parts) {
+        const parent = folders.get(folder);
+        folder += part + "/";
+        if (!folders.has(folder)) {
+          const {details, branch} = disclosure(part + "/", true);
+          const label = element("span", part + "/", "folder-label");
+          label.append(score(totals.get(folder)));
+          details.firstElementChild.replaceChildren(label);
+          parent.append(details);
+          folders.set(folder, branch);
+        }
+      }
+      const item = button(filename, () => {
+        host.querySelector('[aria-current="true"]')?.removeAttribute("aria-current");
+        item.setAttribute("aria-current", "true");
+        openSource(path);
+      }, "file");
+      item.append(score(fileCoverage(path)));
+      item.title = path;
+      if (path === selections.coverage?.path) item.setAttribute("aria-current", "true");
+      folders.get(folder).append(item);
+    }
+    if (!host.children.length) host.append(element("p", "No matching files.", "message"));
+  }
+
+  function documentLink(path, label) {
+    if (!report.revision.document_base) return element("small", path, "mono muted");
+    const link = element("a", label);
+    const [filename, fragment] = path.split("#", 2);
+    const encoded = filename.split("/").map(encodeURIComponent).join("/");
+    link.href = report.revision.document_base + encodeURIComponent(commit) +
+      "/" + encoded + (fragment ? "#" + encodeURIComponent(fragment) : "");
+    return link;
+  }
+
+  const artifactLabel = doc => doc.id + " — " + doc.title;
+  const artifacts = new Map([...trace.intents, ...Object.values(trace.requirements)].map(doc => [doc.id, doc]));
+  let activeArtifact;
+
+  function intentProgress(intent) {
+    const total = intent.requirements.length;
+    const linked = intent.requirements.filter(id => trace.requirements[id].tests.length).length;
+    return {linked, total};
+  }
+
+  function traceEntry(doc, label, state) {
+    const item = button(undefined, () => selectArtifact(doc.id, true), "file trace-entry " + doc.type);
+    item.dataset.artifact = doc.id;
+    item.append(element("span", artifactLabel(doc)), element("span", label, "trace-status " + state));
+    return item;
+  }
+
+  function selectArtifact(id, reveal = false) {
+    activeArtifact = id;
+    for (const item of byId("intents").querySelectorAll("[data-artifact]")) {
+      if (item.dataset.artifact === id) item.setAttribute("aria-current", "true");
+      else item.removeAttribute("aria-current");
+    }
+    const doc = artifacts.get(id);
+    const body = byId("trace-detail-body");
+    const link = byId("trace-doc-link");
+    body.replaceChildren();
+    link.replaceChildren();
+    write("trace-details-title", doc ? artifactLabel(doc) : "Traceability details");
+    if (doc) link.append(documentLink(doc.path, "View repository document"));
+    if (!doc) {
+      body.append(element("p", "No matching intent or requirement.", "muted"));
+    } else {
+      body.append(renderedMarkdown(doc.markdown.html));
+      if (doc.type === "intent") {
+        const {linked, total} = intentProgress(doc);
+        body.append(element("h3", "Requirement coverage"),
+          element("p", total ? linked + " of " + total + " requirements have linked tests." : "No requirements are linked."));
+      } else {
+        renderRequirementDetails(doc, body);
+      }
+    }
+    if (reveal && matchMedia("(max-width: 870px)").matches) {
+      byId("trace-details-title").focus({preventScroll: true});
+      byId("trace-details").scrollIntoView({block: "start"});
+    }
+  }
+
+  function renderRequirementDetails(req, body) {
+    body.append(element("h3", "Related intents"));
+    if (req.intents.length) {
+      const intents = element("ul");
+      for (const intent of req.intents) {
+        const item = element("li");
+        item.append(button(artifactLabel(intent), () => selectArtifact(intent.id)));
+        intents.append(item);
+      }
+      body.append(intents);
+    } else {
+      body.append(element("p", "No linked intents.", "muted"));
+    }
+    if (req.specifications.length) {
+      body.append(element("h3", "Specifications"));
+      for (const spec of req.specifications) body.append(renderSpecification(spec.path));
+    }
+    body.append(element("h3", "Linked tests"));
+    if (!req.tests.length) {
+      body.append(element("p", "No linked tests.", "muted"));
+      return;
+    }
+    for (const test of req.tests) body.append(renderTest(test));
+  }
+
+  function renderedMarkdown(html, className = "") {
+    const rendered = element("div", undefined, "markdown-text " + className);
+    // The generator disables raw HTML and restricts generated MathML.
+    rendered.innerHTML = html;
+    return rendered;
+  }
+
+  function renderSpecification(path) {
+    const preview = trace.specifications[path];
+    const details = element("details", undefined, "spec-preview");
+    const controls = element("div", undefined, "spec-controls");
+    const raw = element("pre", preview.text, "detail-text spec-text");
+    controls.append(documentLink(path, "View repository specification"));
+    details.append(element("summary", preview.title || path), controls, raw);
+    if (preview.html !== undefined) {
+      const rendered = renderedMarkdown(preview.html, "spec-text");
+      raw.hidden = true;
+      const toggle = button("Raw Markdown", () => {
+        raw.hidden = !raw.hidden;
+        rendered.hidden = !raw.hidden;
+        toggle.textContent = raw.hidden ? "Raw Markdown" : "Rendered Markdown";
+      });
+      controls.append(toggle);
+      details.append(rendered);
+    }
+    return details;
+  }
+
+  function renderTest(test) {
+    const details = element("details", undefined, "test-preview");
+    const summary = element("summary", test.name);
+    summary.append(element("small", test.path + ":" + test.line, "mono muted"));
+    const code = element("div", undefined, "code");
+    code.tabIndex = 0;
+    code.setAttribute("aria-label", "Source for " + test.name);
+    details.append(summary, code);
+    details.addEventListener("toggle", () => {
+      if (!details.open || code.firstElementChild) return;
+      const view = buildSource(test.path);
+      const target = view.rows[test.line - 1];
+      code.append(view.body);
+      if (target) {
+        target.classList.add("active", "target");
+        scrollToSource(code, target);
+      }
+    });
+    return details;
+  }
+
+  function renderTrace() {
+    const query = byId("trace-search").value.trim();
+    const gapsOnly = byId("trace-gaps").checked;
+    const host = byId("intents");
+    host.replaceChildren();
+    const groups = [...trace.intents];
+    if (trace.unassigned.length) groups.push({title: "Requirements without an intent", requirements: trace.unassigned});
+    for (const intent of groups) {
+      const label = intent.id ? artifactLabel(intent) : intent.title;
+      const {linked, total} = intentProgress(intent);
+      if (gapsOnly && intent.id && total && linked === total) continue;
+      const intentMatches = matches(query, label, intent.path, intent.markdown?.text);
+      const requirements = intent.requirements.map(id => trace.requirements[id]).filter(req =>
+        (!gapsOnly || !req.tests.length || !req.intents.length) &&
+        (intentMatches || matches(query, req.id, req.title, req.path, req.markdown.text,
+          ...req.specifications.map(spec => spec.path), ...req.tests.flatMap(test => [test.name, test.path]))));
+      if (!intentMatches && !requirements.length) continue;
+      if (!intent.id && !requirements.length) continue;
+      const group = element("div", undefined, "trace-group");
+      if (intent.id) {
+        group.append(traceEntry(intent, total ? linked + "/" + total + " linked" : "No requirements",
+          coverageState(linked, total) || "miss"));
+      } else {
+        group.append(element("h3", label));
+      }
+      const entries = element("div", undefined, "trace-requirements");
+      for (const req of requirements) {
+        const count = req.tests.length;
+        entries.append(traceEntry(req, count ? count + (count === 1 ? " test" : " tests") : "No linked tests", count ? "hit" : "miss"));
+      }
+      group.append(entries);
+      host.append(group);
+    }
+    if (!host.children.length) host.append(element("p", "No matching intents or requirements.", "message"));
+    const buttons = [...host.querySelectorAll("[data-artifact]")];
+    selectArtifact(buttons.some(item => item.dataset.artifact === activeArtifact) ? activeArtifact : buttons[0]?.dataset.artifact);
+  }
+
+  const sortButtons = [...document.querySelectorAll("th button")];
+  let sortKey = "cognitive_complexity";
+  let ascending = false;
+  for (const item of sortButtons) {
+    item.addEventListener("click", () => {
+      const next = item.dataset.sort;
+      ascending = sortKey === next ? !ascending : next !== "cognitive_complexity";
+      sortKey = next;
+      renderFunctions();
+    });
+  }
+  const compare = (a, b) => typeof a === "number" ? a - b : a.localeCompare(b);
+
+  function renderFunctions() {
+    const query = byId("function-search").value;
+    const functions = report.functions.filter(fn => matches(query, fn.name, fn.file));
+    functions.sort((a, b) => (ascending ? 1 : -1) * compare(a[sortKey], b[sortKey]) ||
+      compare(a.file, b.file) || a.start_line - b.start_line || compare(a.name, b.name));
+    for (const item of sortButtons) {
+      const selected = item.dataset.sort === sortKey;
+      item.textContent = item.textContent.replace(/ [↑↓]$/, "") + (selected ? (ascending ? " ↑" : " ↓") : "");
+      if (selected) item.parentElement.setAttribute("aria-sort", ascending ? "ascending" : "descending");
+      else item.parentElement.removeAttribute("aria-sort");
+    }
+    const rows = functions.map(fn => {
+      const row = element("tr");
+      const name = element("td", undefined, "mono");
+      name.append(button(fn.name, () => openSource(fn.file, fn.start_line, fn.end_line)));
+      row.append(name, element("td", fn.file, "mono"), element("td", fn.start_line), element("td", fn.cognitive_complexity));
+      return row;
+    });
+    write("function-count", rows.length ? number(rows.length) + " functions shown" : "No matching functions.");
+    byId("functions").replaceChildren(...rows);
+  }
+
+  byId("file-search").addEventListener("input", renderFiles);
+  byId("trace-search").addEventListener("input", renderTrace);
+  byId("trace-gaps").addEventListener("change", renderTrace);
+  byId("function-search").addEventListener("input", renderFunctions);
+  openSource(report.production.find(path => fileCoverage(path).total) ?? report.production[0], undefined, undefined, false);
+  renderFiles();
+  renderTrace();
+  renderFunctions();
+  selectTabFromHash();
+</script>
+</body>
+</html>

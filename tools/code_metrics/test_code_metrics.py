@@ -118,6 +118,26 @@ int nested(int x, int y) {
         self.assertEqual(self.output("cognitive", "src", "--percentile", "50"), "1\n")
         self.assertEqual(self.output("cognitive", "src"), "3\n")
 
+    def test_function_details_use_the_same_scores_as_the_percentile(self):
+        self.write("src/functions.cpp", "int simple() { return 0; }\n"
+                   "int branch(int x) {\n    if (x) return 1;\n    return 0;\n}\n")
+
+        report = json.loads(self.output("cognitive", "src", "--json", "--functions"))
+        plain = json.loads(self.output("cognitive", "src", "--json"))
+        details = report.pop("function_details")
+
+        self.assertEqual(report, plain)
+        self.assertEqual(details, [
+            {"name": "simple", "file": "src/functions.cpp", "start_line": 1,
+             "end_line": 1, "cognitive_complexity": 0},
+            {"name": "branch", "file": "src/functions.cpp", "start_line": 2,
+             "end_line": 5, "cognitive_complexity": 1},
+        ])
+        self.assertEqual(report["functions"], len(details))
+        self.assertEqual(report["value"], max(fn["cognitive_complexity"] for fn in details))
+        self.assert_cli_error("--functions requires cognitive --json", "cognitive", "src", "--functions")
+        self.assert_cli_error("--functions requires cognitive --json", "sloc", "src", "--json", "--functions")
+
     def test_shields_badges(self):
         self.write("src/code.cpp", "int f() { return 0; }\n" + "int x;\n" * 1249)
 
@@ -156,14 +176,6 @@ int nested(int x, int y) {
             self.assert_cli_error("No C/C++ source files found", metric, "empty")
         self.assert_cli_error("No C/C++ functions found", "cognitive", "src")
 
-    def test_cloc_partial_report_is_an_error(self):
-        file = self.write("src/source.c", "int value;\n")
-        report = subprocess.CompletedProcess([], 0, '{"SUM": {"nFiles": 0, "code": 0}}', "")
-
-        with patch("code_metrics.subprocess.run", return_value=report):
-            with self.assertRaisesRegex(RuntimeError, "cloc counted 0 of 1 nonempty files"):
-                code_metrics.count_sloc([file])
-
     def test_lizard_parser_diagnostic_is_an_error(self):
         file = self.write("src/source.h", "int f() { return 0; }\n")
 
@@ -173,3 +185,5 @@ int nested(int x, int y) {
         with patch("lizard.FileAnalyzer.analyze_source_code", side_effect=fail_to_parse):
             with self.assertRaisesRegex(RuntimeError, "Lizard failed to analyze .*source.h"):
                 code_metrics.count_cognitive_complexity([file], 95)
+            with self.assertRaisesRegex(RuntimeError, "Lizard failed to analyze .*source.h"):
+                code_metrics.count_sloc([file])

@@ -9,7 +9,6 @@ on:
 permissions:
   contents: read
 
-# Cancel superseded report runs on main before they publish.
 concurrency:
   group: repository-reports-${{ github.ref == 'refs/heads/main' && 'main' || github.run_id }}
   cancel-in-progress: true
@@ -25,49 +24,10 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install reporting tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y cloc
-          python -m pip install -r tools/trace/requirements.txt -r tools/code_metrics/requirements.txt
+        run: python -m pip install -r tools/trace/requirements.txt -r tools/code_metrics/requirements.txt
       - name: Test traceability tool
         run: python -m unittest discover -s tools/trace
       - name: Validate traceability
         run: python tools/trace/trace.py validate
       - name: Test code metrics tool
         run: python -m unittest discover -s tools/code_metrics
-      - name: Generate reports and badges
-        run: |
-          mkdir -p badge
-          python tools/trace/trace.py coverage --badge > badge/traceability.json
-          # These two source roots exclude tests, build output, and fetched dependencies.
-          python tools/code_metrics/code_metrics.py sloc src include --badge > badge/sloc.json
-          python tools/code_metrics/code_metrics.py cognitive src include --badge > badge/cognitive-complexity.json
-          cat badge/*.json
-      - name: Stage badge bundle
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v4
-        with:
-          name: repository-badges
-          path: badge/
-          if-no-files-found: error
-          overwrite: true
-
-  badge:
-    needs: validate
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-    steps:
-      - name: Download badge bundle
-        uses: actions/download-artifact@v4
-        with:
-          name: repository-badges
-          path: badge
-      - name: Publish badges
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: badges
-          publish_dir: ./badge
-          force_orphan: true

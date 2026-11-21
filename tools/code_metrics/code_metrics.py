@@ -4,8 +4,6 @@
 import argparse
 import json
 import math
-import subprocess
-import tempfile
 from colorsys import hsv_to_rgb
 from contextlib import redirect_stderr
 from fractions import Fraction
@@ -37,51 +35,16 @@ def source_files(directories: list[Path]) -> list[Path]:
 
 
 def count_sloc(files: list[Path]) -> int:
-    # cloc omits zero-byte files, which contribute zero lines.
-    nonempty_count = sum(path.stat().st_size > 0 for path in files)
-    paths = [path.as_posix() for path in files]
-    if any("\n" in path or "\r" in path for path in paths):
-        raise ValueError("cloc cannot read filenames containing line breaks")
-
-    with tempfile.TemporaryDirectory() as tmp:
-        file_list = Path(tmp) / "files.txt"
-        file_list.write_text("\n".join(paths) + "\n", encoding="utf-8")
-        config = Path(tmp) / "options.txt"
-        config.touch()  # Keep the user's cloc defaults out of the measurement.
-
-        try:
-            result = subprocess.run(
-                [
-                    "cloc", "--json", "--quiet", "--skip-uniqueness",
-                    "--force-lang=C++", "--strip-str-comments",
-                    f"--config={config}", f"--list-file={file_list}",
-                ],
-                capture_output=True, encoding="utf-8", errors="replace", check=True,
-            )
-        except FileNotFoundError as exc:
-            raise RuntimeError("cloc is not installed or not on PATH") from exc
-        except subprocess.CalledProcessError as exc:
-            detail = exc.stderr.strip() or exc.stdout.strip() or f"exit code {exc.returncode}"
-            raise RuntimeError(f"cloc failed: {detail}") from exc
-
-    diagnostics = result.stderr.strip()
-    try:
-        report = json.loads(result.stdout)
-        if report == {} and nonempty_count == 0:
-            return 0
-        total = report["SUM"]
-        counted, code = total["nFiles"], total["code"]
-        if type(counted) is not int or type(code) is not int or code < 0:
-            raise ValueError("invalid totals")
-    except (KeyError, TypeError, ValueError) as exc:
-        raise RuntimeError(f"invalid cloc report: {diagnostics or exc}") from exc
-    if counted != nonempty_count:
-        detail = f": {diagnostics}" if diagnostics else ""
-        raise RuntimeError(f"cloc counted {counted} of {nonempty_count} nonempty files{detail}")
-    return code
+    sloc, _ = analyze_sources(files)
+    return sloc
 
 
-def count_cognitive_complexity(files: list[Path], percentile: float) -> tuple[int, int]:
+def analyze_functions(files: list[Path]) -> list[dict]:
+    _, functions = analyze_sources(files)
+    return functions
+
+
+def analyze_sources(files: list[Path]) -> tuple[int, list[dict]]:
     try:
         import lizard
 
@@ -89,7 +52,8 @@ def count_cognitive_complexity(files: list[Path], percentile: float) -> tuple[in
     except ImportError as exc:
         raise RuntimeError("Install the required Lizard version with python -m pip install -r tools/code_metrics/requirements.txt") from exc
 
-    complexities = []
+    sloc = 0
+    functions = []
     for path in files:
         # Select Lizard's C/C++ reader for every accepted extension and casing.
         try:
@@ -101,14 +65,39 @@ def count_cognitive_complexity(files: list[Path], percentile: float) -> tuple[in
             analysis = analyzer.analyze_source_code(str(path.with_suffix(".cpp")), source)
         if diagnostics := stderr.getvalue():
             raise RuntimeError(f"Lizard failed to analyze {path}: {diagnostics.strip()}")
-        complexities.extend(function.cognitive_complexity for function in analysis.function_list)
+        sloc += analysis.nloc
+        functions.extend({
+            "name": function.name,
+            "file": path,
+            "start_line": function.start_line,
+            "end_line": function.end_line,
+            "cognitive_complexity": function.cognitive_complexity,
+        } for function in analysis.function_list)
+    return sloc, functions
 
+
+def cognitive_percentile(functions: list[dict], percentile: float) -> int:
+    complexities = sorted(function["cognitive_complexity"] for function in functions)
     if not complexities:
         raise RuntimeError("No C/C++ functions found")
-    complexities.sort()
     # Avoid rounding a whole-number rank up due to binary floating-point arithmetic.
     rank = math.ceil(Fraction(str(percentile)) * len(complexities) / 100)
-    return complexities[rank - 1], len(complexities)
+    return complexities[rank - 1]
+
+
+def count_cognitive_complexity(files: list[Path], percentile: float) -> tuple[int, int]:
+    functions = analyze_functions(files)
+    return cognitive_percentile(functions, percentile), len(functions)
+
+
+def function_details(functions: list[dict], root: Path) -> list[dict]:
+    details = []
+    for function in functions:
+        path = function["file"]
+        if path.is_relative_to(root):
+            path = path.relative_to(root)
+        details.append({**function, "file": path.as_posix()})
+    return details
 
 
 def make_badge(metric: str, value: int, percentile: float) -> dict:
@@ -132,8 +121,12 @@ def main() -> None:
     output = parser.add_mutually_exclusive_group()
     output.add_argument("--json", action="store_true", help="Print machine-readable JSON")
     output.add_argument("--badge", action="store_true", help="Print Shields.io endpoint JSON")
+    parser.add_argument("--functions", action="store_true",
+                        help="Include individual functions with cognitive --json")
     args = parser.parse_intermixed_args()
 
+    if args.functions and (args.metric != "cognitive" or not args.json):
+        parser.error("--functions requires cognitive --json")
     if args.metric == "sloc" and args.percentile is not None:
         parser.error("--percentile is only valid for cognitive")
     percentile = args.percentile if args.percentile is not None else 95.0
@@ -155,6 +148,11 @@ def main() -> None:
         }
         if args.metric == "sloc":
             value = count_sloc(files)
+        elif args.functions:
+            functions = analyze_functions(files)
+            value = cognitive_percentile(functions, percentile)
+            report.update(percentile=percentile, functions=len(functions),
+                          function_details=function_details(functions, Path.cwd().resolve()))
         else:
             value, function_count = count_cognitive_complexity(files, percentile)
             report.update(percentile=percentile, functions=function_count)
