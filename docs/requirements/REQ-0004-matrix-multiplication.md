@@ -9,4 +9,4 @@ specifications:
 
 ## Obligation
 
-Popnet shall compute matrix multiplication using the specified A-times-transpose-B convention and output shape.
+Matrix multiplication shall follow the specified A-times-transpose-B convention and output shape.

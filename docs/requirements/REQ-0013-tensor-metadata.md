@@ -8,4 +8,4 @@ specifications: []
 
 ## Obligation
 
-Popnet shall provide the tensor's shape, element count, data type, and recorded operation. The element count shall equal the product of its dimension sizes.
+Tensor metadata queries shall provide the shape, element count, data type, and recorded operation. The element count shall equal the product of the dimension sizes.

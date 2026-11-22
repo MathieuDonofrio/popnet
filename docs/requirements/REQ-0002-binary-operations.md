@@ -9,4 +9,4 @@ specifications:
 
 ## Obligation
 
-Popnet shall compute the specified binary operations using the defined broadcasting rules.
+Binary operations shall follow the specified broadcasting rules.

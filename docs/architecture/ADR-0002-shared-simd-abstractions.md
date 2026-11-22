@@ -5,17 +5,16 @@ title: Shared SIMD abstractions
 
 ## Context
 
-Both common CPU code and CPU backend kernels can benefit from SIMD optimizations.
+Common CPU code and CPU backend kernels can use the same SIMD primitives and traversal patterns. Some kernels need instruction selection or data access patterns specific to the operation.
 
 ## Decision
 
-Provide shared SIMD abstractions in the common implementation, preferred where applicable while allowing specialized kernels to use SIMD directly.
+Keep reusable SIMD abstractions in the common implementation, independent of compute backends. Prefer them when they fit the operation. Specialized kernels may use SIMD directly.
 
 ## Rationale
 
-Shared abstractions allow SIMD functionality to be reused across common code and CPU backend kernels, reducing duplication.
+Sharing SIMD primitives and traversal logic reduces duplication and lets both users benefit from maintenance in one place. Direct use gives specialized kernels control over instruction selection and data access where the shared abstractions would constrain them.
 
 ## Consequences
 
-- SIMD abstractions remain independent of compute backends.
-- Specialized kernels may use SIMD directly when appropriate.
+Shared abstractions need to accommodate common use cases without taking on each kernel's special cases. Kernels that use SIMD directly retain more control and may need their own architecture-specific code and maintenance.

@@ -8,4 +8,4 @@ specifications: []
 
 ## Obligation
 
-Popnet shall create result tensors with independent storage that record the operation and its inputs, with the shape and data type determined by the operation. Creation shall not compute values.
+Operation creation shall allocate a result tensor with independent storage, record the operation and its inputs, and set the shape and data type according to the operation. Creation shall not compute values.

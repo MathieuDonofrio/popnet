@@ -47,22 +47,30 @@ part of the required behavior. Use `[]` when the obligation is self-contained.
 
 Keep documentation concise. State obligations in requirements and details in specifications; avoid duplication.
 
-Use "shall" for obligations. Prefer EARS-style patterns when useful:
+Use "shall" for obligations. Name the specific subject of the obligation, when the project is already clear. Prefer the
+shortest wording that remains precise and independently verifiable. Omit
+context and qualifications already established by the document, metadata, or
+references.
+
+Use EARS-style patterns when useful:
 
 - The component shall ...
 - When <event>, the component shall ...
 - While <state>, the component shall ...
 - If <unwanted condition>, then the component shall ...
-- Where <feature is supported>, the component shall ...
 
 Other precise forms are allowed. Use equations, tables, or references
 when clearer. Define necessary conditions, bounds, and tolerances.
+Use qualifications such as "where supported" only when the support conditions
+are defined or referenced. Distinguish observable behavior from caller
+preconditions and unsupported functionality. Record implementation decisions
+in ADRs unless they are intentional requirements.
 Keep rationale separate and do not invent missing decisions.
 
 ## Quality
 
 Local:
-- Atomic: One independently assessable obligation.
+- Atomic: One independently assessable contract. Keep related clauses together when they define that contract.
 - Unambiguous: One reasonable interpretation with its references.
 - Verifiable: Compliance can be assessed with evidence.
 - Sufficient: Necessary contract details are defined or referenced.

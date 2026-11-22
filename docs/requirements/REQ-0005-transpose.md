@@ -9,4 +9,4 @@ specifications:
 
 ## Obligation
 
-Popnet shall swap the final two dimensions using the specified index mapping.
+Transpose shall swap the final two dimensions using the specified index mapping.

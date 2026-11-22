@@ -1,7 +1,7 @@
 if(POPNET_NATIVE)
   if(CMAKE_CROSSCOMPILING)
-    message(STATUS "Cross-compiling: ignoring POPNET_CPU_NATIVE=ON.")
-    set(POPNET_CPU_NATIVE OFF CACHE BOOL "" FORCE)
+    message(STATUS "Cross-compiling: ignoring POPNET_NATIVE=ON.")
+    set(POPNET_NATIVE OFF CACHE BOOL "" FORCE)
   else()
     # Autodetect CPU flags
 

@@ -8,7 +8,7 @@ description: Create, update, and review architectural decision records (ADRs).
 ## Workflow
 
 1. Read relevant intents, requirements, specifications, existing ADRs, and implementation.
-2. Identify the architectural decision and its motivation.
+2. Identify the architectural decision and its motivation, when known.
 3. Draft or revise the ADR using the established format.
 4. Verify the decision, rationale, and consequences against available evidence.
 5. Apply the quality criteria and report unresolved questions.
@@ -50,8 +50,11 @@ Link related intents, requirements, or other ADRs when useful, without duplicati
 ## Writing
 
 - Document significant architectural decisions, not routine implementation details.
+- Leave tentative or likely-to-change choices in the implementation or planning artifacts.
 - Focus on the decision and its reasoning rather than describing the implementation.
-- Keep records concise and self-contained.
+- Explain meaningful tradeoffs and relevant alternatives when known.
+- Include important limitations and disadvantages alongside benefits.
+- Keep records concise and self-contained. Name the project only when needed for clarity.
 - Avoid duplicating requirements, specifications, or in-code documentation.
 - Distinguish implemented decisions from planned architecture.
 - Record new decisions rather than silently rewriting superseded ones.

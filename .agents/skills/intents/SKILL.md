@@ -50,13 +50,15 @@ All metadata and sections are required except Assumptions and Open questions.
 
 ## Writing
 
-Describe why the work matters and what outcome is wanted.
+Describe the problem and the benefit or capability people should gain.
+Scope claims to the intended users and conditions.
 Avoid implementation choices unless they are genuine constraints.
 Keep detailed behavioral obligations in requirements.
 
-Make success assessable without inventing targets or promising
-uncertain results. For research, distinguish obtaining credible
-evidence from proving the hoped-for hypothesis.
+State what would demonstrate that the outcome was achieved. Describe
+verification activities as sources of evidence and set quantitative targets
+only when justified. For research, distinguish obtaining credible evidence
+from proving the hoped-for hypothesis.
 
 ## Quality
 

@@ -8,4 +8,4 @@ specifications: []
 
 ## Obligation
 
-After tensor creation, Popnet shall preserve its shape, data type, recorded operation, and input references throughout its lifetime.
+A tensor's shape, data type, recorded operation, and input references shall remain fixed after creation.

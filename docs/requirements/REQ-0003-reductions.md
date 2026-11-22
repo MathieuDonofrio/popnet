@@ -9,4 +9,4 @@ specifications:
 
 ## Obligation
 
-Popnet shall support each specified reduction over a nonempty selection of axes, provided the selected non-singleton axes are contiguous when singleton dimensions are ignored. Reductions over only singleton axes shall also be supported.
+Each specified reduction shall support nonempty selections of axes whose non-singleton axes are contiguous when singleton dimensions are ignored, including selections of only singleton axes.

@@ -9,4 +9,4 @@ specifications:
 
 ## Obligation
 
-For each supported operation and datatype combination, Popnet shall satisfy the numerical accuracy guarantees defined in the corresponding specification.
+Each supported operation and data type combination shall meet the specified numerical accuracy guarantees.

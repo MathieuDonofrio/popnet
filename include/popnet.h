@@ -51,6 +51,7 @@
 #include <assert.h>
 #define POPNET_EXPECT(cond) assert(cond)
 #define POPNET_UNREACHABLE() assert(false)
+#define POPNET_UNSUPPORTED(message) assert(false && (message))
 #else
 #ifdef _MSC_VER
 #define POPNET_EXPECT(cond) __assume(cond)
@@ -65,6 +66,7 @@
 #define POPNET_EXPECT(cond) ((void)0)
 #define POPNET_UNREACHABLE() ((void)0)
 #endif
+#define POPNET_UNSUPPORTED(message) POPNET_UNREACHABLE()
 #endif
 
 #ifdef __cplusplus
@@ -72,7 +74,6 @@
 #else
 #define POPNET_UNSUPPORTED_STATIC(message) _Static_assert(0, message)
 #endif
-#define POPNET_UNSUPPORTED(message) POPNET_UNREACHABLE()
 
 #define POPNET_MAX_DIMS 4
 #define POPNET_MAX_SRC 8
@@ -129,6 +130,7 @@ typedef struct popnet_shape
 
 static const popnet_shape popnet_scalar_shape = {.dim = {1, 1, 1, 1}};
 
+/** Returns the element count. Each dimension must be positive and their product must fit in size_t. **/
 POPNET_INLINE size_t popnet_numel(popnet_shape shape)
 {
 #ifdef __cplusplus
@@ -153,7 +155,7 @@ typedef struct popnet_tensor popnet_tensor;
  * Allocates independent, uninitialized storage with no recorded operation.
  * Release the result with popnet_free().
  *
- * @pre dtype is supported and every shape dimension is positive.
+ * @pre dtype is supported, every shape dimension is positive, and the element count fits in size_t.
  **/
 POPNET_API popnet_tensor* popnet_empty(popnet_dtype dtype, popnet_shape shape);
 /** Allocates like popnet_empty() using tensor's shape and type; does not copy its data or operation. **/

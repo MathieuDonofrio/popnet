@@ -8,4 +8,4 @@ specifications: []
 
 ## Obligation
 
-Each time a graph is computed, Popnet shall execute every operation once, after its dependencies, using the current input values. Tensors with no recorded operation shall remain unchanged.
+Each forward graph execution shall compute every recorded operation once, after its dependencies, using the current input values. Tensors with no recorded operation shall remain unchanged.

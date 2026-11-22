@@ -9,4 +9,4 @@ specifications:
 
 ## Obligation
 
-Where 32-bit floating-point operations are supported, Popnet shall support the specified float32 tensor operations.
+On compute backends that support 32-bit floating-point computation, all specified float32 tensor operations shall be supported.

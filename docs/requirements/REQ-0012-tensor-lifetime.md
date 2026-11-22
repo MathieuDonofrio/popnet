@@ -8,4 +8,4 @@ specifications: []
 
 ## Obligation
 
-Popnet shall let callers explicitly free a tensor and its storage without freeing its inputs.
+Callers shall be able to explicitly free a tensor and its storage without freeing its inputs.

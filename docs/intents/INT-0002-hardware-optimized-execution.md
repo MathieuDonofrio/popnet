@@ -9,7 +9,7 @@ Different CPUs and GPUs offer different capabilities for accelerating tensor ope
 
 ## Desired outcome
 
-Run tensor operations efficiently on any CPU or GPU through kernels optimized for the selected hardware.
+Run tensor operations efficiently on supported hardware architectures.
 
 ## Scope
 
@@ -17,4 +17,4 @@ Backend execution and architecture-specific optimization of library code and ker
 
 ## Success assessment
 
-Confirm that the selected backend enables available architecture-specific optimizations. Assess execution efficiency with benchmarks.
+Assess whether architecture-specific optimizations improve execution efficiency by benchmarking representative operations and tensor shapes against comparable baselines on supported hardware configurations.

@@ -2,7 +2,11 @@
 
 ## Dimensions
 
-Tensors have four positive dimensions, written `(d0,d1,d2,d3)`. The last dimension varies fastest. Dimensions of size 1 are singleton axes; `(1,1,1,1)` represents a scalar.
+Tensors have four positive dimensions, written `(d0,d1,d2,d3)`. Storage is row-major, with the final dimension varying fastest. Dimensions of size 1 are singleton axes and can represent lower-rank tensors. A scalar has shape `(1,1,1,1)`.
+
+## Tensor Data Transfers
+
+Transfers between a tensor and a host buffer support f32 paired with f32 in either direction. Transfers copy values without data type conversion.
 
 ## Numerical Accuracy
 

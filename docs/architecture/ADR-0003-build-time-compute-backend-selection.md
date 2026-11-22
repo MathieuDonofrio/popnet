@@ -9,14 +9,12 @@ Different compute backends require different implementations of memory operation
 
 ## Decision
 
-Select the compute backend at build time while keeping the core library independent of backend-specific implementations.
+Select one compute backend at build time. The core library calls shared internal compute interfaces implemented by the selected backend.
 
 ## Rationale
 
-This separates hardware-specific code from common functionality without introducing runtime backend dispatch.
+The shared interfaces separate hardware-specific code from common functionality. Build-time selection avoids runtime dispatch between backends.
 
 ## Consequences
 
-- Each build includes one compute backend.
-- Switching backends requires rebuilding the library.
-- Backends implement the shared internal compute interfaces.
+A compiled library cannot switch compute backends at runtime. Using a different backend requires a separate build of the library.

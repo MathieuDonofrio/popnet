@@ -8,4 +8,4 @@ specifications: []
 
 ## Obligation
 
-For operations on inputs of the same supported data type, Popnet shall produce a result of that type. Mixed-type operands shall be treated as unsupported unless explicitly supported.
+An operation on inputs of the same supported data type shall produce a result of that type. Mixed-type operands shall be unsupported unless their combination is explicitly supported.

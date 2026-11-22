@@ -13,25 +13,14 @@ At the same time, the implementation benefits from C++ features such as template
 
 ## Decision
 
-Popnet exposes a C-compatible public API in `include/popnet.h` and implements the library internally in C++20.
+The library exposes a C-compatible public API in `include/popnet.h` and uses modern C++ internally.
 
 ## Rationale
 
-A C API provides a simple and widely supported integration boundary.
-
-This makes it easier to:
-- call Popnet from C and C-compatible environments,
-- write bindings for other languages,
-- avoid exposing C++ ABI and implementation details as part of the public interface.
+A C API provides a widely supported integration boundary for C callers and bindings in other languages. It keeps the C++ ABI and implementation details out of the public interface.
 
 Using C++ internally allows the implementation to use templates, abstractions, and architecture-specific optimizations without making them part of the public API.
 
 ## Consequences
 
-The public interface uses C-compatible functions, types, and opaque handles.
-
-Ownership and lifetime must be managed explicitly through the API.
-
-Internal C++ implementation details remain hidden behind the C interface.
-
-Changes to the implementation can remain flexible as long as the public C API contract is preserved.
+The public interface is limited to C-compatible functions and types, including opaque handles. Callers manage ownership and lifetime explicitly through the API. The implementation can evolve behind the public C contract.

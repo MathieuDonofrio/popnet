@@ -8,6 +8,6 @@ specifications: []
 
 ## Obligation
 
-Popnet shall add an output and its dependencies to a graph without computing values or duplicating tensors.
+Graph building shall add the existing output tensor and its dependencies without computing values. Each tensor shall be included at most once.
 
-It shall return true when all are included, or false for a null output or allocation failure. Tensors already added shall remain in the graph.
+The function shall return true when all are included and false for a null output or allocation failure. Tensors already added shall remain in the graph.

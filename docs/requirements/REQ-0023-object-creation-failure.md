@@ -8,4 +8,4 @@ specifications: []
 
 ## Obligation
 
-If allocation fails while creating a library object, Popnet shall return null and release any resources allocated for that object.
+If allocation fails, object creation shall return null and release any resources allocated for that object.

@@ -5,11 +5,11 @@ title: Reliable tensor operations for neural networks
 
 ## Problem
 
-Neural networks need correct tensor operations with clearly documented supported behavior.
+Unclear tensor behavior and numerical errors make neural-network results difficult to diagnose.
 
 ## Desired outcome
 
-Provide simple, reliable tensor operations for building neural networks.
+Developers can build neural networks using reliable tensor computations with predictable behavior, well-defined ownership, and numerically correct results.
 
 ## Scope
 
@@ -17,4 +17,4 @@ Tensor allocation, metadata, data transfers, operation tensor creation, graph bu
 
 ## Success assessment
 
-Verify production optimized operations against naive scalar references, including output shapes and numerical results. Verify tensor lifetime, metadata, data transfers, and graph building and repeated execution. Verify that programmer errors produce debug assertions and unsupported cases are identified clearly.
+Tensor lifetime, metadata, transfers, and graph construction and reuse meet their functional contracts. Output shapes match reference implementations, and computed values agree within the specified numerical bounds.

@@ -8,4 +8,4 @@ specifications: []
 
 ## Obligation
 
-Popnet shall support allocating an uninitialized tensor with the requested supported shape and data type, independent storage for its elements, and no recorded operation.
+Tensor allocation shall create a tensor with the requested supported shape and data type, independent uninitialized storage, and no recorded operation.

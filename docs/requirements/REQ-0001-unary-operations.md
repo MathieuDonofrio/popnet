@@ -9,4 +9,4 @@ specifications:
 
 ## Obligation
 
-Popnet shall apply each specified unary operation elementwise and preserve the input shape.
+Unary operations shall apply elementwise and preserve the input shape.
