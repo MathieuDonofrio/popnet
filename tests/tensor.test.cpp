@@ -31,6 +31,18 @@ TEST_CASE("popnet_empty")
   popnet_free(a);
 }
 
+// @verifies REQ-0023: Checks that tensor creation returns null when the storage size cannot be represented.
+TEST_CASE("popnet_empty returns null for unrepresentable storage size")
+{
+  const popnet_shape shape{{1, 1, 1, SIZE_MAX / sizeof(float) + 1}};
+
+  auto* tensor = popnet_empty(popnet_dtype_f32, shape);
+
+  CHECK(tensor == nullptr);
+
+  popnet_free(tensor);
+}
+
 // @verifies REQ-0011: Checks matching metadata, independent storage, and no copied operation.
 // @verifies REQ-0013: Checks metadata queries on the matching allocation.
 TEST_CASE("popnet_empty_like")
