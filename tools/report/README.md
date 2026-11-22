@@ -19,7 +19,9 @@ Open `report/index.html` in a browser. Use `--output` to change the destination,
 - **Requirement Coverage** counts intents linked to at least one requirement and requirements linked to at least one test, divided by the total number of intents and requirements. The card also gives both rates separately. Open a document to read its full Markdown. Linked specifications can switch between rendered Markdown and raw text. Linked tests show any `@verifies` rationale and expand to reveal the test source.
 - **Source lines of code** sums Lizard's non-comment lines in `src/` and `include/`. See the [code metrics guide](../code_metrics/README.md) for the percentile calculation. The **P95 cognitive complexity** card also shows the highest function score.
 
-**Dashboard** charts the four metrics in the browser's local time zone. Links can select a tab with `#coverage`, `#traceability`, or `#complexity`. The same keys work with `?tab=`.
+On **Dashboard**, select a metric card to chart it. The chart starts with 30 days ending on the latest build date. Choose 7 days, 90 days, or All, or move through earlier periods. Hover to inspect the nearest build, click or tap to pin it, or use the arrow keys when the chart has focus. The measurements table follows the same range. Dates use the browser's local time zone.
+
+Links can select a tab with `#coverage`, `#traceability`, or `#complexity`. The same keys work with `?tab=`.
 
 ## Publishing
 
