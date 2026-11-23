@@ -8,8 +8,8 @@
 #include <type_traits>
 #include <vector>
 
-#include "dtype_traits.h"
 #include "ops.h"
+#include "simd/simd_traits.h"
 #include "tensor.h"
 #include "test_assertions.h"
 #include "test_data.h"
@@ -180,8 +180,8 @@ template <popnet_dtype dtype, auto compute_ref>
 static auto binary_ref(const auto& lhs, const popnet_shape& lhs_shape, const auto& rhs, const popnet_shape& rhs_shape,
                        const popnet_shape& out_shape)
 {
-  using dtype_traits = dtype_traits<dtype>;
-  using scalar_t = typename dtype_traits::scalar_t;
+  using traits = simd_traits<dtype>;
+  using scalar_t = typename traits::scalar_t;
 
   const size_t n = popnet_numel(out_shape);
 
@@ -204,8 +204,8 @@ static auto binary_ref(const auto& lhs, const popnet_shape& lhs_shape, const aut
 TEST_CASE("element binary compute")
 {
   auto run = []<auto compute, auto compute_ref, popnet_dtype dtype>(auto lower, auto upper, bool exclude_zero = false) {
-    using dtype_traits = dtype_traits<dtype>;
-    using scalar_t = typename dtype_traits::scalar_t;
+    using traits = simd_traits<dtype>;
+    using scalar_t = typename traits::scalar_t;
 
     auto run_shape = [=](const popnet_shape lhs_shape, const popnet_shape rhs_shape) {
       const auto dst_shape = popnet_broadcast_shape(lhs_shape, rhs_shape);
@@ -258,7 +258,7 @@ TEST_CASE("element binary compute")
 
     SUBCASE("SIMD boundaries")
     {
-      for (size_t n : {1, 3, 15, 16, 17, 31, 32, 33})
+      for (size_t n : {1, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 17, 31, 32, 33, 63, 64, 65})
       {
         CAPTURE(n);
 

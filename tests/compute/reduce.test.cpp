@@ -7,8 +7,8 @@
 #include <type_traits>
 #include <vector>
 
-#include "dtype_traits.h"
 #include "ops.h"
+#include "simd/simd_traits.h"
 #include "tensor.h"
 #include "test_assertions.h"
 #include "test_data.h"
@@ -259,8 +259,8 @@ TEST_CASE("reduce compute")
 {
   auto run = []<auto compute, popnet_dtype dtype>(auto lower, auto upper, bool exclude_zero = false) {
     auto run_shape = [&](popnet_shape src_shape, popnet_shape dst_shape) {
-      using dtype_dtype_traits = dtype_traits<dtype>;
-      using scalar_t = typename dtype_dtype_traits::scalar_t;
+      using traits = simd_traits<dtype>;
+      using scalar_t = typename traits::scalar_t;
 
       const size_t n = popnet_numel(src_shape);
 
@@ -315,7 +315,7 @@ TEST_CASE("reduce compute")
     }
     SUBCASE("contiguous reduction widths with multiple output groups")
     {
-      for (const size_t count : {3, 15, 16, 17, 31, 33})
+      for (const size_t count : {3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 17, 31, 33, 63, 64, 65})
       {
         CAPTURE(count);
         run_shape({{2, 3, 1, count}}, {{2, 3, 1, 1}});
@@ -345,7 +345,7 @@ TEST_CASE("reduce compute")
     }
     SUBCASE("row reductions and SIMD boundaries")
     {
-      for (const size_t inner : {1, 3, 15, 16, 17, 31, 32, 33})
+      for (const size_t inner : {1, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 17, 31, 32, 33, 63, 64, 65})
         for (uint8_t mask = 1; mask < 16; ++mask)
         {
           CAPTURE(inner);

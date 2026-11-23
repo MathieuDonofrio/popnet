@@ -8,16 +8,16 @@
 #include <type_traits>
 #include <vector>
 
-#include "dtype_traits.h"
 #include "ops.h"
+#include "simd/simd_traits.h"
 #include "tensor.h"
 #include "test_assertions.h"
 #include "test_data.h"
 
 template <popnet_dtype dtype> static auto transpose_ref(const auto& src, size_t outer_size, size_t n, size_t m)
 {
-  using dtype_traits = dtype_traits<dtype>;
-  using scalar_t = typename dtype_traits::scalar_t;
+  using traits = simd_traits<dtype>;
+  using scalar_t = typename traits::scalar_t;
 
   const size_t plane_size = n * m;
 
@@ -250,8 +250,8 @@ TEST_CASE("matmul")
   }
 
   auto run = []<popnet_dtype dtype>(auto lower, auto upper, popnet_shape a_shape, popnet_shape b_shape) {
-    using dtype_traits = dtype_traits<dtype>;
-    using scalar_t = typename dtype_traits::scalar_t;
+    using traits = simd_traits<dtype>;
+    using scalar_t = typename traits::scalar_t;
 
     const size_t outer_size = a_shape.dim[0] * a_shape.dim[1];
     const size_t m = a_shape.dim[2];

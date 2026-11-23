@@ -11,7 +11,6 @@
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "POPNET_BUILD_TESTS": "ON",
         "POPNET_BUILD_BENCHMARKS": "ON",
-        "POPNET_NATIVE": "ON",
         "POPNET_LTO": "OFF",
         "POPNET_BACKEND": "CPU",
         "POPNET_ASAN": "OFF",
@@ -27,7 +26,7 @@
       "cacheVariables": {
         "POPNET_ENABLE_COVERAGE": "ON",
         "POPNET_BUILD_BENCHMARKS": "OFF",
-        "POPNET_NATIVE": "OFF"
+        "POPNET_SIMD": "SCALAR"
       }
     },
     {
@@ -75,7 +74,7 @@
       },
       "cacheVariables": {
         "CMAKE_CXX_COMPILER": "g++",
-        "POPNET_NATIVE": "OFF"
+        "POPNET_SIMD": "SCALAR"
       }
     },
     {

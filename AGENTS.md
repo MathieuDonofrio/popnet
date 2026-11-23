@@ -10,6 +10,7 @@ All paths are relative to the repository root.
 - `include/`: Public API
 - `src/`: Implementation and internal headers
 - `src/compute/`: Compute interfaces and backend implementations
+- `src/simd/`: Shared SIMD operations, traits, and traversal
 - `tests/`: Tests
 - `bench/`: Benchmarks
 - `tools/`: Developer tools and their tests

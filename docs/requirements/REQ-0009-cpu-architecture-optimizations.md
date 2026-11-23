@@ -8,4 +8,6 @@ specifications: []
 
 ## Obligation
 
-When `POPNET_NATIVE` is enabled, the build shall enable architecture-specific compiler optimizations for host-side library code outside the compute kernels and, when the CPU backend is selected, for CPU kernels.
+The build shall allow an explicit `POPNET_SIMD` selection for host-side library code, including CPU kernels. An explicit selection shall override native detection and fail configuration if the compiler target does not support it. `SCALAR` shall select the library's scalar path.
+
+`POPNET_SIMD` shall default to `AUTO`, which selects optimizations for the build host. Cross-builds with `AUTO` shall use the compiler target defaults.

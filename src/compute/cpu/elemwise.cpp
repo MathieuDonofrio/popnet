@@ -1,8 +1,8 @@
 #include "elemwise.h"
 
-#include "dtype_traits.h"
-#include "simd_algorithms.h"
-#include "simd_ops_f32.h"
+#include "simd/simd_algorithms.h"
+#include "simd/simd_ops_f32.h"
+#include "simd/simd_traits.h"
 #include "tensor.h"
 
 template <auto op, popnet_dtype dtype>
@@ -52,8 +52,8 @@ POPNET_NO_INLINE void binary_kernel_broadcast(const void* POPNET_RESTRICT a, con
                                               void* POPNET_RESTRICT c, const popnet_shape dst_shape,
                                               const popnet_shape lhs_shape, const popnet_shape rhs_shape) noexcept
 {
-  using dtype_traits = dtype_traits<dtype>;
-  using scalar_t = typename dtype_traits::scalar_t;
+  using traits = simd_traits<dtype>;
+  using scalar_t = typename traits::scalar_t;
 
   size_t lhs_strides[POPNET_MAX_DIMS];
   size_t rhs_strides[POPNET_MAX_DIMS];

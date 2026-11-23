@@ -13,7 +13,6 @@ A lightweight tensor library for neural networks, with a C API and a C++20 imple
 
 - `include/` — Public C API
 - `src/` — Implementation and internal headers
-- `src/compute/` — Compute interfaces and backend implementations
 - `tests/` — Unit tests
 - `bench/` — Benchmarks
 - `cmake/` — CMake utilities

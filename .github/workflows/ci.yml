@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       full_matrix:
-        description: Run all platforms, compilers, build types, and native settings
+        description: Run all platforms, compilers, build types, and SIMD settings
         type: boolean
         default: false
 
@@ -36,7 +36,7 @@ jobs:
           FULL_MATRIX: ${{ inputs.full_matrix || false }}
         with:
           script: |
-            const debugPortable = { build_type: 'Debug', native: 'OFF' };
+            const debugPortable = { build_type: 'Debug', simd: 'SCALAR' };
             const platforms = [
               { runner: 'windows-2022', arch: 'x64', compiler: 'cl', standard: debugPortable },
               { runner: 'windows-11-vs2026-arm', arch: 'arm64', compiler: 'cl' },
@@ -48,10 +48,10 @@ jobs:
               { runner: 'ubuntu-24.04-arm', arch: 'arm64', compiler: 'clang++' },
               { runner: 'macos-15-intel', arch: 'x64', compiler: 'clang++' },
               { runner: 'macos-15', arch: 'arm64', compiler: 'clang++',
-                standard: { build_type: 'RelWithDebInfo', native: 'ON' } },
+                standard: { build_type: 'RelWithDebInfo', simd: 'AUTO' } },
             ];
             const variants = ['Debug', 'RelWithDebInfo'].flatMap(build_type =>
-              ['ON', 'OFF'].map(native => ({ build_type, native })));
+              ['AUTO', 'SCALAR'].map(simd => ({ build_type, simd })));
             const full = process.env.FULL_MATRIX === 'true';
             const builds = platforms.flatMap(({ standard, ...platform }) =>
               (full ? variants : standard ? [standard] : []).map(variant => ({ ...platform, ...variant })));
@@ -59,7 +59,7 @@ jobs:
 
   test:
     needs: matrix
-    name: ${{ matrix.runner }} / ${{ matrix.compiler }} / ${{ matrix.build_type }} / native=${{ matrix.native }}
+    name: ${{ matrix.runner }} / ${{ matrix.compiler }} / ${{ matrix.build_type }} / simd=${{ matrix.simd }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     strategy:
@@ -88,7 +88,7 @@ jobs:
         env:
           BUILD_TYPE: ${{ matrix.build_type }}
           COMPILER: ${{ matrix.compiler }}
-          NATIVE: ${{ matrix.native }}
+          SIMD: ${{ matrix.simd }}
           ARCH: ${{ matrix.arch }}
         run: |
           asan=OFF
@@ -110,7 +110,7 @@ jobs:
           cmake -S . -B build/ci -G Ninja \
             -DCMAKE_CXX_COMPILER="$COMPILER" -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
             -DPOPNET_BUILD_TESTS=ON -DPOPNET_BUILD_BENCHMARKS=OFF \
-            -DPOPNET_NATIVE="$NATIVE" -DPOPNET_ASAN="$asan" -DPOPNET_UBSAN="$ubsan" \
+            -DPOPNET_SIMD="$SIMD" -DPOPNET_ASAN="$asan" -DPOPNET_UBSAN="$ubsan" \
             "${extra[@]}"
       - name: Build
         run: cmake --build build/ci --parallel 2

@@ -1,9 +1,9 @@
 #include "reduce.h"
 
-#include "dtype_traits.h"
 #include "memory.h"
-#include "simd_algorithms.h"
-#include "simd_ops_f32.h"
+#include "simd/simd_algorithms.h"
+#include "simd/simd_ops_f32.h"
+#include "simd/simd_traits.h"
 #include "tensor.h"
 
 static constexpr auto mean_finalize = [](auto value, size_t n) {
@@ -11,15 +11,15 @@ static constexpr auto mean_finalize = [](auto value, size_t n) {
 
   if constexpr (std::same_as<decltype(value), f32_t>) return value / divisor;
   else
-    return simd::div_f32(value, dtype_traits<popnet_dtype_f32>::broadcast(divisor));
+    return simd::div_f32(value, simd_traits<popnet_dtype_f32>::broadcast(divisor));
 };
 
 template <auto init_state_op, auto merge_op, auto horizontal_op, auto finalize_op, popnet_dtype dtype>
 POPNET_NO_INLINE void reduce_kernel_contiguous(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b,
                                                size_t outer_size, size_t reduce_size) noexcept
 {
-  using dtype_traits = dtype_traits<dtype>;
-  using scalar_t = typename dtype_traits::scalar_t;
+  using traits = simd_traits<dtype>;
+  using scalar_t = typename traits::scalar_t;
 
   const auto* src = static_cast<const scalar_t*>(a);
   auto* dst = static_cast<scalar_t*>(b);
@@ -35,7 +35,7 @@ template <auto init_state_op, auto merge_op, auto finalize_op, popnet_dtype dtyp
 POPNET_NO_INLINE void reduce_kernel_rows(const void* POPNET_RESTRICT a, void* POPNET_RESTRICT b, size_t outer_size,
                                          size_t reduce_size, size_t inner_size) noexcept
 {
-  using traits = dtype_traits<dtype>;
+  using traits = simd_traits<dtype>;
   using scalar_t = typename traits::scalar_t;
   const auto* src = static_cast<const scalar_t*>(a);
   auto* dst = static_cast<scalar_t*>(b);

@@ -5,14 +5,14 @@
 #include <random>
 #include <vector>
 
-#include "dtype_traits.h"
 #include "popnet.h"
+#include "simd/simd_traits.h"
 
 template <popnet_dtype dtype>
 static auto generate_scalar_data(size_t n, auto lower, auto upper, bool exclude_zero, size_t index = 0)
 {
-  using dtype_traits = dtype_traits<dtype>;
-  using scalar_t = typename dtype_traits::scalar_t;
+  using traits = simd_traits<dtype>;
+  using scalar_t = typename traits::scalar_t;
 
   const size_t seed = 0x9E3779B9u * (index + 1);
   const size_t zero_stride = 3 + (index % 7);

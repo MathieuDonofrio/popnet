@@ -22,8 +22,10 @@ option(POPNET_ENABLE_COVERAGE "Enable LLVM coverage" OFF)
 
 # Optimization and Compilation
 
-option(POPNET_NATIVE "Enable host CPU optimizations (auto-off when cross-compiling)." ON)
 option(POPNET_LTO "Enable link-time optimization (LTO/IPO) if supported." OFF)
+
+set(POPNET_SIMD "AUTO" CACHE STRING "Select the SIMD target")
+set_property(CACHE POPNET_SIMD PROPERTY STRINGS AUTO SCALAR SSE2 AVX AVX2 AVX512 NEON ARM_SVE ARM_SVE2)
 
 set(POPNET_L1_CACHE_KB "" CACHE STRING "Optional override for L1 cache size (KB)")
 
