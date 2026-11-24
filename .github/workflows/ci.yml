@@ -6,11 +6,6 @@ on:
     tags: ['**']
   pull_request:
   workflow_dispatch:
-    inputs:
-      full_matrix:
-        description: Run all platforms, compilers, build types, and SIMD settings
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -24,47 +19,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  matrix:
-    runs-on: ubuntu-24.04
-    outputs:
-      builds: ${{ steps.select.outputs.builds }}
-    steps:
-      - name: Select build matrix
-        uses: actions/github-script@v7
-        id: select
-        env:
-          FULL_MATRIX: ${{ inputs.full_matrix || false }}
-        with:
-          script: |
-            const debugPortable = { build_type: 'Debug', simd: 'SCALAR' };
-            const platforms = [
-              { runner: 'windows-2022', arch: 'x64', compiler: 'cl', standard: debugPortable },
-              { runner: 'windows-11-vs2026-arm', arch: 'arm64', compiler: 'cl' },
-              { runner: 'windows-2022', arch: 'x64', compiler: 'clang-cl' },
-              { runner: 'windows-11-vs2026-arm', arch: 'arm64', compiler: 'clang-cl' },
-              { runner: 'ubuntu-24.04', arch: 'x64', compiler: 'g++', standard: debugPortable },
-              { runner: 'ubuntu-24.04-arm', arch: 'arm64', compiler: 'g++' },
-              { runner: 'ubuntu-24.04', arch: 'x64', compiler: 'clang++' },
-              { runner: 'ubuntu-24.04-arm', arch: 'arm64', compiler: 'clang++' },
-              { runner: 'macos-15-intel', arch: 'x64', compiler: 'clang++' },
-              { runner: 'macos-15', arch: 'arm64', compiler: 'clang++',
-                standard: { build_type: 'RelWithDebInfo', simd: 'AUTO' } },
-            ];
-            const variants = ['Debug', 'RelWithDebInfo'].flatMap(build_type =>
-              ['AUTO', 'SCALAR'].map(simd => ({ build_type, simd })));
-            const full = process.env.FULL_MATRIX === 'true';
-            const builds = platforms.flatMap(({ standard, ...platform }) =>
-              (full ? variants : standard ? [standard] : []).map(variant => ({ ...platform, ...variant })));
-            core.setOutput('builds', { include: builds });
-
   test:
-    needs: matrix
-    name: ${{ matrix.runner }} / ${{ matrix.compiler }} / ${{ matrix.build_type }} / simd=${{ matrix.simd }}
+    if: github.event_name == 'workflow_dispatch'
+    name: ${{ matrix.os }} / ${{ matrix.compiler }} / ${{ matrix.arch }} / ${{ matrix.build_type }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.matrix.outputs.builds) }}
+      matrix:
+        os: [linux, windows, macos]
+        compiler: [gcc, clang, msvc]
+        arch: [x64, arm64]
+        build_type: [Debug, Release]
+        exclude:
+          - { os: linux, compiler: msvc }
+          - { os: windows, compiler: gcc }
+          - { os: macos, compiler: gcc }
+          - { os: macos, compiler: msvc }
+        include:
+          - { os: linux, arch: x64, runner: ubuntu-24.04 }
+          - { os: linux, arch: arm64, runner: ubuntu-24.04-arm }
+          - { os: windows, arch: x64, runner: windows-2022 }
+          - { os: windows, arch: arm64, runner: windows-11-vs2026-arm }
+          - { os: macos, arch: x64, runner: macos-15-intel }
+          - { os: macos, arch: arm64, runner: macos-15 }
     env:
       UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
     steps:
@@ -76,7 +54,7 @@ jobs:
         with:
           arch: ${{ matrix.arch == 'arm64' && 'amd64_arm64' || 'amd64' }}
       - name: Locate ARM64 ASan runtime
-        if: runner.os == 'Windows' && matrix.arch == 'arm64' && matrix.compiler == 'cl' && matrix.build_type == 'Debug'
+        if: runner.os == 'Windows' && matrix.arch == 'arm64' && matrix.compiler == 'msvc' && matrix.build_type == 'Debug'
         shell: pwsh
         run: |
           $runtime = Join-Path $env:VCToolsInstallDir 'bin/Hostarm64/arm64'
@@ -87,31 +65,32 @@ jobs:
       - name: Configure
         env:
           BUILD_TYPE: ${{ matrix.build_type }}
-          COMPILER: ${{ matrix.compiler }}
-          SIMD: ${{ matrix.simd }}
+          TOOLCHAIN: ${{ matrix.compiler }}
           ARCH: ${{ matrix.arch }}
         run: |
-          asan=OFF
-          ubsan=OFF
           extra=()
-          if [[ "$BUILD_TYPE" == Debug && "$COMPILER" != clang-cl ]]; then
-            asan=ON
+          case "$RUNNER_OS/$TOOLCHAIN" in
+            Windows/msvc) compiler=cl ;;
+            Windows/clang)
+              compiler=clang-cl
+              target=x86_64
+              if [[ "$ARCH" == arm64 ]]; then
+                target=aarch64
+              fi
+              extra+=("-DCMAKE_CXX_COMPILER_TARGET=$target-pc-windows-msvc")
+              ;;
+            */gcc) compiler=g++ ;;
+            */clang) compiler=clang++ ;;
+          esac
+
+          if [[ "$BUILD_TYPE" == Debug && "$compiler" != clang-cl ]]; then
+            extra+=(-DPOPNET_ASAN=ON)
             if [[ "$RUNNER_OS" != Windows ]]; then
-              ubsan=ON
+              extra+=(-DPOPNET_UBSAN=ON)
             fi
           fi
-          if [[ "$RUNNER_OS" == Windows && "$COMPILER" == clang-cl ]]; then
-            target=x86_64
-            if [[ "$ARCH" == arm64 ]]; then
-              target=aarch64
-            fi
-            extra+=("-DCMAKE_CXX_COMPILER_TARGET=$target-pc-windows-msvc")
-          fi
-          cmake -S . -B build/ci -G Ninja \
-            -DCMAKE_CXX_COMPILER="$COMPILER" -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
-            -DPOPNET_BUILD_TESTS=ON -DPOPNET_BUILD_BENCHMARKS=OFF \
-            -DPOPNET_SIMD="$SIMD" -DPOPNET_ASAN="$asan" -DPOPNET_UBSAN="$ubsan" \
-            "${extra[@]}"
+          cmake -S . -B build/ci -G Ninja -DCMAKE_CXX_COMPILER="$compiler" \
+            -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DPOPNET_BUILD_TESTS=ON "${extra[@]}"
       - name: Build
         run: cmake --build build/ci --parallel 2
       - name: Test
@@ -133,6 +112,15 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y clang-18 llvm-18 libclang-rt-18-dev ninja-build
+      - name: Run tests with sanitizers
+        env:
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: |
+          cmake -S . -B build/linux-clang-sanitizers -G Ninja \
+            -DCMAKE_CXX_COMPILER=clang++-18 -DCMAKE_BUILD_TYPE=Debug \
+            -DPOPNET_BUILD_TESTS=ON -DPOPNET_ASAN=ON -DPOPNET_UBSAN=ON
+          cmake --build build/linux-clang-sanitizers --parallel 2
+          ctest --test-dir build/linux-clang-sanitizers --output-on-failure --no-tests=error
       - name: Configure
         run: cmake --preset "$COVERAGE_PRESET" -DCMAKE_CXX_COMPILER=clang++-18
       - name: Collect coverage

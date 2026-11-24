@@ -11,17 +11,17 @@
 namespace simd
 {
 
-#if POPNET_ARM_SVE || POPNET_ARM_SVE2
+#if defined(POPNET_SVE)
 // SVE permits up to 2048 bits per vector. Only the runtime lane count is used.
 inline constexpr size_t sve_max_f32_lanes = 2048 / 32;
 #endif
 
-#if POPNET_AVX2 || POPNET_AVX || POPNET_SSE2 || POPNET_NEON || POPNET_ARM_SVE || POPNET_ARM_SVE2
+#if !defined(POPNET_SCALAR) && !defined(POPNET_AVX512)
 
 template <typename Op> POPNET_INLINE vf32_t map_f32(vf32_t a, Op op)
 {
   using traits = simd_traits<popnet_dtype_f32>;
-#if POPNET_ARM_SVE || POPNET_ARM_SVE2
+#if defined(POPNET_SVE)
   f32_t lanes[sve_max_f32_lanes];
 #else
   f32_t lanes[traits::vector_length()];
@@ -51,7 +51,7 @@ POPNET_INLINE vf32_t sigmoid_f32(vf32_t a)
 
 #endif
 
-#if POPNET_AVX512
+#if defined(POPNET_AVX512)
 
 POPNET_INLINE vf32_t set_zero_f32() { return _mm512_setzero_ps(); }
 POPNET_INLINE vf32_t set_one_f32() { return _mm512_set1_ps(1.0f); }
@@ -251,9 +251,9 @@ POPNET_INLINE f32_t reduce_product_f32(vf32_t a) { return _mm512_reduce_mul_ps(a
 POPNET_INLINE f32_t reduce_min_f32(vf32_t a) { return _mm512_reduce_min_ps(a); }
 POPNET_INLINE f32_t reduce_max_f32(vf32_t a) { return _mm512_reduce_max_ps(a); }
 
-#elif POPNET_AVX2 || POPNET_AVX || POPNET_SSE2
+#elif defined(POPNET_AVX) || defined(POPNET_SSE2)
 
-#if POPNET_AVX2 || POPNET_AVX
+#if defined(POPNET_AVX)
 #define POPNET_F32_INTRINSIC(op) _mm256_##op
 #else
 #define POPNET_F32_INTRINSIC(op) _mm_##op
@@ -293,7 +293,8 @@ POPNET_INLINE vf32_t max_f32(vf32_t a, vf32_t b) { return POPNET_F32_INTRINSIC(m
 
 POPNET_INLINE vf32_t fma_f32(vf32_t a, vf32_t b, vf32_t c)
 {
-#if defined(__FMA__) && (POPNET_AVX2 || POPNET_AVX)
+  // MSVC's AVX2 target includes FMA. Clang and GCC report it separately.
+#if defined(POPNET_AVX) && (defined(__FMA__) || (defined(_MSC_VER) && !defined(__clang__) && defined(__AVX2__)))
   return _mm256_fmadd_ps(a, b, c);
 #else
   return add_f32(mul_f32(a, b), c);
@@ -302,7 +303,7 @@ POPNET_INLINE vf32_t fma_f32(vf32_t a, vf32_t b, vf32_t c)
 
 template <auto op> POPNET_INLINE f32_t reduce_lanes_f32(vf32_t a)
 {
-#if POPNET_AVX2 || POPNET_AVX
+#if defined(POPNET_AVX)
   a = op(a, _mm256_permute2f128_ps(a, a, 1));
   a = op(a, _mm256_permute_ps(a, _MM_SHUFFLE(1, 0, 3, 2)));
   a = op(a, _mm256_permute_ps(a, _MM_SHUFFLE(2, 3, 0, 1)));
@@ -321,7 +322,7 @@ POPNET_INLINE f32_t reduce_max_f32(vf32_t a) { return reduce_lanes_f32<max_f32>(
 
 #undef POPNET_F32_INTRINSIC
 
-#elif POPNET_ARM_SVE || POPNET_ARM_SVE2
+#elif defined(POPNET_SVE)
 
 POPNET_INLINE vf32_t set_zero_f32() { return svdup_n_f32(0.0f); }
 POPNET_INLINE vf32_t set_one_f32() { return svdup_n_f32(1.0f); }
@@ -365,7 +366,7 @@ POPNET_INLINE f32_t reduce_product_f32(vf32_t a)
   return product;
 }
 
-#elif POPNET_NEON
+#elif defined(POPNET_NEON)
 
 POPNET_INLINE vf32_t set_zero_f32() { return vdupq_n_f32(0.0f); }
 POPNET_INLINE vf32_t set_one_f32() { return vdupq_n_f32(1.0f); }

@@ -21,13 +21,13 @@ A lightweight tensor library for neural networks, with a C API and a C++20 imple
 
 ## Supported Platforms
 
-Build & Tests tests three configurations by default. Enable `full_matrix` when running the workflow manually to test all supported combinations below.
+On pushes and pull requests, Build & Tests runs Linux Clang tests with ASan and UBSan and collects coverage in a separate build. Run the workflow manually to also test Debug and Release on x64 and ARM64 for each platform and compiler combination below.
 
-| Platform | Compilers |
-|---|---|
-| Windows | MSVC, Clang |
-| Linux | GCC, Clang |
-| macOS | Clang |
+| Platform | Compilers | Arch |
+|---|---|---|
+| Windows | MSVC, Clang | x86-64, arm |
+| Linux | GCC, Clang | x86-64, arm |
+| macOS | Clang | x86-64, arm |
 
 ### Compute Backends
 
@@ -68,6 +68,8 @@ cmake -S . -B build -G Ninja -DPOPNET_BUILD_TESTS=ON
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
+
+For cross-builds, set `CMAKE_CROSSCOMPILING_EMULATOR` to run test discovery and CTest through a compatible emulator. Cross-builds without an emulator can build the test executable for use on compatible hardware.
 
 ### Test Coverage
 

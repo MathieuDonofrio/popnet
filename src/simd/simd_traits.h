@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "platform.h"
+#include "popnet.h"
 
 enum class cpu_execution_model
 {
@@ -19,7 +20,7 @@ template <> struct simd_traits<popnet_dtype_f32>
 
   POPNET_INLINE static consteval size_t element_size() { return sizeof(scalar_t); }
 
-#if POPNET_AVX512
+#if defined(POPNET_AVX512)
   static inline constexpr ::cpu_execution_model cpu_execution_model = ::cpu_execution_model::fixed;
 
   using vector_t = __m512;
@@ -43,7 +44,7 @@ template <> struct simd_traits<popnet_dtype_f32>
     return _mm512_mask_blend_ps(m, a, b);
   }
 
-#elif POPNET_AVX2 || POPNET_AVX
+#elif defined(POPNET_AVX)
   static inline constexpr ::cpu_execution_model cpu_execution_model = ::cpu_execution_model::fixed;
 
   using vector_t = __m256;
@@ -76,7 +77,7 @@ template <> struct simd_traits<popnet_dtype_f32>
     return _mm256_blendv_ps(a, b, _mm256_castsi256_ps(m));
   }
 
-#elif POPNET_ARM_SVE || POPNET_ARM_SVE2
+#elif defined(POPNET_SVE)
   static inline constexpr ::cpu_execution_model cpu_execution_model = ::cpu_execution_model::variable;
 
   using vector_t = svfloat32_t;
@@ -99,10 +100,10 @@ template <> struct simd_traits<popnet_dtype_f32>
 
   POPNET_INLINE static vector_t blend(vector_t a, vector_t b, mask_t m) { return svsel_f32(m, b, a); }
 
-#elif POPNET_SSE2 || POPNET_NEON
+#elif defined(POPNET_SSE2) || defined(POPNET_NEON)
   static inline constexpr ::cpu_execution_model cpu_execution_model = ::cpu_execution_model::fixed;
 
-#if POPNET_NEON
+#if defined(POPNET_NEON)
   using vector_t = float32x4_t;
 
   POPNET_INLINE static vector_t vload(const void* p) { return vld1q_f32(static_cast<const scalar_t*>(p)); }
@@ -148,7 +149,7 @@ template <> struct simd_traits<popnet_dtype_f32>
 
   POPNET_INLINE static vector_t blend(vector_t a, vector_t b, mask_t m)
   {
-#if POPNET_NEON
+#if defined(POPNET_NEON)
     const uint32_t lanes[] = {0, 1, 2, 3};
     const auto active = vcgtq_u32(vdupq_n_u32(static_cast<uint32_t>(m)), vld1q_u32(lanes));
     return vbslq_f32(active, b, a);

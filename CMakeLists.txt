@@ -24,10 +24,10 @@ option(POPNET_ENABLE_COVERAGE "Enable LLVM coverage" OFF)
 
 option(POPNET_LTO "Enable link-time optimization (LTO/IPO) if supported." OFF)
 
-set(POPNET_SIMD "AUTO" CACHE STRING "Select the SIMD target")
-set_property(CACHE POPNET_SIMD PROPERTY STRINGS AUTO SCALAR SSE2 AVX AVX2 AVX512 NEON ARM_SVE ARM_SVE2)
+set(POPNET_CPU_TARGET "DEFAULT" CACHE STRING "CPU target (DEFAULT, NATIVE, or a compiler-supported target name)")
+option(POPNET_ENABLE_SIMD "Enable Popnet's explicit SIMD implementations" ON)
 
-set(POPNET_L1_CACHE_KB "" CACHE STRING "Optional override for L1 cache size (KB)")
+set(POPNET_L1_CACHE_KB "" CACHE STRING "Optional override for L1 data cache size (KiB)")
 
 # Compute Backend
 
@@ -46,7 +46,8 @@ option(POPNET_TSAN "Enable ThreadSanitizer (TSAN) for detecting data races" OFF)
 
 include(cmake/compiler-warnings.cmake)
 include(cmake/conformance.cmake)
-include(cmake/cpu-native-tuning.cmake)
+include(cmake/cpu-target.cmake)
+include(cmake/cpu-cache.cmake)
 include(cmake/interprocedural-optimization.cmake)
 include(cmake/sanitizers.cmake)
 
@@ -83,11 +84,8 @@ target_include_directories(popnet PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 add_target_warnings(popnet)
 enable_popnet_ipo(popnet)
-
-
-if(NOT "${POPNET_L1_CACHE_KB}" STREQUAL "")
-  target_compile_definitions(popnet PUBLIC POPNET_L1_CACHE_KB=${POPNET_L1_CACHE_KB})
-endif()
+popnet_configure_cpu_target(popnet PRIVATE)
+popnet_configure_cpu_cache(popnet)
 
 add_library(popnet_internal INTERFACE)
 
@@ -98,6 +96,7 @@ target_include_directories(popnet_internal
 )
 
 target_link_libraries(popnet_internal INTERFACE popnet)
+popnet_configure_cpu_target(popnet_internal INTERFACE)
 
 #
 # Testing

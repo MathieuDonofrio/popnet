@@ -33,6 +33,7 @@ endif()
 # Test Discovery
 #
 
-include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake)
-
-doctest_discover_tests(popnet_test)
+if(NOT CMAKE_CROSSCOMPILING OR CMAKE_CROSSCOMPILING_EMULATOR)
+  include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake)
+  doctest_discover_tests(popnet_test)
+endif()

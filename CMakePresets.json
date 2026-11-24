@@ -26,7 +26,7 @@
       "cacheVariables": {
         "POPNET_ENABLE_COVERAGE": "ON",
         "POPNET_BUILD_BENCHMARKS": "OFF",
-        "POPNET_SIMD": "SCALAR"
+        "POPNET_ENABLE_SIMD": "OFF"
       }
     },
     {
@@ -74,7 +74,7 @@
       },
       "cacheVariables": {
         "CMAKE_CXX_COMPILER": "g++",
-        "POPNET_SIMD": "SCALAR"
+        "POPNET_ENABLE_SIMD": "OFF"
       }
     },
     {

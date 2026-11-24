@@ -23,22 +23,13 @@ static_assert(sqrti(0) == 0 && sqrti(1) == 1 && sqrti(2) == 1);
 static_assert(sqrti(15) == 3 && sqrti(16) == 4 && sqrti(17) == 4);
 static_assert(sqrti(2730) == 52 && sqrti(5461) == 73 && sqrti(8192) == 90);
 
-constexpr size_t l1_cache_size() noexcept
-{
-#ifdef POPNET_L1_CACHE_KB
-  return POPNET_L1_CACHE_KB * 1024;
-#else
-  // A 32 KiB budget favors smaller tiles when cache size is unknown, trading reuse
-  // on larger caches for a smaller working set. This is a heuristic, not a cache-size guarantee.
-  return 32 * 1024;
-#endif
-}
+constexpr size_t l1_cache_bytes = size_t{POPNET_L1_CACHE_KB} * 1024;
 
-consteval size_t compute_matmul_tile_size(size_t element_size) { return sqrti(l1_cache_size() / (element_size * 3)); }
+consteval size_t compute_matmul_tile_size(size_t element_size) { return sqrti(l1_cache_bytes / (element_size * 3)); }
 
 consteval size_t compute_transpose_tile_size(size_t element_size)
 {
-  return sqrti(l1_cache_size() / (element_size * 2));
+  return sqrti(l1_cache_bytes / (element_size * 2));
 }
 
 template <auto init_state_op, auto merge_op, auto horizontal_op, popnet_dtype dtype>
