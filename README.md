@@ -21,18 +21,18 @@ A lightweight tensor library for neural networks, with a C API and a C++20 imple
 
 ## Supported Platforms
 
-On pushes and pull requests, Build & Tests runs Linux Clang tests with ASan and UBSan and collects coverage in a separate build. Run the workflow manually to also test Debug and Release on x64 and ARM64 for each platform and compiler combination below.
+The following matrix is built and tested by the CI.
 
 | Platform | Compilers | Arch |
 |---|---|---|
-| Windows | MSVC, Clang | x86-64, arm |
-| Linux | GCC, Clang | x86-64, arm |
-| macOS | Clang | x86-64, arm |
+| Windows | MSVC, Clang | x86-64, ARM64 |
+| Linux | GCC, Clang | x86-64, ARM64 |
+| macOS | Clang | x86-64, ARM64 |
 
 ### Compute Backends
 
-- **CPU** — Supported on all platforms.
-- **CUDA** — NVIDIA GPUs (not yet implemented).
+- **CPU** - Supported on all platforms.
+- **CUDA** - NVIDIA GPUs (not yet implemented).
 
 ## Build Requirements
 
