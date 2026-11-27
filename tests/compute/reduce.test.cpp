@@ -166,7 +166,7 @@ TEST_CASE("reductions over singleton axes preserve input values")
     {
       auto* src = popnet_empty(popnet_dtype_f32, shape);
       REQUIRE(src != nullptr);
-      popnet_set_data(src, input.data(), popnet_dtype_f32, 0, input.size());
+      popnet_set_data(src, input.data(), 0, input.size());
       auto* dst = popnet_empty(popnet_dtype_f32, shape);
       REQUIRE(dst != nullptr);
       CHECK(popnet_shapeof(dst) == shape);
@@ -176,7 +176,7 @@ TEST_CASE("reductions over singleton axes preserve input values")
       compute(dst);
 
       std::vector<float> actual(input.size());
-      popnet_get_data(dst, actual.data(), popnet_dtype_f32, 0, actual.size());
+      popnet_get_data(dst, actual.data(), 0, actual.size());
       CHECK(std::memcmp(actual.data(), input.data(), input.size() * sizeof(float)) == 0);
 
       popnet_free(dst);
@@ -210,7 +210,7 @@ TEST_CASE("separated reduction groups compose through the public API")
   {
     auto* src = popnet_empty(popnet_dtype_f32, shape);
     REQUIRE(src != nullptr);
-    popnet_set_data(src, input.data(), popnet_dtype_f32, 0, input.size());
+    popnet_set_data(src, input.data(), 0, input.size());
     auto* spatial = operation.create(src, 0x0C);
     REQUIRE(spatial != nullptr);
     auto* result = operation.create(spatial, 0x01);
@@ -223,13 +223,13 @@ TEST_CASE("separated reduction groups compose through the public API")
 
     CHECK(popnet_shapeof(result) == expected_shape);
     std::vector<float> intermediate(popnet_numel(popnet_shapeof(spatial)));
-    popnet_get_data(spatial, intermediate.data(), popnet_dtype_f32, 0, intermediate.size());
+    popnet_get_data(spatial, intermediate.data(), 0, intermediate.size());
     check_reduction_accuracy(operation.compute, input, shape, popnet_shapeof(spatial), intermediate);
     std::vector<float> actual(popnet_numel(expected_shape));
-    popnet_get_data(result, actual.data(), popnet_dtype_f32, 0, actual.size());
+    popnet_get_data(result, actual.data(), 0, actual.size());
     check_reduction_accuracy(operation.compute, intermediate, popnet_shapeof(spatial), expected_shape, actual);
     std::vector<float> preserved(input.size());
-    popnet_get_data(src, preserved.data(), popnet_dtype_f32, 0, preserved.size());
+    popnet_get_data(src, preserved.data(), 0, preserved.size());
     CHECK(std::memcmp(preserved.data(), input.data(), input.size() * sizeof(float)) == 0);
 
     popnet_graph_free(graph);
@@ -272,19 +272,19 @@ TEST_CASE("reduce compute")
       REQUIRE(src != nullptr);
       REQUIRE(dst != nullptr);
 
-      popnet_set_data(src, input_data.data(), dtype, 0, input_data.size());
+      popnet_set_data(src, input_data.data(), 0, input_data.size());
 
       dst->src[0] = src;
 
       compute(dst);
 
       std::vector<scalar_t> preserved(n);
-      popnet_get_data(src, preserved.data(), dtype, 0, n);
+      popnet_get_data(src, preserved.data(), 0, n);
       CHECK(std::memcmp(preserved.data(), input_data.data(), n * sizeof(scalar_t)) == 0);
       CHECK(popnet_shapeof(dst) == dst_shape);
 
       std::vector<scalar_t> actual(popnet_numel(dst_shape));
-      popnet_get_data(dst, actual.data(), dtype, 0, actual.size());
+      popnet_get_data(dst, actual.data(), 0, actual.size());
 
       check_reduction_accuracy(compute, input_data, src_shape, dst_shape, actual);
 

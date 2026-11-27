@@ -13,9 +13,6 @@
                            ((defined(_M_X64) && !defined(_M_ARM64EC)) || (defined(_M_IX86_FP) && _M_IX86_FP >= 2)))
 #include <emmintrin.h>
 #define POPNET_SSE2 1
-#elif defined(__ARM_FEATURE_SVE)
-#include <arm_sve.h>
-#define POPNET_SVE 1
 #elif defined(__aarch64__) && (defined(__ARM_NEON) || defined(__ARM_NEON__))
 #include <arm_neon.h>
 #define POPNET_NEON 1

@@ -5,7 +5,6 @@
 
 // @verifies REQ-0003: Public reduction constructors apply each supported axis mask to the output shape.
 // @verifies REQ-0017: Reduction results record their operation and input with independent storage.
-// @verifies REQ-0024: Reduction results preserve float32 dtype.
 TEST_CASE("reduction output shapes follow the axis mask")
 {
   const struct
@@ -71,7 +70,6 @@ TEST_CASE("reduction output shapes follow the axis mask")
 
 // @verifies REQ-0002: Each binary constructor applies the same broadcasting contract.
 // @verifies REQ-0017: Creation records the operation and inputs with independent output storage.
-// @verifies REQ-0024: A result created from float32 operands has float32 dtype.
 TEST_CASE("binary operation creation records result metadata")
 {
   auto* a = popnet_empty(popnet_dtype_f32, {{1, 2, 1, 3}});
@@ -119,7 +117,6 @@ TEST_CASE("binary operation creation records result metadata")
 
 // @verifies REQ-0001: Unary constructors preserve the input shape.
 // @verifies REQ-0017: Unary results record their operation and input with independent storage.
-// @verifies REQ-0024: Unary results preserve float32 dtype.
 TEST_CASE("unary operation creation records result metadata")
 {
   const popnet_shape shape{{2, 3, 4, 5}};
@@ -162,7 +159,6 @@ TEST_CASE("unary operation creation records result metadata")
 
 // @verifies REQ-0004: Matrix multiplication preserves outer dimensions and uses the right operand's row count.
 // @verifies REQ-0017: Matrix multiplication records both inputs with independent result storage.
-// @verifies REQ-0024: Matrix multiplication results preserve float32 dtype.
 TEST_CASE("matrix multiplication creation records result metadata")
 {
   auto* a = popnet_empty(popnet_dtype_f32, {{2, 3, 4, 5}});
@@ -194,7 +190,6 @@ TEST_CASE("matrix multiplication creation records result metadata")
 
 // @verifies REQ-0005: Transpose construction swaps only the final two dimensions.
 // @verifies REQ-0017: Transpose records its input with independent result storage.
-// @verifies REQ-0024: Transpose results preserve float32 dtype.
 TEST_CASE("transpose creation records result metadata")
 {
   auto* src = popnet_empty(popnet_dtype_f32, {{2, 3, 4, 5}});
@@ -238,14 +233,14 @@ TEST_CASE("operation metadata stays fixed during computation")
   for (int pass = 0; pass < 2; ++pass)
   {
     const float values[] = {float(pass), 1, 2, 3};
-    popnet_set_data(a, values, popnet_dtype_f32, 0, 4);
-    popnet_set_data(b, values, popnet_dtype_f32, 0, 4);
+    popnet_set_data(a, values, 0, 4);
+    popnet_set_data(b, values, 0, 4);
 
     popnet_compute_add(dst);
 
     float output[4]{};
 
-    popnet_get_data(dst, output, popnet_dtype_f32, 0, 4);
+    popnet_get_data(dst, output, 0, 4);
 
     CHECK(popnet_shapeof(dst) == shape);
     CHECK(popnet_dtypeof(dst) == popnet_dtype_f32);

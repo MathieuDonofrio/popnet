@@ -4,7 +4,7 @@ title: Matrix multiplication with a shared right operand
 intents:
   - INT-0001
 specifications:
-  - docs/specifications/supported-tensor-operations.md
+  - docs/specifications/supported-tensor-operations.md#matrix-multiplication
 ---
 
 ## Obligation

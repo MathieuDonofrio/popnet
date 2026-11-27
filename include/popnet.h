@@ -89,11 +89,15 @@ typedef enum
 {
   popnet_dtype_none = 0,
   popnet_dtype_f32,
+  popnet_dtype_i8,
+  popnet_dtype_ternary,
 } popnet_dtype;
 
 typedef enum
 {
   popnet_op_none = 0,
+
+  popnet_op_cast,
 
   popnet_op_add,
   popnet_op_sub,
@@ -170,20 +174,16 @@ POPNET_API popnet_op popnet_opof(const popnet_tensor* tensor);
 
 /**
  * Copies n elements from src into the tensor at element offset; other elements are unchanged.
- * Currently both source and tensor must use f32.
  *
- * @pre tensor and src are non-null, src holds n elements, and the tensor range is in bounds.
+ * @pre tensor and src are non-null, src holds n elements of the tensor dtype and the tensor range is in bounds.
  **/
-POPNET_API void popnet_set_data(const popnet_tensor* tensor, const void* src, popnet_dtype src_dtype, size_t offset,
-                                size_t n);
+POPNET_API void popnet_set_data(const popnet_tensor* tensor, const void* src, size_t offset, size_t n);
 /**
  * Copies n elements from the tensor at element offset into dst without changing the tensor.
- * Currently both tensor and destination must use f32.
  *
- * @pre tensor and dst are non-null, dst holds n elements, and the tensor range is in bounds.
+ * @pre tensor and dst are non-null, dst holds n elements of the tensor dtype and the tensor range is in bounds.
  **/
-POPNET_API void popnet_get_data(const popnet_tensor* tensor, void* dst, popnet_dtype dst_dtype, size_t offset,
-                                size_t n);
+POPNET_API void popnet_get_data(const popnet_tensor* tensor, void* dst, size_t offset, size_t n);
 
 // Graph
 
@@ -219,9 +219,15 @@ POPNET_API void popnet_graph_compute_forward(popnet_graph* graph);
  * Release results with popnet_free(); inputs remain caller-owned and must outlive graph use.
  * Computing an operation preserves its inputs. Shapes, types, and dependencies are fixed at creation.
  *
- * @pre Inputs are non-null and use the same supported type (currently f32).
+ * @pre Inputs are non-null and use data types supported by the operation.
  * @{
  **/
+
+/**
+ * Records a shape-preserving conversion to dtype. The dtype pair must be supported.
+ * Values cast to ternary must equal -1, 0, or +1. Either sign of zero becomes ternary zero.
+ **/
+POPNET_API popnet_tensor* popnet_cast(popnet_tensor* a, popnet_dtype dtype);
 
 /**
  * @name Elementwise binary operations

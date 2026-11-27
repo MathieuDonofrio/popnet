@@ -349,3 +349,16 @@ popnet_tensor* popnet_transpose(popnet_tensor* a)
 
   return result;
 }
+
+popnet_tensor* popnet_cast(popnet_tensor* a, popnet_dtype dtype)
+{
+  POPNET_EXPECT(a != nullptr);
+
+  popnet_tensor* result = popnet_empty(dtype, a->shape);
+  if (result)
+  {
+    result->op = popnet_op_cast;
+    result->src[0] = a;
+  }
+  return result;
+}

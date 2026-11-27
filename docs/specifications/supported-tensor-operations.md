@@ -6,7 +6,29 @@ Tensors have four positive dimensions, written `(d0,d1,d2,d3)`. Storage is row-m
 
 ## Tensor Data Transfers
 
-Transfers between a tensor and a host buffer support f32 paired with f32 in either direction. Transfers copy values without data type conversion.
+The host buffer uses the tensor's dtype. The supported pairs apply to both host-to-tensor and tensor-to-host copies.
+
+| Source dtype | Destination dtype |
+|---|---|
+| f32 | f32 |
+| i8 | i8 |
+
+Offset and count are measured in logical elements. A zero count is valid at the end of the tensor.
+
+Use `popnet_cast` for dtype conversion.
+
+## Cast
+
+`popnet_cast(input, dtype)` records a shape-preserving conversion to the requested dtype. Supported pairs are listed below.
+
+| Source | Destination | Values |
+|---|---|---|
+| f32 or i8 | ternary | Input values must equal -1, 0, or +1. Either sign of zero encodes ternary zero. |
+| ternary | i8 | Produces exactly -1, 0, or +1. |
+| ternary | f32 | Produces exactly -1.0, +0.0, or +1.0. |
+| f32 | i8 | Truncates toward zero. The truncated value must fit in i8. |
+| i8 | f32 | Preserves the value exactly. |
+
 
 ## Numerical Accuracy
 

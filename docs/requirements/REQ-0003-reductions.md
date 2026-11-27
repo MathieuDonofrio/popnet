@@ -4,7 +4,7 @@ title: Tensor reductions
 intents:
   - INT-0001
 specifications:
-  - docs/specifications/supported-tensor-operations.md
+  - docs/specifications/supported-tensor-operations.md#reductions
 ---
 
 ## Obligation

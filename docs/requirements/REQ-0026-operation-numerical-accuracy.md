@@ -4,7 +4,7 @@ title: Operation numerical accuracy
 intents:
   - INT-0001
 specifications:
-  - docs/specifications/supported-tensor-operations.md
+  - docs/specifications/supported-tensor-operations.md#numerical-accuracy
 ---
 
 ## Obligation

@@ -52,7 +52,7 @@ TEST_CASE("elementwise unary compute")
       REQUIRE(src != nullptr);
       REQUIRE(dst != nullptr);
 
-      popnet_set_data(src, input_data.data(), dtype, 0, n);
+      popnet_set_data(src, input_data.data(), 0, n);
 
       dst->src[0] = src;
 
@@ -61,7 +61,7 @@ TEST_CASE("elementwise unary compute")
       decltype(input_data) output_data;
       output_data.resize(n);
 
-      popnet_get_data(dst, output_data.data(), dtype, 0, n);
+      popnet_get_data(dst, output_data.data(), 0, n);
 
       for (int i = 0; i < n; i++)
       {
@@ -231,8 +231,8 @@ TEST_CASE("element binary compute")
       REQUIRE(rhs != nullptr);
       REQUIRE(dst != nullptr);
 
-      popnet_set_data(lhs, lhs_data.data(), dtype, 0, lhs_n);
-      popnet_set_data(rhs, rhs_data.data(), dtype, 0, rhs_n);
+      popnet_set_data(lhs, lhs_data.data(), 0, lhs_n);
+      popnet_set_data(rhs, rhs_data.data(), 0, rhs_n);
 
       dst->src[0] = lhs;
       dst->src[1] = rhs;
@@ -241,7 +241,7 @@ TEST_CASE("element binary compute")
 
       std::vector<scalar_t> output_data(dst_n);
 
-      popnet_get_data(dst, output_data.data(), dtype, 0, dst_n);
+      popnet_get_data(dst, output_data.data(), 0, dst_n);
 
       for (size_t i = 0; i < dst_n; ++i)
       {

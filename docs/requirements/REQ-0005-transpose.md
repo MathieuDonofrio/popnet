@@ -4,7 +4,7 @@ title: Transpose the final two dimensions
 intents:
   - INT-0001
 specifications:
-  - docs/specifications/supported-tensor-operations.md
+  - docs/specifications/supported-tensor-operations.md#transpose
 ---
 
 ## Obligation

@@ -5,13 +5,6 @@
 #include "platform.h"
 #include "popnet.h"
 
-enum class cpu_execution_model
-{
-  scalar,
-  fixed,
-  variable
-};
-
 template <popnet_dtype Type> struct simd_traits;
 
 template <> struct simd_traits<popnet_dtype_f32>
@@ -21,8 +14,6 @@ template <> struct simd_traits<popnet_dtype_f32>
   POPNET_INLINE static consteval size_t element_size() { return sizeof(scalar_t); }
 
 #if defined(POPNET_AVX512)
-  static inline constexpr ::cpu_execution_model cpu_execution_model = ::cpu_execution_model::fixed;
-
   using vector_t = __m512;
   using mask_t = __mmask16;
 
@@ -45,8 +36,6 @@ template <> struct simd_traits<popnet_dtype_f32>
   }
 
 #elif defined(POPNET_AVX)
-  static inline constexpr ::cpu_execution_model cpu_execution_model = ::cpu_execution_model::fixed;
-
   using vector_t = __m256;
   using mask_t = __m256i;
 
@@ -77,32 +66,7 @@ template <> struct simd_traits<popnet_dtype_f32>
     return _mm256_blendv_ps(a, b, _mm256_castsi256_ps(m));
   }
 
-#elif defined(POPNET_SVE)
-  static inline constexpr ::cpu_execution_model cpu_execution_model = ::cpu_execution_model::variable;
-
-  using vector_t = svfloat32_t;
-  using mask_t = svbool_t;
-
-  POPNET_INLINE static size_t vector_length() { return svcntw(); }
-
-  POPNET_INLINE static mask_t tail_mask(size_t count) { return svwhilelt_b32_u64(0, count); }
-
-  POPNET_INLINE static vector_t vload(const void* p, mask_t m)
-  {
-    return svld1_f32(m, static_cast<const scalar_t*>(p));
-  }
-  POPNET_INLINE static vector_t vload(const void* p) { return vload(p, svptrue_b32()); }
-
-  POPNET_INLINE static void vstore(void* p, mask_t m, vector_t v) { svst1_f32(m, static_cast<scalar_t*>(p), v); }
-  POPNET_INLINE static void vstore(void* p, vector_t v) { vstore(p, svptrue_b32(), v); }
-
-  POPNET_INLINE static vector_t broadcast(scalar_t a) { return svdup_n_f32(a); }
-
-  POPNET_INLINE static vector_t blend(vector_t a, vector_t b, mask_t m) { return svsel_f32(m, b, a); }
-
 #elif defined(POPNET_SSE2) || defined(POPNET_NEON)
-  static inline constexpr ::cpu_execution_model cpu_execution_model = ::cpu_execution_model::fixed;
-
 #if defined(POPNET_NEON)
   using vector_t = float32x4_t;
 
@@ -160,8 +124,6 @@ template <> struct simd_traits<popnet_dtype_f32>
   }
 
 #else
-  static inline constexpr ::cpu_execution_model cpu_execution_model = ::cpu_execution_model::scalar;
-
   using vector_t = scalar_t;
 
   POPNET_INLINE static consteval size_t vector_length() { return 1; }

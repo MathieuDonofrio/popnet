@@ -88,7 +88,7 @@ TEST_CASE("popnet_set_data")
 
   SUBCASE("full write")
   {
-    popnet_set_data(tensor, values, popnet_dtype_f32, 0, 4);
+    popnet_set_data(tensor, values, 0, 4);
 
     for (size_t i = 0; i < 4; ++i)
     {
@@ -98,7 +98,7 @@ TEST_CASE("popnet_set_data")
 
   SUBCASE("partial write")
   {
-    popnet_set_data(tensor, values, popnet_dtype_f32, 1, 2);
+    popnet_set_data(tensor, values, 1, 2);
     const float expected[] = {11, 7, -3, 44};
 
     for (size_t i = 0; i < 4; ++i)
@@ -109,7 +109,7 @@ TEST_CASE("popnet_set_data")
 
   SUBCASE("zero-length write at end")
   {
-    popnet_set_data(tensor, values, popnet_dtype_f32, 4, 0);
+    popnet_set_data(tensor, values, 4, 0);
 
     for (size_t i = 0; i < 4; ++i)
     {
@@ -134,7 +134,7 @@ TEST_CASE("popnet_get_data")
 
   SUBCASE("full read")
   {
-    popnet_get_data(tensor, output, popnet_dtype_f32, 0, 4);
+    popnet_get_data(tensor, output, 0, 4);
 
     for (size_t i = 0; i < 4; ++i)
     {
@@ -144,7 +144,7 @@ TEST_CASE("popnet_get_data")
 
   SUBCASE("partial read")
   {
-    popnet_get_data(tensor, output, popnet_dtype_f32, 1, 2);
+    popnet_get_data(tensor, output, 1, 2);
     const float expected[] = {22, 33, -1, -1};
 
     for (size_t i = 0; i < 4; ++i)
@@ -155,7 +155,7 @@ TEST_CASE("popnet_get_data")
 
   SUBCASE("zero-length read at end")
   {
-    popnet_get_data(tensor, output, popnet_dtype_f32, 4, 0);
+    popnet_get_data(tensor, output, 4, 0);
 
     for (float value : output)
     {
@@ -179,7 +179,7 @@ TEST_CASE("freeing a tensor preserves its inputs")
   REQUIRE(src != nullptr);
 
   const float values[] = {3, -7};
-  popnet_set_data(src, values, popnet_dtype_f32, 0, 2);
+  popnet_set_data(src, values, 0, 2);
   auto* dst = popnet_neg(src);
 
   REQUIRE(dst != nullptr);
@@ -188,7 +188,7 @@ TEST_CASE("freeing a tensor preserves its inputs")
 
   float actual[2]{};
 
-  popnet_get_data(src, actual, popnet_dtype_f32, 0, 2);
+  popnet_get_data(src, actual, 0, 2);
 
   CHECK(actual[0] == values[0]);
   CHECK(actual[1] == values[1]);

@@ -34,7 +34,7 @@ TEST_CASE("compute operations preserve input data")
       values[3] = -std::numeric_limits<float>::infinity();
     }
 
-    popnet_set_data(src, values.data(), popnet_dtype_f32, 0, values.size());
+    popnet_set_data(src, values.data(), 0, values.size());
     dst->src[0] = src;
 
     popnet_tensor* rhs = nullptr;
@@ -52,7 +52,7 @@ TEST_CASE("compute operations preserve input data")
         rhs_values[i] = 1.25f + float(i % 5);
       }
 
-      popnet_set_data(rhs, rhs_values.data(), popnet_dtype_f32, 0, rhs_values.size());
+      popnet_set_data(rhs, rhs_values.data(), 0, rhs_values.size());
       dst->src[1] = rhs;
     }
 
@@ -60,13 +60,13 @@ TEST_CASE("compute operations preserve input data")
 
     std::vector<float> actual(values.size());
 
-    popnet_get_data(src, actual.data(), popnet_dtype_f32, 0, actual.size());
+    popnet_get_data(src, actual.data(), 0, actual.size());
 
     CHECK(std::memcmp(actual.data(), values.data(), values.size() * sizeof(float)) == 0);
     if (binary)
     {
       actual.resize(rhs_values.size());
-      popnet_get_data(rhs, actual.data(), popnet_dtype_f32, 0, actual.size());
+      popnet_get_data(rhs, actual.data(), 0, actual.size());
 
       CHECK(std::memcmp(actual.data(), rhs_values.data(), rhs_values.size() * sizeof(float)) == 0);
     }

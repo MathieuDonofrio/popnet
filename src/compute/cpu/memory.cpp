@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "ternary.h"
+
 void* popnet_alloc(popnet_dtype dtype, popnet_shape shape) noexcept
 {
   const size_t nelems = popnet_numel(shape);
@@ -20,7 +22,9 @@ void* popnet_alloc(popnet_dtype dtype, popnet_shape shape) noexcept
     size = sizeof(float) * nelems;
     break;
   }
-  default: POPNET_UNSUPPORTED("CPU allocation requires f32 dtype"); break;
+  case popnet_dtype_i8: size = nelems; break;
+  case popnet_dtype_ternary: size = ternary::storage_bytes(shape); break;
+  default: POPNET_UNSUPPORTED("Unsupported CPU allocation dtype"); break;
   }
 
   POPNET_EXPECT(size > 0);

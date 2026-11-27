@@ -39,7 +39,10 @@ POPNET_INLINE bool popnet_valid_shape(popnet_shape shape)
   return shape.dim[0] != 0 && shape.dim[1] != 0 && shape.dim[2] != 0 && shape.dim[3] != 0;
 }
 
-POPNET_INLINE bool popnet_valid_dtype(popnet_dtype dtype) { return dtype == popnet_dtype_f32; }
+POPNET_INLINE bool popnet_valid_dtype(popnet_dtype dtype)
+{
+  return dtype == popnet_dtype_f32 || dtype == popnet_dtype_i8 || dtype == popnet_dtype_ternary;
+}
 
 POPNET_INLINE bool popnet_valid_tensor(const popnet_tensor* tensor)
 {

@@ -2,8 +2,6 @@
 
 #include <concepts>
 #include <cstddef>
-#include <cstdint>
-#include <type_traits>
 
 #include "simd_traits.h"
 
@@ -61,23 +59,20 @@ POPNET_INLINE static void simd_map(void* POPNET_RESTRICT output, size_t n, const
 {
   using traits = simd_traits<dtype>;
 
-  constexpr bool variable = traits::cpu_execution_model == cpu_execution_model::variable;
-  const size_t vector_length = traits::vector_length();
+  constexpr size_t vector_length = traits::vector_length();
 
-  // Count down full vectors so scalable widths need no remainder calculation.
-  size_t remaining = variable ? n : n % vector_length;
+  const size_t remaining = n % vector_length;
   const void* const output_body_end = traits::advance(output, n - remaining);
 
-  while (variable ? remaining >= vector_length : output != output_body_end)
+  while (output != output_body_end)
   {
     traits::vstore(output, op(maybe_broadcast_vload<dtype>(inputs)...));
 
     output = traits::advance(output, vector_length);
     ((inputs = maybe_broadcast_advance<dtype>(inputs, vector_length)), ...);
-    if constexpr (variable) remaining -= vector_length;
   }
 
-  if constexpr (traits::cpu_execution_model != cpu_execution_model::scalar)
+  if constexpr (vector_length > 1)
   {
     if (remaining)
     {
@@ -93,21 +88,19 @@ POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inpu
 {
   using traits = simd_traits<dtype>;
 
-  constexpr bool variable = traits::cpu_execution_model == cpu_execution_model::variable;
-  const size_t vector_length = traits::vector_length();
-  size_t remaining = variable ? n : n % vector_length;
+  constexpr size_t vector_length = traits::vector_length();
+  const size_t remaining = n % vector_length;
   const size_t body = n - remaining;
   auto s = state_init_op();
 
-  for (size_t i = 0; variable ? remaining >= vector_length : i < body; i += vector_length)
+  for (size_t i = 0; i < body; i += vector_length)
   {
     s = merge_op(maybe_broadcast_vload<dtype>(inputs)..., s);
 
     ((inputs = maybe_broadcast_advance<dtype>(inputs, vector_length)), ...);
-    if constexpr (variable) remaining -= vector_length;
   }
 
-  if constexpr (traits::cpu_execution_model != cpu_execution_model::scalar)
+  if constexpr (vector_length > 1)
   {
     if (remaining)
     {
@@ -123,16 +116,15 @@ POPNET_INLINE static auto simd_reduce(size_t n, const T* POPNET_RESTRICT... inpu
 
 template <auto state_init_op, auto merge_op, popnet_dtype dtype, auto finalize_op>
 POPNET_INLINE static void simd_reduce_rows(void* POPNET_RESTRICT output, size_t rows, size_t cols,
-                                          const typename simd_traits<dtype>::scalar_t* POPNET_RESTRICT input) noexcept
+                                           const typename simd_traits<dtype>::scalar_t* POPNET_RESTRICT input) noexcept
 {
   using traits = simd_traits<dtype>;
 
-  constexpr bool variable = traits::cpu_execution_model == cpu_execution_model::variable;
-  const size_t vector_length = traits::vector_length();
-  const size_t body = variable ? cols : cols - cols % vector_length;
+  constexpr size_t vector_length = traits::vector_length();
+  const size_t body = cols - cols % vector_length;
   size_t col = 0;
 
-  for (; variable ? cols - col >= vector_length : col < body; col += vector_length)
+  for (; col < body; col += vector_length)
   {
     auto s = state_init_op();
 
@@ -144,7 +136,7 @@ POPNET_INLINE static void simd_reduce_rows(void* POPNET_RESTRICT output, size_t 
     traits::vstore(traits::advance(output, col), finalize_op(s, rows));
   }
 
-  if constexpr (traits::cpu_execution_model != cpu_execution_model::scalar)
+  if constexpr (vector_length > 1)
   {
     if (col < cols)
     {

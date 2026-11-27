@@ -11,21 +11,12 @@
 namespace simd
 {
 
-#if defined(POPNET_SVE)
-// SVE permits up to 2048 bits per vector. Only the runtime lane count is used.
-inline constexpr size_t sve_max_f32_lanes = 2048 / 32;
-#endif
-
 #if !defined(POPNET_SCALAR) && !defined(POPNET_AVX512)
 
 template <typename Op> POPNET_INLINE vf32_t map_f32(vf32_t a, Op op)
 {
   using traits = simd_traits<popnet_dtype_f32>;
-#if defined(POPNET_SVE)
-  f32_t lanes[sve_max_f32_lanes];
-#else
   f32_t lanes[traits::vector_length()];
-#endif
   traits::vstore(lanes, a);
 
   const size_t n = traits::vector_length();
@@ -35,11 +26,26 @@ template <typename Op> POPNET_INLINE vf32_t map_f32(vf32_t a, Op op)
   return traits::vload(lanes);
 }
 
-POPNET_INLINE vf32_t exp_f32(vf32_t a) { return map_f32(a, [](float x) { return std::exp(x); }); }
-POPNET_INLINE vf32_t log_f32(vf32_t a) { return map_f32(a, [](float x) { return std::log(x); }); }
-POPNET_INLINE vf32_t sin_f32(vf32_t a) { return map_f32(a, [](float x) { return std::sin(x); }); }
-POPNET_INLINE vf32_t cos_f32(vf32_t a) { return map_f32(a, [](float x) { return std::cos(x); }); }
-POPNET_INLINE vf32_t tanh_f32(vf32_t a) { return map_f32(a, [](float x) { return std::tanh(x); }); }
+POPNET_INLINE vf32_t exp_f32(vf32_t a)
+{
+  return map_f32(a, [](float x) { return std::exp(x); });
+}
+POPNET_INLINE vf32_t log_f32(vf32_t a)
+{
+  return map_f32(a, [](float x) { return std::log(x); });
+}
+POPNET_INLINE vf32_t sin_f32(vf32_t a)
+{
+  return map_f32(a, [](float x) { return std::sin(x); });
+}
+POPNET_INLINE vf32_t cos_f32(vf32_t a)
+{
+  return map_f32(a, [](float x) { return std::cos(x); });
+}
+POPNET_INLINE vf32_t tanh_f32(vf32_t a)
+{
+  return map_f32(a, [](float x) { return std::tanh(x); });
+}
 
 POPNET_INLINE vf32_t sigmoid_f32(vf32_t a)
 {
@@ -265,19 +271,13 @@ POPNET_INLINE vf32_t set_neg_inf_f32()
 {
   return POPNET_F32_INTRINSIC(set1_ps)(-std::numeric_limits<f32_t>::infinity());
 }
-POPNET_INLINE vf32_t set_pos_inf_f32()
-{
-  return POPNET_F32_INTRINSIC(set1_ps)(std::numeric_limits<f32_t>::infinity());
-}
+POPNET_INLINE vf32_t set_pos_inf_f32() { return POPNET_F32_INTRINSIC(set1_ps)(std::numeric_limits<f32_t>::infinity()); }
 
 POPNET_INLINE vf32_t abs_f32(vf32_t a)
 {
   return POPNET_F32_INTRINSIC(andnot_ps)(POPNET_F32_INTRINSIC(set1_ps)(-0.0f), a);
 }
-POPNET_INLINE vf32_t neg_f32(vf32_t a)
-{
-  return POPNET_F32_INTRINSIC(xor_ps)(a, POPNET_F32_INTRINSIC(set1_ps)(-0.0f));
-}
+POPNET_INLINE vf32_t neg_f32(vf32_t a) { return POPNET_F32_INTRINSIC(xor_ps)(a, POPNET_F32_INTRINSIC(set1_ps)(-0.0f)); }
 
 POPNET_INLINE vf32_t sqr_f32(vf32_t a) { return POPNET_F32_INTRINSIC(mul_ps)(a, a); }
 POPNET_INLINE vf32_t sqrt_f32(vf32_t a) { return POPNET_F32_INTRINSIC(sqrt_ps)(a); }
@@ -321,50 +321,6 @@ POPNET_INLINE f32_t reduce_min_f32(vf32_t a) { return reduce_lanes_f32<min_f32>(
 POPNET_INLINE f32_t reduce_max_f32(vf32_t a) { return reduce_lanes_f32<max_f32>(a); }
 
 #undef POPNET_F32_INTRINSIC
-
-#elif defined(POPNET_SVE)
-
-POPNET_INLINE vf32_t set_zero_f32() { return svdup_n_f32(0.0f); }
-POPNET_INLINE vf32_t set_one_f32() { return svdup_n_f32(1.0f); }
-POPNET_INLINE vf32_t set_neg_inf_f32() { return svdup_n_f32(-std::numeric_limits<f32_t>::infinity()); }
-POPNET_INLINE vf32_t set_pos_inf_f32() { return svdup_n_f32(std::numeric_limits<f32_t>::infinity()); }
-
-POPNET_INLINE vf32_t abs_f32(vf32_t a) { return svabs_f32_x(svptrue_b32(), a); }
-POPNET_INLINE vf32_t neg_f32(vf32_t a) { return svneg_f32_x(svptrue_b32(), a); }
-POPNET_INLINE vf32_t sqr_f32(vf32_t a) { return svmul_f32_x(svptrue_b32(), a, a); }
-POPNET_INLINE vf32_t sqrt_f32(vf32_t a) { return svsqrt_f32_x(svptrue_b32(), a); }
-
-POPNET_INLINE vf32_t relu_f32(vf32_t a)
-{
-  return svsel_f32(svcmplt_n_f32(svptrue_b32(), a, 0.0f), set_zero_f32(), a);
-}
-
-POPNET_INLINE vf32_t add_f32(vf32_t a, vf32_t b) { return svadd_f32_x(svptrue_b32(), a, b); }
-POPNET_INLINE vf32_t sub_f32(vf32_t a, vf32_t b) { return svsub_f32_x(svptrue_b32(), a, b); }
-POPNET_INLINE vf32_t mul_f32(vf32_t a, vf32_t b) { return svmul_f32_x(svptrue_b32(), a, b); }
-POPNET_INLINE vf32_t div_f32(vf32_t a, vf32_t b) { return svdiv_f32_x(svptrue_b32(), a, b); }
-POPNET_INLINE vf32_t min_f32(vf32_t a, vf32_t b) { return svmin_f32_x(svptrue_b32(), a, b); }
-POPNET_INLINE vf32_t max_f32(vf32_t a, vf32_t b) { return svmax_f32_x(svptrue_b32(), a, b); }
-
-POPNET_INLINE vf32_t fma_f32(vf32_t a, vf32_t b, vf32_t c) { return svmla_f32_x(svptrue_b32(), c, a, b); }
-
-POPNET_INLINE f32_t reduce_sum_f32(vf32_t a) { return svaddv_f32(svptrue_b32(), a); }
-POPNET_INLINE f32_t reduce_min_f32(vf32_t a) { return svminv_f32(svptrue_b32(), a); }
-POPNET_INLINE f32_t reduce_max_f32(vf32_t a) { return svmaxv_f32(svptrue_b32(), a); }
-
-POPNET_INLINE f32_t reduce_product_f32(vf32_t a)
-{
-  using traits = simd_traits<popnet_dtype_f32>;
-  f32_t lanes[sve_max_f32_lanes];
-  traits::vstore(lanes, a);
-
-  f32_t product = 1.0f;
-  const size_t n = traits::vector_length();
-  for (size_t i = 0; i < n; ++i)
-    product *= lanes[i];
-
-  return product;
-}
 
 #elif defined(POPNET_NEON)
 

@@ -107,15 +107,15 @@ TEST_CASE("matmul")
     popnet_tensor* c = popnet_empty(popnet_dtype_f32, c_shape);
     REQUIRE(c != nullptr);
 
-    popnet_set_data(a, a_data.data(), popnet_dtype_f32, 0, popnet_numel(a_shape));
-    popnet_set_data(b, b_data.data(), popnet_dtype_f32, 0, popnet_numel(b_shape));
+    popnet_set_data(a, a_data.data(), 0, popnet_numel(a_shape));
+    popnet_set_data(b, b_data.data(), 0, popnet_numel(b_shape));
 
     c->src[0] = a;
     c->src[1] = b;
     popnet_compute_matmul(c);
 
     std::vector<float> output_data(popnet_numel(c_shape));
-    popnet_get_data(c, output_data.data(), popnet_dtype_f32, 0, popnet_numel(c_shape));
+    popnet_get_data(c, output_data.data(), 0, popnet_numel(c_shape));
     for (size_t i = 0; i < output_data.size(); ++i)
     {
       // These fixtures contain only nonnegative, exactly representable products.
@@ -148,15 +148,15 @@ TEST_CASE("matmul")
     popnet_tensor* c = popnet_empty(popnet_dtype_f32, c_shape);
     REQUIRE(c != nullptr);
 
-    popnet_set_data(a, a_data.data(), popnet_dtype_f32, 0, popnet_numel(a_shape));
-    popnet_set_data(b, b_data.data(), popnet_dtype_f32, 0, popnet_numel(b_shape));
+    popnet_set_data(a, a_data.data(), 0, popnet_numel(a_shape));
+    popnet_set_data(b, b_data.data(), 0, popnet_numel(b_shape));
 
     c->src[0] = a;
     c->src[1] = b;
     popnet_compute_matmul(c);
 
     std::vector<float> output_data(popnet_numel(c_shape));
-    popnet_get_data(c, output_data.data(), popnet_dtype_f32, 0, popnet_numel(c_shape));
+    popnet_get_data(c, output_data.data(), 0, popnet_numel(c_shape));
     for (size_t i = 0; i < output_data.size(); ++i)
     {
       // These fixtures contain only nonnegative, exactly representable products.
@@ -188,15 +188,15 @@ TEST_CASE("matmul")
     popnet_tensor* c = popnet_empty(popnet_dtype_f32, c_shape);
     REQUIRE(c != nullptr);
 
-    popnet_set_data(a, a_data.data(), popnet_dtype_f32, 0, popnet_numel(a_shape));
-    popnet_set_data(b, b_data.data(), popnet_dtype_f32, 0, popnet_numel(b_shape));
+    popnet_set_data(a, a_data.data(), 0, popnet_numel(a_shape));
+    popnet_set_data(b, b_data.data(), 0, popnet_numel(b_shape));
 
     c->src[0] = a;
     c->src[1] = b;
     popnet_compute_matmul(c);
 
     std::vector<float> output_data(popnet_numel(c_shape));
-    popnet_get_data(c, output_data.data(), popnet_dtype_f32, 0, popnet_numel(c_shape));
+    popnet_get_data(c, output_data.data(), 0, popnet_numel(c_shape));
     for (size_t i = 0; i < output_data.size(); ++i)
     {
       // These fixtures contain only nonnegative, exactly representable products.
@@ -229,15 +229,15 @@ TEST_CASE("matmul")
     popnet_tensor* c = popnet_empty(popnet_dtype_f32, c_shape);
     REQUIRE(c != nullptr);
 
-    popnet_set_data(a, a_data.data(), popnet_dtype_f32, 0, popnet_numel(a_shape));
-    popnet_set_data(b, b_data.data(), popnet_dtype_f32, 0, popnet_numel(b_shape));
+    popnet_set_data(a, a_data.data(), 0, popnet_numel(a_shape));
+    popnet_set_data(b, b_data.data(), 0, popnet_numel(b_shape));
 
     c->src[0] = a;
     c->src[1] = b;
     popnet_compute_matmul(c);
 
     std::vector<float> output_data(popnet_numel(c_shape));
-    popnet_get_data(c, output_data.data(), popnet_dtype_f32, 0, popnet_numel(c_shape));
+    popnet_get_data(c, output_data.data(), 0, popnet_numel(c_shape));
     for (size_t i = 0; i < output_data.size(); ++i)
     {
       // These fixtures contain only nonnegative, exactly representable products.
@@ -272,15 +272,15 @@ TEST_CASE("matmul")
     popnet_tensor* C = popnet_empty(dtype, c_shape);
     REQUIRE(C != nullptr);
 
-    popnet_set_data(A, a_data.data(), dtype, 0, popnet_numel(a_shape));
-    popnet_set_data(B, b_data.data(), dtype, 0, popnet_numel(b_shape));
+    popnet_set_data(A, a_data.data(), 0, popnet_numel(a_shape));
+    popnet_set_data(B, b_data.data(), 0, popnet_numel(b_shape));
 
     C->src[0] = A;
     C->src[1] = B;
     popnet_compute_matmul(C);
 
     std::vector<scalar_t> output_data(popnet_numel(c_shape));
-    popnet_get_data(C, output_data.data(), dtype, 0, popnet_numel(c_shape));
+    popnet_get_data(C, output_data.data(), 0, popnet_numel(c_shape));
 
     for (size_t i = 0; i < output_data.size(); ++i)
     {
@@ -373,13 +373,13 @@ TEST_CASE("transpose")
     popnet_tensor* dst = popnet_empty(popnet_dtype_f32, dst_shape);
     REQUIRE(dst != nullptr);
 
-    popnet_set_data(src, src_data.data(), popnet_dtype_f32, 0, popnet_numel(src_shape));
+    popnet_set_data(src, src_data.data(), 0, popnet_numel(src_shape));
     dst->src[0] = src;
 
     popnet_compute_transpose(dst);
 
     std::vector<float> output_data(popnet_numel(dst_shape));
-    popnet_get_data(dst, output_data.data(), popnet_dtype_f32, 0, popnet_numel(dst_shape));
+    popnet_get_data(dst, output_data.data(), 0, popnet_numel(dst_shape));
     CHECK(std::memcmp(output_data.data(), expected_data.data(), output_data.size() * sizeof(float)) == 0);
 
     popnet_free(dst);
@@ -402,13 +402,13 @@ TEST_CASE("transpose")
     popnet_tensor* dst = popnet_empty(popnet_dtype_f32, dst_shape);
     REQUIRE(dst != nullptr);
 
-    popnet_set_data(src, src_data.data(), popnet_dtype_f32, 0, popnet_numel(src_shape));
+    popnet_set_data(src, src_data.data(), 0, popnet_numel(src_shape));
 
     dst->src[0] = src;
     popnet_compute_transpose(dst);
 
     std::vector<float> output_data(popnet_numel(dst_shape));
-    popnet_get_data(dst, output_data.data(), popnet_dtype_f32, 0, popnet_numel(dst_shape));
+    popnet_get_data(dst, output_data.data(), 0, popnet_numel(dst_shape));
     CHECK(std::memcmp(output_data.data(), expected_data.data(), output_data.size() * sizeof(float)) == 0);
 
     popnet_free(dst);
@@ -431,13 +431,13 @@ TEST_CASE("transpose")
     popnet_tensor* dst = popnet_empty(popnet_dtype_f32, dst_shape);
     REQUIRE(dst != nullptr);
 
-    popnet_set_data(src, src_data.data(), popnet_dtype_f32, 0, popnet_numel(src_shape));
+    popnet_set_data(src, src_data.data(), 0, popnet_numel(src_shape));
 
     dst->src[0] = src;
     popnet_compute_transpose(dst);
 
     std::vector<float> output_data(popnet_numel(dst_shape));
-    popnet_get_data(dst, output_data.data(), popnet_dtype_f32, 0, popnet_numel(dst_shape));
+    popnet_get_data(dst, output_data.data(), 0, popnet_numel(dst_shape));
     CHECK(std::memcmp(output_data.data(), expected_data.data(), output_data.size() * sizeof(float)) == 0);
 
     popnet_free(dst);
@@ -460,13 +460,13 @@ TEST_CASE("transpose")
     popnet_tensor* dst = popnet_empty(popnet_dtype_f32, dst_shape);
     REQUIRE(dst != nullptr);
 
-    popnet_set_data(src, src_data.data(), popnet_dtype_f32, 0, popnet_numel(src_shape));
+    popnet_set_data(src, src_data.data(), 0, popnet_numel(src_shape));
 
     dst->src[0] = src;
     popnet_compute_transpose(dst);
 
     std::vector<float> output_data(popnet_numel(dst_shape));
-    popnet_get_data(dst, output_data.data(), popnet_dtype_f32, 0, popnet_numel(dst_shape));
+    popnet_get_data(dst, output_data.data(), 0, popnet_numel(dst_shape));
     CHECK(std::memcmp(output_data.data(), expected_data.data(), output_data.size() * sizeof(float)) == 0);
 
     popnet_free(dst);
@@ -489,13 +489,13 @@ TEST_CASE("transpose")
     popnet_tensor* dst = popnet_empty(popnet_dtype_f32, dst_shape);
     REQUIRE(dst != nullptr);
 
-    popnet_set_data(src, src_data.data(), popnet_dtype_f32, 0, popnet_numel(src_shape));
+    popnet_set_data(src, src_data.data(), 0, popnet_numel(src_shape));
 
     dst->src[0] = src;
     popnet_compute_transpose(dst);
 
     std::vector<float> output_data(popnet_numel(dst_shape));
-    popnet_get_data(dst, output_data.data(), popnet_dtype_f32, 0, popnet_numel(dst_shape));
+    popnet_get_data(dst, output_data.data(), 0, popnet_numel(dst_shape));
     CHECK(std::memcmp(output_data.data(), expected_data.data(), output_data.size() * sizeof(float)) == 0);
 
     popnet_free(dst);
@@ -519,12 +519,12 @@ TEST_CASE("transpose")
     popnet_tensor* dst = popnet_empty(popnet_dtype_f32, dst_shape);
     REQUIRE(dst != nullptr);
 
-    popnet_set_data(src, src_data.data(), popnet_dtype_f32, 0, popnet_numel(src_shape));
+    popnet_set_data(src, src_data.data(), 0, popnet_numel(src_shape));
     dst->src[0] = src;
     popnet_compute_transpose(dst);
 
     std::vector<float> output_data(popnet_numel(dst_shape));
-    popnet_get_data(dst, output_data.data(), popnet_dtype_f32, 0, popnet_numel(dst_shape));
+    popnet_get_data(dst, output_data.data(), 0, popnet_numel(dst_shape));
     CHECK(std::memcmp(output_data.data(), expected_data.data(), output_data.size() * sizeof(float)) == 0);
 
     popnet_free(dst);
@@ -548,12 +548,12 @@ TEST_CASE("transpose")
     popnet_tensor* dst = popnet_empty(popnet_dtype_f32, dst_shape);
     REQUIRE(dst != nullptr);
 
-    popnet_set_data(src, src_data.data(), popnet_dtype_f32, 0, popnet_numel(src_shape));
+    popnet_set_data(src, src_data.data(), 0, popnet_numel(src_shape));
     dst->src[0] = src;
     popnet_compute_transpose(dst);
 
     std::vector<float> output_data(popnet_numel(dst_shape));
-    popnet_get_data(dst, output_data.data(), popnet_dtype_f32, 0, popnet_numel(dst_shape));
+    popnet_get_data(dst, output_data.data(), 0, popnet_numel(dst_shape));
     CHECK(std::memcmp(output_data.data(), expected_data.data(), output_data.size() * sizeof(float)) == 0);
 
     popnet_free(dst);
@@ -579,12 +579,12 @@ TEST_CASE("transpose")
     popnet_tensor* dst = popnet_empty(popnet_dtype_f32, dst_shape);
     REQUIRE(dst != nullptr);
 
-    popnet_set_data(src, src_data.data(), popnet_dtype_f32, 0, popnet_numel(src_shape));
+    popnet_set_data(src, src_data.data(), 0, popnet_numel(src_shape));
     dst->src[0] = src;
     popnet_compute_transpose(dst);
 
     std::vector<float> output_data(popnet_numel(dst_shape));
-    popnet_get_data(dst, output_data.data(), popnet_dtype_f32, 0, popnet_numel(dst_shape));
+    popnet_get_data(dst, output_data.data(), 0, popnet_numel(dst_shape));
     CHECK(std::memcmp(output_data.data(), expected_data.data(), output_data.size() * sizeof(float)) == 0);
 
     popnet_free(dst);
@@ -604,13 +604,13 @@ TEST_CASE("transpose")
     popnet_tensor* dst = popnet_empty(popnet_dtype_f32, dst_shape);
     REQUIRE(dst != nullptr);
 
-    popnet_set_data(src, src_data.data(), popnet_dtype_f32, 0, popnet_numel(src_shape));
+    popnet_set_data(src, src_data.data(), 0, popnet_numel(src_shape));
 
     dst->src[0] = src;
     popnet_compute_transpose(dst);
 
     std::vector<float> output_data(popnet_numel(dst_shape));
-    popnet_get_data(dst, output_data.data(), popnet_dtype_f32, 0, popnet_numel(dst_shape));
+    popnet_get_data(dst, output_data.data(), 0, popnet_numel(dst_shape));
     CHECK(std::memcmp(output_data.data(), expected_data.data(), output_data.size() * sizeof(float)) == 0);
 
     popnet_free(dst);

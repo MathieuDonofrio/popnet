@@ -57,39 +57,39 @@ popnet_shape popnet_shapeof(const popnet_tensor* tensor) { return tensor ? tenso
 
 popnet_op popnet_opof(const popnet_tensor* tensor) { return tensor ? tensor->op : popnet_op_none; }
 
-void popnet_set_data(const popnet_tensor* tensor, const void* src, popnet_dtype src_dtype, size_t offset, size_t n)
+namespace
+{
+constexpr size_t transfer_element_size(popnet_dtype dtype)
+{
+  switch (dtype)
+  {
+  case popnet_dtype_f32: return sizeof(float);
+  case popnet_dtype_i8: return sizeof(int8_t);
+  default: POPNET_UNSUPPORTED("Unsupported tensor transfer dtype"); return 0;
+  }
+}
+} // namespace
+
+void popnet_set_data(const popnet_tensor* tensor, const void* src, size_t offset, size_t n)
 {
   POPNET_EXPECT(popnet_valid_tensor(tensor));
   POPNET_EXPECT(src != nullptr);
-  POPNET_EXPECT(popnet_valid_dtype(src_dtype));
   POPNET_EXPECT(offset <= popnet_numel(tensor->shape));
   POPNET_EXPECT(n <= popnet_numel(tensor->shape) - offset);
 
-  if (tensor->dtype == popnet_dtype_f32 && src_dtype == popnet_dtype_f32)
-  {
-    popnet_memcpy(static_cast<float*>(tensor->data) + offset, src, n * sizeof(float), memcpy_kind::host_to_device);
-  }
-  else
-  {
-    POPNET_UNSUPPORTED("Setting tensor data requires f32 source and tensor dtypes");
-  }
+  const size_t element_size = transfer_element_size(tensor->dtype);
+  auto* dst = static_cast<unsigned char*>(tensor->data) + offset * element_size;
+  popnet_memcpy(dst, src, n * element_size, memcpy_kind::host_to_device);
 }
 
-void popnet_get_data(const popnet_tensor* tensor, void* dst, popnet_dtype dst_dtype, size_t offset, size_t n)
+void popnet_get_data(const popnet_tensor* tensor, void* dst, size_t offset, size_t n)
 {
   POPNET_EXPECT(popnet_valid_tensor(tensor));
   POPNET_EXPECT(dst != nullptr);
-  POPNET_EXPECT(popnet_valid_dtype(dst_dtype));
   POPNET_EXPECT(offset <= popnet_numel(tensor->shape));
   POPNET_EXPECT(n <= popnet_numel(tensor->shape) - offset);
 
-  if (tensor->dtype == popnet_dtype_f32 && dst_dtype == popnet_dtype_f32)
-  {
-    popnet_memcpy(dst, static_cast<const float*>(tensor->data) + offset, n * sizeof(float),
-                  memcpy_kind::device_to_host);
-  }
-  else
-  {
-    POPNET_UNSUPPORTED("Getting tensor data requires f32 tensor and destination dtypes");
-  }
+  const size_t element_size = transfer_element_size(tensor->dtype);
+  const auto* src = static_cast<const unsigned char*>(tensor->data) + offset * element_size;
+  popnet_memcpy(dst, src, n * element_size, memcpy_kind::device_to_host);
 }

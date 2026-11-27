@@ -23,7 +23,7 @@ static void check_graph_result(popnet_tensor* result, const T* expected, size_t 
   popnet_graph_compute_forward(graph);
 
   std::vector<float> actual(count);
-  popnet_get_data(result, actual.data(), popnet_dtype_f32, 0, count);
+  popnet_get_data(result, actual.data(), 0, count);
 
   for (size_t i = 0; i < count; ++i)
   {
@@ -63,7 +63,7 @@ TEST_CASE("graph executes each unary operation")
     auto* src = popnet_empty(popnet_dtype_f32, {{1, 1, 1, 2}});
 
     REQUIRE(src != nullptr);
-    popnet_set_data(src, operation.input, popnet_dtype_f32, 0, 2);
+    popnet_set_data(src, operation.input, 0, 2);
     auto* result = operation.create(src);
 
     const bool approximate = operation.create == popnet_exp || operation.create == popnet_log ||
@@ -98,8 +98,8 @@ TEST_CASE("graph executes each binary operation")
 
   const float a_values[] = {6, -8};
   const float b_values[] = {2, 4};
-  popnet_set_data(a, a_values, popnet_dtype_f32, 0, 2);
-  popnet_set_data(b, b_values, popnet_dtype_f32, 0, 2);
+  popnet_set_data(a, a_values, 0, 2);
+  popnet_set_data(b, b_values, 0, 2);
 
   for (const auto& operation : operations)
   {
@@ -136,7 +136,7 @@ TEST_CASE("graph executes each reduction")
   REQUIRE(src != nullptr);
 
   const float values[] = {2, 3, 4};
-  popnet_set_data(src, values, popnet_dtype_f32, 0, 3);
+  popnet_set_data(src, values, 0, 3);
 
   for (const auto& reduction : reductions)
   {
@@ -168,8 +168,8 @@ TEST_CASE("graph executes matrix multiplication")
 
   const float a_values[] = {1, 2, 3, 4, 5, 6};
   const float b_values[] = {1, 0, 1, 0, 2, 1};
-  popnet_set_data(a, a_values, popnet_dtype_f32, 0, 6);
-  popnet_set_data(b, b_values, popnet_dtype_f32, 0, 6);
+  popnet_set_data(a, a_values, 0, 6);
+  popnet_set_data(b, b_values, 0, 6);
   auto* result = popnet_matmul(a, b);
   const float expected[] = {4, 7, 10, 16};
 
@@ -189,7 +189,7 @@ TEST_CASE("graph executes transpose")
   REQUIRE(src != nullptr);
 
   const float values[] = {1, 2, 3, 4, 5, 6};
-  popnet_set_data(src, values, popnet_dtype_f32, 0, 6);
+  popnet_set_data(src, values, 0, 6);
   auto* result = popnet_transpose(src);
   const float expected[] = {1, 4, 2, 5, 3, 6};
 
@@ -210,13 +210,13 @@ TEST_CASE("graph lifetime")
   REQUIRE(src != nullptr);
 
   const float values[] = {3, -7};
-  popnet_set_data(src, values, popnet_dtype_f32, 0, 2);
+  popnet_set_data(src, values, 0, 2);
 
   REQUIRE(popnet_graph_build_forward(graph, src));
   popnet_graph_free(graph);
 
   float actual[2]{};
-  popnet_get_data(src, actual, popnet_dtype_f32, 0, 2);
+  popnet_get_data(src, actual, 0, 2);
 
   CHECK(actual[0] == values[0]);
   CHECK(actual[1] == values[1]);
@@ -356,8 +356,8 @@ TEST_CASE("popnet_graph compute forward")
   float a_values[4] = {1, 2, 3, 4};
   float b_values[4] = {10, 20, 30, 40};
 
-  popnet_set_data(a, a_values, popnet_dtype_f32, 0, 4);
-  popnet_set_data(b, b_values, popnet_dtype_f32, 0, 4);
+  popnet_set_data(a, a_values, 0, 4);
+  popnet_set_data(b, b_values, 0, 4);
 
   SUBCASE("empty graph")
   {
@@ -379,12 +379,12 @@ TEST_CASE("popnet_graph compute forward")
     for (int pass = 0; pass < 2; ++pass)
     {
       const float input[4] = {float(pass + 1), -2.0f, float(pass * 10), 4.0f};
-      popnet_set_data(a, input, popnet_dtype_f32, 0, 4);
+      popnet_set_data(a, input, 0, 4);
 
       popnet_graph_compute_forward(graph);
 
       float actual[4]{};
-      popnet_get_data(result, actual, popnet_dtype_f32, 0, 4);
+      popnet_get_data(result, actual, 0, 4);
 
       for (size_t i = 0; i < 4; ++i)
       {
@@ -402,7 +402,7 @@ TEST_CASE("popnet_graph compute forward")
     popnet_graph_compute_forward(graph);
 
     float out[4] = {};
-    popnet_get_data(a, out, popnet_dtype_f32, 0, 4);
+    popnet_get_data(a, out, 0, 4);
 
     for (int i = 0; i < 4; ++i)
     {
@@ -421,8 +421,8 @@ TEST_CASE("popnet_graph compute forward")
     popnet_graph_compute_forward(graph);
 
     float c1_out[4], c2_out[4];
-    popnet_get_data(c1, c1_out, popnet_dtype_f32, 0, 4);
-    popnet_get_data(c2, c2_out, popnet_dtype_f32, 0, 4);
+    popnet_get_data(c1, c1_out, 0, 4);
+    popnet_get_data(c2, c2_out, 0, 4);
 
     for (int i = 0; i < 4; ++i)
     {
@@ -443,8 +443,8 @@ TEST_CASE("popnet_graph compute forward")
     popnet_graph_compute_forward(graph);
 
     float c_out[4], d_out[4];
-    popnet_get_data(c, c_out, popnet_dtype_f32, 0, 4);
-    popnet_get_data(d, d_out, popnet_dtype_f32, 0, 4);
+    popnet_get_data(c, c_out, 0, 4);
+    popnet_get_data(d, d_out, 0, 4);
 
     for (int i = 0; i < 4; ++i)
     {
@@ -465,8 +465,8 @@ TEST_CASE("popnet_graph compute forward")
     popnet_graph_compute_forward(graph);
 
     float c_out[4], d_out[4];
-    popnet_get_data(c, c_out, popnet_dtype_f32, 0, 4);
-    popnet_get_data(d, d_out, popnet_dtype_f32, 0, 4);
+    popnet_get_data(c, c_out, 0, 4);
+    popnet_get_data(d, d_out, 0, 4);
 
     for (int i = 0; i < 4; ++i)
     {
@@ -488,9 +488,9 @@ TEST_CASE("popnet_graph compute forward")
     popnet_graph_compute_forward(graph);
 
     float c_out[4], d_out[4], e_out[4];
-    popnet_get_data(c, c_out, popnet_dtype_f32, 0, 4);
-    popnet_get_data(d, d_out, popnet_dtype_f32, 0, 4);
-    popnet_get_data(e, e_out, popnet_dtype_f32, 0, 4);
+    popnet_get_data(c, c_out, 0, 4);
+    popnet_get_data(d, d_out, 0, 4);
+    popnet_get_data(e, e_out, 0, 4);
 
     for (int i = 0; i < 4; ++i)
     {
@@ -514,9 +514,9 @@ TEST_CASE("popnet_graph compute forward")
     popnet_graph_compute_forward(graph);
 
     float c1_out[4], c2_out[4], d_out[4];
-    popnet_get_data(c1, c1_out, popnet_dtype_f32, 0, 4);
-    popnet_get_data(c2, c2_out, popnet_dtype_f32, 0, 4);
-    popnet_get_data(d, d_out, popnet_dtype_f32, 0, 4);
+    popnet_get_data(c1, c1_out, 0, 4);
+    popnet_get_data(c2, c2_out, 0, 4);
+    popnet_get_data(d, d_out, 0, 4);
 
     for (int i = 0; i < 4; ++i)
     {
@@ -542,8 +542,8 @@ TEST_CASE("popnet_graph compute forward")
     float a_values[TENSOR_SIZE] = {1, 2, 3, 4};
     float b_values[TENSOR_SIZE] = {5, 6, 7, 8};
 
-    popnet_set_data(base_a, a_values, popnet_dtype_f32, 0, TENSOR_SIZE);
-    popnet_set_data(base_b, b_values, popnet_dtype_f32, 0, TENSOR_SIZE);
+    popnet_set_data(base_a, a_values, 0, TENSOR_SIZE);
+    popnet_set_data(base_b, b_values, 0, TENSOR_SIZE);
 
     std::vector<popnet_tensor*> nodes;
     nodes.push_back(base_a);
@@ -567,7 +567,7 @@ TEST_CASE("popnet_graph compute forward")
     popnet_graph_compute_forward(graph);
 
     float last_out[TENSOR_SIZE] = {};
-    popnet_get_data(prev, last_out, popnet_dtype_f32, 0, TENSOR_SIZE);
+    popnet_get_data(prev, last_out, 0, TENSOR_SIZE);
 
     // Positive inputs make abs an identity; every odd chain step adds base_a.
     std::vector<float> expected(TENSOR_SIZE);

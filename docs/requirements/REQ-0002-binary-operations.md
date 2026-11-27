@@ -4,7 +4,7 @@ title: Binary tensor operations with broadcasting
 intents:
   - INT-0001
 specifications:
-  - docs/specifications/supported-tensor-operations.md
+  - docs/specifications/supported-tensor-operations.md#binary-operations
 ---
 
 ## Obligation

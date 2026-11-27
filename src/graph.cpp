@@ -3,6 +3,7 @@
 #include <new>
 #include <stdexcept>
 
+#include "cast.h"
 #include "elemwise.h"
 #include "linalg.h"
 #include "reduce.h"
@@ -56,6 +57,7 @@ void popnet_graph_compute_forward(popnet_graph* graph)
     switch (node->op)
     {
     case popnet_op_none: break; // Input or constant node
+    case popnet_op_cast: popnet_compute_cast(node); break;
     case popnet_op_add: popnet_compute_add(node); break;
     case popnet_op_sub: popnet_compute_sub(node); break;
     case popnet_op_mul: popnet_compute_mul(node); break;
