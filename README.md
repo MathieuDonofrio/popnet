@@ -36,7 +36,7 @@ The following matrix is built and tested by the CI.
 
 ## Build Requirements
 
-- CMake 3.20+
+- CMake 3.25+
 - C++20-compatible compiler
 - Ninja
 - Git (for fetching dependencies)

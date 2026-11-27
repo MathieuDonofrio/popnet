@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.25)
 
 #
 # Project
@@ -79,8 +79,6 @@ target_include_directories(popnet
           "${CMAKE_CURRENT_SOURCE_DIR}/src/compute"
           "${POPNET_COMPUTE_DIR}"
 )
-
-target_include_directories(popnet PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 add_target_warnings(popnet)
 enable_popnet_ipo(popnet)

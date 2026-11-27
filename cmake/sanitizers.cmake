@@ -1,6 +1,17 @@
+if(POPNET_ASAN AND POPNET_TSAN)
+  message(FATAL_ERROR "POPNET_ASAN and POPNET_TSAN cannot be enabled together")
+endif()
+
 if(POPNET_ASAN)
-  if(MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    message(FATAL_ERROR "POPNET_ASAN is not supported with clang-cl; use MSVC on Windows")
+  if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    # clang-cl ASan requires a release CRT even in Debug builds.
+    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
+    add_compile_options(-fsanitize=address /Oy-)
+
+    # Let clang-cl select the ASan libraries for its target architecture.
+    set(CMAKE_CXX_LINK_EXECUTABLE
+      "<CMAKE_CXX_COMPILER> /MD -fsanitize=address <OBJECTS> /Fe<TARGET> /link <LINK_FLAGS> <LINK_LIBRARIES>")
+    message(STATUS "ASAN enabled with clang-cl and /MD")
   elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
     add_link_options(-fsanitize=address)
@@ -30,7 +41,9 @@ if(POPNET_UBSAN)
 endif()
 
 if(POPNET_TSAN)
-  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+  if(CMAKE_SYSTEM_NAME STREQUAL "Windows" AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    message(FATAL_ERROR "POPNET_TSAN is unsupported for Clang targeting native Windows")
+  elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     add_compile_options(-fsanitize=thread)
     add_link_options(-fsanitize=thread)
     message(STATUS "TSAN enabled")
